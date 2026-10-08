@@ -15,6 +15,7 @@ in
   imports = [
     ./disko.nix
     ../../modules/core/root-rollback.nix
+    ../../modules/core/persistence.nix
   ];
 
   nixpkgs.hostPlatform = "x86_64-linux";
@@ -39,7 +40,14 @@ in
     device = "/dev/mapper/cryptroot";
   };
 
+  custom.persistence = {
+    enable = true;
+    root = "/persist";
+  };
+
   fileSystems = earlyMounts;
+
+  security.sudo.extraConfig = "Defaults lecture = never";
 
   zramSwap = {
     enable = true;
