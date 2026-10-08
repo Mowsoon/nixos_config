@@ -46,8 +46,10 @@ in
                 "@root" = mkSubvolume "/";
                 "@nix" = mkSubvolume "/nix";
                 "@persist" = mkSubvolume "/persist";
+                "@persist/.snapshots" = { };
                 "@log" = mkSubvolume "/var/log";
                 "@home" = mkSubvolume "/home";
+                "@home/.snapshots" = { };
                 "@swap" = {
                   mountpoint = "/swap";
                   mountOptions = [ "noatime" ];

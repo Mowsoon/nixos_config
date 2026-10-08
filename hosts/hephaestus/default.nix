@@ -16,6 +16,7 @@ in
     ./disko.nix
     ../../modules/core/root-rollback.nix
     ../../modules/core/persistence.nix
+    ../../modules/core/snapshots.nix
   ];
 
   nixpkgs.hostPlatform = "x86_64-linux";
@@ -35,14 +36,24 @@ in
     };
   };
 
-  custom.rootRollback = {
-    enable = true;
-    device = "/dev/mapper/cryptroot";
-  };
+  custom = {
+    rootRollback = {
+      enable = true;
+      device = "/dev/mapper/cryptroot";
+    };
 
-  custom.persistence = {
-    enable = true;
-    root = "/persist";
+    persistence = {
+      enable = true;
+      root = "/persist";
+    };
+
+    snapshots = {
+      enable = true;
+      subvolumes = {
+        home = "/home";
+        persist = "/persist";
+      };
+    };
   };
 
   fileSystems = earlyMounts;
