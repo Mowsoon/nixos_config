@@ -1,0 +1,72 @@
+{ lib, pkgs, ... }:
+{
+  imports = [ ./disko.nix ];
+
+  nixpkgs.hostPlatform = "x86_64-linux";
+
+  networking.hostName = "hephaestus";
+
+  nix.settings.experimental-features = [
+    "nix-command"
+    "flakes"
+  ];
+
+  boot = {
+    initrd.systemd.enable = true;
+    loader.systemd-boot = {
+      enable = true;
+      configurationLimit = 10;
+    };
+  };
+
+  fileSystems = {
+    "/persist".neededForBoot = true;
+    "/var/log".neededForBoot = true;
+  };
+
+  zramSwap = {
+    enable = true;
+    algorithm = "zstd";
+    memoryPercent = 50;
+    priority = 100;
+  };
+
+  console.keyMap = "fr";
+  time.timeZone = "Europe/Dublin";
+  i18n.defaultLocale = "en_US.UTF-8";
+
+  users = {
+    mutableUsers = false;
+    users.mowsoon = {
+      isNormalUser = true;
+      extraGroups = [ "wheel" ];
+      hashedPasswordFile = "/persist/secrets/mowsoon.hash";
+    };
+  };
+
+  virtualisation.vmVariantWithDisko = {
+    disko.imageBuilder.pkgs = pkgs.extend (
+      _: prev: {
+        vmTools = prev.vmTools.override {
+          kernelImage = prev.linux.target;
+        };
+      }
+    );
+    boot.initrd.systemd.emergencyAccess = true;
+    disko.devices.disk.main = {
+      imageSize = "8G";
+      content.partitions.luks.content.content.subvolumes."@swap".swap.swapfile.size = lib.mkForce "1G";
+    };
+    users.users.mowsoon = {
+      hashedPasswordFile = lib.mkForce null;
+      hashedPassword = lib.fileContents ../vm-test/mowsoon.hash;
+    };
+    virtualisation = {
+      memorySize = 4096;
+      cores = 4;
+      graphics = false;
+    };
+  };
+
+  system.stateVersion = "26.11";
+}
