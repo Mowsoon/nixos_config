@@ -1,6 +1,21 @@
 { lib, pkgs, ... }:
+let
+  earlyMounts =
+    lib.genAttrs
+      [
+        "/home"
+        "/persist"
+        "/var/log"
+      ]
+      (_: {
+        neededForBoot = true;
+      });
+in
 {
-  imports = [ ./disko.nix ];
+  imports = [
+    ./disko.nix
+    ../../modules/core/root-rollback.nix
+  ];
 
   nixpkgs.hostPlatform = "x86_64-linux";
 
@@ -19,10 +34,12 @@
     };
   };
 
-  fileSystems = {
-    "/persist".neededForBoot = true;
-    "/var/log".neededForBoot = true;
+  custom.rootRollback = {
+    enable = true;
+    device = "/dev/mapper/cryptroot";
   };
+
+  fileSystems = earlyMounts;
 
   zramSwap = {
     enable = true;
@@ -61,7 +78,14 @@
       hashedPasswordFile = lib.mkForce null;
       hashedPassword = lib.fileContents ../vm-test/mowsoon.hash;
     };
+    swapDevices = lib.mkForce [
+      {
+        device = "/swap/swapfile";
+        priority = 0;
+      }
+    ];
     virtualisation = {
+      fileSystems = earlyMounts;
       memorySize = 4096;
       cores = 4;
       graphics = false;
