@@ -3,10 +3,19 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+
+    disko = {
+      url = "github:nix-community/disko";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
-    { self, nixpkgs }:
+    {
+      self,
+      nixpkgs,
+      disko,
+    }:
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
@@ -18,8 +27,17 @@
         '';
     in
     {
-      nixosConfigurations.vm-test = nixpkgs.lib.nixosSystem {
-        modules = [ ./hosts/vm-test ];
+      nixosConfigurations = {
+        vm-test = nixpkgs.lib.nixosSystem {
+          modules = [ ./hosts/vm-test ];
+        };
+
+        hephaestus = nixpkgs.lib.nixosSystem {
+          modules = [
+            disko.nixosModules.disko
+            ./hosts/hephaestus
+          ];
+        };
       };
 
       formatter.${system} = pkgs.nixfmt-tree;
