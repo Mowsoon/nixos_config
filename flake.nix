@@ -9,6 +9,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    lanzaboote = {
+      url = "github:nix-community/lanzaboote/v1.2.0";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     impermanence = {
       url = "github:nix-community/impermanence";
       inputs = {
@@ -24,6 +29,7 @@
       nixpkgs,
       disko,
       impermanence,
+      lanzaboote,
     }:
     let
       system = "x86_64-linux";
@@ -45,6 +51,7 @@
           modules = [
             disko.nixosModules.disko
             impermanence.nixosModules.impermanence
+            lanzaboote.nixosModules.lanzaboote
             ./hosts/hephaestus
           ];
         };
