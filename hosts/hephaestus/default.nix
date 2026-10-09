@@ -58,6 +58,12 @@ in
 
   fileSystems = earlyMounts;
 
+  services.btrfs.autoScrub = {
+    enable = true;
+    interval = "monthly";
+    fileSystems = [ "/nix" ];
+  };
+
   security.sudo.extraConfig = "Defaults lecture = never";
 
   zramSwap = {
