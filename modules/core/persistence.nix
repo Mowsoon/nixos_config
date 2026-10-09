@@ -11,6 +11,12 @@ in
       example = "/persist";
       description = "Mount point of the persistent subvolume that holds the state.";
     };
+
+    directories = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Extra directories to persist, contributed by the modules that own them.";
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -19,7 +25,8 @@ in
       directories = [
         "/var/lib/nixos"
         "/var/lib/systemd"
-      ];
+      ]
+      ++ cfg.directories;
       files = [ "/etc/machine-id" ];
     };
   };

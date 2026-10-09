@@ -17,6 +17,7 @@ in
     ../../modules/core/root-rollback.nix
     ../../modules/core/persistence.nix
     ../../modules/core/snapshots.nix
+    ../../modules/security/secure-boot.nix
   ];
 
   nixpkgs.hostPlatform = "x86_64-linux";
@@ -28,13 +29,9 @@ in
     "flakes"
   ];
 
-  boot = {
-    initrd.systemd.enable = true;
-    loader.systemd-boot = {
-      enable = true;
-      configurationLimit = 10;
-    };
-  };
+  boot.initrd.systemd.enable = true;
+
+  custom.secureBoot.enable = true;
 
   custom = {
     rootRollback = {
@@ -87,17 +84,40 @@ in
   };
 
   virtualisation.vmVariantWithDisko = {
-    disko.imageBuilder.pkgs = pkgs.extend (
-      _: prev: {
-        vmTools = prev.vmTools.override {
-          kernelImage = prev.linux.target;
+    disko = {
+      tests.efi = true;
+      imageBuilder = {
+        copyNixStore = lib.mkForce true;
+        pkgs = pkgs.extend (
+          _: prev: {
+            vmTools = prev.vmTools.override {
+              kernelImage = prev.linux.target;
+            };
+          }
+        );
+      };
+      devices.disk.main = {
+        imageSize = "16G";
+        content.partitions.luks.content.content.subvolumes."@swap".swap.swapfile.size = lib.mkForce "1G";
+      };
+    };
+    boot = {
+      kernelParams = [
+        "console=tty0"
+        "console=ttyS0,115200n8"
+      ];
+      initrd.systemd.emergencyAccess = true;
+      lanzaboote = {
+        autoGenerateKeys.enable = true;
+        autoEnrollKeys = {
+          enable = true;
+          autoReboot = true;
         };
-      }
-    );
-    boot.initrd.systemd.emergencyAccess = true;
-    disko.devices.disk.main = {
-      imageSize = "8G";
-      content.partitions.luks.content.content.subvolumes."@swap".swap.swapfile.size = lib.mkForce "1G";
+      };
+    };
+    systemd = {
+      services.generate-sb-keys.unitConfig.RequiresMountsFor = [ "/var/lib/sbctl" ];
+      sleep.settings.Sleep.HibernateMode = "reboot";
     };
     users.users.mowsoon = {
       hashedPasswordFile = lib.mkForce null;
@@ -110,6 +130,12 @@ in
       }
     ];
     virtualisation = {
+      useBootLoader = true;
+      useEFIBoot = true;
+      bootPartition = null;
+      efi.keepVariables = false;
+      writableStore = false;
+      sharedDirectories = lib.mkForce { };
       fileSystems = earlyMounts;
       memorySize = 4096;
       cores = 4;
