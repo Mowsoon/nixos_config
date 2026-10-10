@@ -5,6 +5,9 @@
     inputs.nixos-hardware.nixosModules.common-gpu-nvidia-nonprime
     inputs.nixos-hardware.nixosModules.common-pc-laptop
     ../../modules/hardware/nvidia.nix
+    ../../modules/hardware/asus.nix
+    ../../modules/hardware/audio.nix
+    ../../modules/hardware/peripherals.nix
   ];
 
   boot = {
@@ -21,5 +24,11 @@
 
   services.power-profiles-daemon.enable = true;
 
-  custom.nvidia.enable = true;
+  custom = {
+    nvidia.enable = true;
+    asus.enable = true;
+    audio.enable = true;
+    peripherals.enable = true;
+    persistence.directories = [ "/var/lib/power-profiles-daemon" ];
+  };
 }
