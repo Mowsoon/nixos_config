@@ -4,6 +4,7 @@
     ../../modules/network/dns.nix
     ../../modules/network/firewall.nix
     ../../modules/network/tuning.nix
+    ../../modules/network/opensnitch.nix
   ];
 
   custom.network = {
@@ -11,5 +12,6 @@
     dns.enable = true;
     firewall.enable = true;
     tuning.enable = true;
+    opensnitch.enable = true;
   };
 }

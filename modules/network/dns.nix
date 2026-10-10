@@ -26,5 +26,8 @@ in
     };
 
     networking.networkmanager.connectionConfig."connection.dns-over-tls" = 0;
+
+    custom.network.opensnitch.allowedExecutables.systemd-resolved =
+      "${config.systemd.package}/lib/systemd/systemd-resolved";
   };
 }
