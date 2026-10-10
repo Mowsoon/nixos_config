@@ -13,16 +13,19 @@ in
       wifi.backend = "iwd";
     };
 
-    custom.persistence.directories = [
-      {
-        directory = "/etc/NetworkManager/system-connections";
-        mode = "0700";
-      }
-      "/var/lib/NetworkManager"
-      {
-        directory = "/var/lib/iwd";
-        mode = "0700";
-      }
-    ];
+    custom = {
+      network.opensnitch.allowedExecutables.NetworkManager = "${config.networking.networkmanager.package}/bin/NetworkManager";
+      persistence.directories = [
+        {
+          directory = "/etc/NetworkManager/system-connections";
+          mode = "0700";
+        }
+        "/var/lib/NetworkManager"
+        {
+          directory = "/var/lib/iwd";
+          mode = "0700";
+        }
+      ];
+    };
   };
 }
