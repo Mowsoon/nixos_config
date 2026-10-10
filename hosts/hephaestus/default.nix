@@ -20,6 +20,7 @@ in
     ../../modules/core/root-rollback.nix
     ../../modules/core/persistence.nix
     ../../modules/core/snapshots.nix
+    ../../modules/core/windows-volume.nix
     ../../modules/security/secure-boot.nix
     ../../modules/security/luks.nix
     ../../modules/security/hardening.nix
@@ -59,6 +60,12 @@ in
         home = "/home";
         persist = "/persist";
       };
+    };
+
+    windowsVolume = {
+      enable = true;
+      device = "/dev/disk/by-partuuid/9264c24b-c270-4c96-8529-11d2a0ea9dc8";
+      diskSerial = "23362V407993";
     };
   };
 
@@ -113,6 +120,11 @@ in
     custom = {
       nvidia.enable = lib.mkForce false;
       asus.enable = lib.mkForce false;
+      windowsVolume = {
+        device = lib.mkForce "/dev/disk/by-id/virtio-windows-test";
+        type = "luks";
+        diskSerial = lib.mkForce "windows-test";
+      };
     };
     boot = {
       kernelParams = [
@@ -151,6 +163,12 @@ in
       writableStore = false;
       sharedDirectories = lib.mkForce { };
       fileSystems = earlyMounts;
+      emptyDiskImages = [
+        {
+          size = 512;
+          driveConfig.deviceExtraOpts.serial = "windows-test";
+        }
+      ];
       memorySize = 4096;
       cores = 4;
       graphics = false;
