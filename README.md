@@ -53,4 +53,5 @@ The machine reaches a login prompt in the terminal. Press `Ctrl+A` then `X` to s
 | `nix fmt` | Formats every Nix file with `nixfmt` |
 | `nix flake check` | Runs `nixfmt --check`, `statix`, `deadnix` and evaluates every host |
 | `nix develop` | Opens a shell with `nixfmt-tree`, `statix`, `deadnix` and `mkpasswd` |
+| `nix run .#hephaestus-vm` | Builds the `hephaestus` disko VM and boots it from a blank firmware and TPM |
 | `nix flake update` | Moves `flake.lock` to the latest `nixos-unstable` revision |

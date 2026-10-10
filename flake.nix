@@ -57,6 +57,20 @@
         };
       };
 
+      apps.${system}.hephaestus-vm = {
+        type = "app";
+        meta.description = "Boot the hephaestus disko VM from a blank firmware and TPM";
+        program = nixpkgs.lib.getExe (
+          pkgs.writeShellApplication {
+            name = "hephaestus-vm";
+            text = ''
+              rm -rf hephaestus-efi-vars.fd hephaestus-swtpm
+              exec ${self.nixosConfigurations.hephaestus.config.system.build.vmWithDisko}/bin/disko-vm "$@"
+            '';
+          }
+        );
+      };
+
       formatter.${system} = pkgs.nixfmt-tree;
 
       checks.${system} = {

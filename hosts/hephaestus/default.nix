@@ -19,6 +19,7 @@ in
     ../../modules/core/snapshots.nix
     ../../modules/security/secure-boot.nix
     ../../modules/security/luks.nix
+    ../../modules/security/hardening.nix
   ];
 
   nixpkgs.hostPlatform = "x86_64-linux";
@@ -36,6 +37,8 @@ in
     secureBoot.enable = true;
 
     luks.tpm2Unlock = true;
+
+    hardening.enable = true;
 
     rootRollback = {
       enable = true;
