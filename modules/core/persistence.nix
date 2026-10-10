@@ -13,7 +13,7 @@ in
     };
 
     directories = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
+      type = lib.types.listOf (lib.types.either lib.types.str lib.types.attrs);
       default = [ ];
       description = "Extra directories to persist, contributed by the modules that own them.";
     };

@@ -15,6 +15,7 @@ in
   imports = [
     ./disko.nix
     ./hardware.nix
+    ./network.nix
     ../../modules/core/unfree.nix
     ../../modules/core/root-rollback.nix
     ../../modules/core/persistence.nix
