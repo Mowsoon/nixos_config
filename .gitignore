@@ -3,3 +3,4 @@ result-*
 *.qcow2
 /inventory/
 *-efi-vars.fd
+*-swtpm/

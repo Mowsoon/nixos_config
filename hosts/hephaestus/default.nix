@@ -18,6 +18,7 @@ in
     ../../modules/core/persistence.nix
     ../../modules/core/snapshots.nix
     ../../modules/security/secure-boot.nix
+    ../../modules/security/luks.nix
   ];
 
   nixpkgs.hostPlatform = "x86_64-linux";
@@ -31,9 +32,11 @@ in
 
   boot.initrd.systemd.enable = true;
 
-  custom.secureBoot.enable = true;
-
   custom = {
+    secureBoot.enable = true;
+
+    luks.tpm2Unlock = true;
+
     rootRollback = {
       enable = true;
       device = "/dev/mapper/cryptroot";
@@ -130,6 +133,7 @@ in
       }
     ];
     virtualisation = {
+      tpm.enable = true;
       useBootLoader = true;
       useEFIBoot = true;
       bootPartition = null;
