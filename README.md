@@ -11,7 +11,9 @@ The repository is a Nix flake pinned to `nixos-unstable`. Each machine is a host
 | Host | Role |
 | --- | --- |
 | `vm-test` | Disposable QEMU machine used to validate the configuration |
-| `hephaestus` | Physical workstation, added once declarative partitioning lands |
+| `hephaestus` | Physical workstation, tested through its `vmWithDisko` variant |
+
+Procedures run by hand on the workstation are documented under [docs](docs/README.md).
 
 ## Getting started
 
