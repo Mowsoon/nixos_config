@@ -14,6 +14,8 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    nixos-hardware.url = "github:NixOS/nixos-hardware";
+
     impermanence = {
       url = "github:nix-community/impermanence";
       inputs = {
@@ -24,12 +26,13 @@
   };
 
   outputs =
-    {
+    inputs@{
       self,
       nixpkgs,
       disko,
       impermanence,
       lanzaboote,
+      ...
     }:
     let
       system = "x86_64-linux";
@@ -48,6 +51,7 @@
         };
 
         hephaestus = nixpkgs.lib.nixosSystem {
+          specialArgs = { inherit inputs; };
           modules = [
             disko.nixosModules.disko
             impermanence.nixosModules.impermanence

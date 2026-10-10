@@ -14,6 +14,8 @@ in
 {
   imports = [
     ./disko.nix
+    ./hardware.nix
+    ../../modules/core/unfree.nix
     ../../modules/core/root-rollback.nix
     ../../modules/core/persistence.nix
     ../../modules/core/snapshots.nix
@@ -107,6 +109,7 @@ in
         content.partitions.luks.content.content.subvolumes."@swap".swap.swapfile.size = lib.mkForce "1G";
       };
     };
+    custom.nvidia.enable = lib.mkForce false;
     boot = {
       kernelParams = [
         "console=tty0"
