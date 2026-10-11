@@ -3,6 +3,7 @@
     ./shell.nix
     ./git.nix
     ./packages.nix
+    ./audio.nix
     ./editor/nixvim.nix
   ];
 
