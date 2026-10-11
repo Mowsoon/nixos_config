@@ -7,6 +7,8 @@
     ../../modules/network/opensnitch.nix
   ];
 
+  programs.mtr.enable = true;
+
   custom.network = {
     manager.enable = true;
     dns.enable = true;
