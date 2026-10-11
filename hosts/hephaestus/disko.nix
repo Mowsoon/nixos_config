@@ -50,6 +50,7 @@ in
                 "@log" = mkSubvolume "/var/log";
                 "@home" = mkSubvolume "/home";
                 "@home/.snapshots" = { };
+                "@docker" = mkSubvolume "/var/lib/docker";
                 "@swap" = {
                   mountpoint = "/swap";
                   mountOptions = [ "noatime" ];

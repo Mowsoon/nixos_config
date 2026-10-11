@@ -22,6 +22,7 @@ in
     ../../modules/core/persistence.nix
     ../../modules/core/snapshots.nix
     ../../modules/core/windows-volume.nix
+    ../../modules/virtualisation/docker.nix
     ../../modules/security/secure-boot.nix
     ../../modules/security/luks.nix
     ../../modules/security/hardening.nix
@@ -44,6 +45,8 @@ in
     luks.tpm2Unlock = true;
 
     hardening.enable = true;
+
+    docker.enable = true;
 
     rootRollback = {
       enable = true;

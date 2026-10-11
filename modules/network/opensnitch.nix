@@ -51,6 +51,16 @@ let
       inherit data;
     }
   ) cfg.allowedExecutables;
+
+  patternRules = lib.mapAttrsToList (
+    name: data:
+    allowRule {
+      name = "match-${name}";
+      operand = "process.path";
+      type = "regexp";
+      inherit data;
+    }
+  ) cfg.allowedExecutablePatterns;
 in
 {
   options.custom.network.opensnitch = {
@@ -60,6 +70,12 @@ in
       type = lib.types.attrsOf lib.types.str;
       default = { };
       description = "Executables allowed to open outbound connections, contributed by the modules that own them.";
+    };
+
+    allowedExecutablePatterns = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+      description = "Regular expressions on executable paths, for programs whose real binary sits behind a wrapper the package does not expose.";
     };
   };
 
@@ -71,7 +87,7 @@ in
         DefaultDuration = "once";
         InterceptUnknown = false;
       };
-      rules = lib.listToAttrs (baseRules ++ executableRules);
+      rules = lib.listToAttrs (baseRules ++ executableRules ++ patternRules);
     };
 
     custom = {
