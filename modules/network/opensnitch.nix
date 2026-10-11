@@ -21,7 +21,7 @@ let
       };
     };
 
-  loopbackRules = [
+  baseRules = [
     (allowRule {
       name = "000-allow-loopback";
       operand = "dest.network";
@@ -34,6 +34,12 @@ let
       operand = "dest.ip";
       data = "::1";
       precedence = true;
+    })
+    (allowRule {
+      name = "allow-nix-builders";
+      operand = "user.id";
+      data = "^300[0-9]{2}$";
+      type = "regexp";
     })
   ];
 
@@ -65,7 +71,7 @@ in
         DefaultDuration = "once";
         InterceptUnknown = false;
       };
-      rules = lib.listToAttrs (loopbackRules ++ executableRules);
+      rules = lib.listToAttrs (baseRules ++ executableRules);
     };
 
     custom = {
