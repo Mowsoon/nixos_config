@@ -14,6 +14,7 @@
   home-manager = {
     useGlobalPkgs = true;
     useUserPackages = true;
+    sharedModules = [ inputs.nixvim.homeModules.nixvim ];
     users.mowsoon.imports = [ ../../home/mowsoon ];
   };
 }
