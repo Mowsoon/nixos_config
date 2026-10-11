@@ -11,6 +11,11 @@
 
   users.users.mowsoon.shell = pkgs.zsh;
 
+  custom.unfreePackages = [
+    "terraform"
+    "unrar"
+  ];
+
   home-manager = {
     useGlobalPkgs = true;
     useUserPackages = true;
