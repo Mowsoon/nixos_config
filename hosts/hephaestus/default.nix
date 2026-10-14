@@ -23,6 +23,7 @@ in
     ../../modules/core/snapshots.nix
     ../../modules/core/windows-volume.nix
     ../../modules/virtualisation/docker.nix
+    ../../modules/desktop/claude-desktop.nix
     ../../modules/security/secure-boot.nix
     ../../modules/security/luks.nix
     ../../modules/security/hardening.nix
@@ -47,6 +48,8 @@ in
     hardening.enable = true;
 
     docker.enable = true;
+
+    claudeDesktop.enable = true;
 
     rootRollback = {
       enable = true;
