@@ -24,6 +24,7 @@ in
     ../../modules/core/windows-volume.nix
     ../../modules/virtualisation/docker.nix
     ../../modules/desktop/claude-desktop.nix
+    ../../modules/desktop/plasma.nix
     ../../modules/security/secure-boot.nix
     ../../modules/security/luks.nix
     ../../modules/security/hardening.nix
@@ -50,6 +51,8 @@ in
     docker.enable = true;
 
     claudeDesktop.enable = true;
+
+    plasma.enable = true;
 
     rootRollback = {
       enable = true;
@@ -120,7 +123,7 @@ in
         );
       };
       devices.disk.main = {
-        imageSize = "16G";
+        imageSize = "32G";
         content.partitions.luks.content.content.subvolumes."@swap".swap.swapfile.size = lib.mkForce "1G";
       };
     };
@@ -176,9 +179,10 @@ in
           driveConfig.deviceExtraOpts.serial = "windows-test";
         }
       ];
-      memorySize = 4096;
+      memorySize = 8192;
       cores = 4;
-      graphics = false;
+      graphics = true;
+      qemu.options = [ "-cpu host" ];
     };
   };
 

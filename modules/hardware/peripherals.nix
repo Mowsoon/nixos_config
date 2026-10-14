@@ -8,7 +8,10 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    hardware.bluetooth.enable = true;
+    hardware = {
+      bluetooth.enable = true;
+      logitech.wireless.enable = true;
+    };
 
     services.input-remapper.enable = true;
 

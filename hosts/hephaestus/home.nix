@@ -12,6 +12,9 @@
   users.users.mowsoon.shell = pkgs.zsh;
 
   custom.unfreePackages = [
+    "discord"
+    "discord-unwrapped"
+    "spotify"
     "terraform"
     "unrar"
   ];

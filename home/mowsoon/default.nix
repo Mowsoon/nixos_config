@@ -4,6 +4,7 @@
     ./git.nix
     ./packages.nix
     ./audio.nix
+    ./desktop.nix
     ./editor/nixvim.nix
   ];
 
