@@ -47,6 +47,12 @@
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
+      hephaestusModules = [
+        disko.nixosModules.disko
+        impermanence.nixosModules.impermanence
+        lanzaboote.nixosModules.lanzaboote
+        ./hosts/hephaestus
+      ];
       runLint =
         name: tool: command:
         pkgs.runCommand "${name}-check" { nativeBuildInputs = [ tool ]; } ''
@@ -62,12 +68,12 @@
 
         hephaestus = nixpkgs.lib.nixosSystem {
           specialArgs = { inherit inputs; };
-          modules = [
-            disko.nixosModules.disko
-            impermanence.nixosModules.impermanence
-            lanzaboote.nixosModules.lanzaboote
-            ./hosts/hephaestus
-          ];
+          modules = hephaestusModules;
+        };
+
+        hephaestus-rehearsal = nixpkgs.lib.nixosSystem {
+          specialArgs = { inherit inputs; };
+          modules = hephaestusModules ++ [ ./hosts/hephaestus/rehearsal.nix ];
         };
 
         installer = nixpkgs.lib.nixosSystem {
@@ -76,18 +82,30 @@
         };
       };
 
-      apps.${system}.hephaestus-vm = {
-        type = "app";
-        meta.description = "Boot the hephaestus disko VM from a blank firmware and TPM";
-        program = nixpkgs.lib.getExe (
-          pkgs.writeShellApplication {
-            name = "hephaestus-vm";
-            text = ''
-              rm -rf hephaestus-efi-vars.fd hephaestus-swtpm
-              exec ${self.nixosConfigurations.hephaestus.config.system.build.vmWithDisko}/bin/disko-vm "$@"
-            '';
-          }
-        );
+      apps.${system} = {
+        hephaestus-vm = {
+          type = "app";
+          meta.description = "Boot the hephaestus disko VM from a blank firmware and TPM";
+          program = nixpkgs.lib.getExe (
+            pkgs.writeShellApplication {
+              name = "hephaestus-vm";
+              text = ''
+                rm -rf hephaestus-efi-vars.fd hephaestus-swtpm
+                exec ${self.nixosConfigurations.hephaestus.config.system.build.vmWithDisko}/bin/disko-vm "$@"
+              '';
+            }
+          );
+        };
+
+        rehearsal = {
+          type = "app";
+          meta.description = "Boot the installer ISO against a blank NVMe disk, Secure Boot firmware in setup mode and a TPM";
+          program = nixpkgs.lib.getExe (
+            pkgs.callPackage ./tools/rehearsal.nix {
+              iso = self.nixosConfigurations.installer.config.system.build.isoImage;
+            }
+          );
+        };
       };
 
       formatter.${system} = pkgs.nixfmt-tree;

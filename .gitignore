@@ -4,3 +4,4 @@ result-*
 /inventory/
 *-efi-vars.fd
 *-swtpm/
+/rehearsal/
