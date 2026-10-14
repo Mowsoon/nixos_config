@@ -16,6 +16,8 @@ in
   config = lib.mkIf cfg.enable {
     environment.systemPackages = [ package ];
 
+    programs.nix-ld.enable = true;
+
     systemd.tmpfiles.settings.claude-desktop = {
       "/usr/share/OVMF/OVMF_CODE_4M.fd"."L+".argument = "${pkgs.OVMF.fd}/FV/OVMF_CODE.fd";
       "/usr/share/OVMF/OVMF_VARS_4M.fd"."L+".argument = "${pkgs.OVMF.fd}/FV/OVMF_VARS.fd";
@@ -24,7 +26,10 @@ in
 
     custom = {
       unfreePackages = [ "claude-desktop" ];
-      network.opensnitch.allowedExecutables.claude-desktop = "${package}/lib/claude-desktop/claude-desktop";
+      network.opensnitch = {
+        allowedExecutables.claude-desktop = "${package}/lib/claude-desktop/claude-desktop";
+        allowedExecutablePatterns.claude-code = "^/home/[^/]+/\\.config/Claude/claude-code/[0-9.]+/[0-9a-f]+/claude$";
+      };
     };
   };
 }
