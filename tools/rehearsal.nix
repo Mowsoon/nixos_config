@@ -58,9 +58,9 @@ writeShellApplication {
       printf '[connection]\nid=rehearsal-wired\ntype=ethernet\n' \
         > "$stage/etc/NetworkManager/system-connections/rehearsal-wired.nmconnection"
 
-      mkdir -p "$stage/home/alban/.ssh" "$stage/home/alban/.config/nixos"
-      ssh-keygen -q -t ed25519 -N "" -C rehearsal -f "$stage/home/alban/.ssh/id_ed25519"
-      git -C "$repo" archive HEAD | tar -x -C "$stage/home/alban/.config/nixos"
+      mkdir -p "$stage/home/$USER/.ssh" "$stage/home/$USER/.config/nixos"
+      ssh-keygen -q -t ed25519 -N "" -C rehearsal -f "$stage/home/$USER/.ssh/id_ed25519"
+      git -C "$repo" archive HEAD | tar -x -C "$stage/home/$USER/.config/nixos"
 
       echo "Choose a test passphrase for the rehearsal archive."
       tar --create --zstd --xattrs --acls --file=- -C "$stage" var etc home \
