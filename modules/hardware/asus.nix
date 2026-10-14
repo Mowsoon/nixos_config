@@ -10,6 +10,8 @@ in
   config = lib.mkIf cfg.enable {
     services.asusd.enable = true;
 
+    programs.rog-control-center.enable = true;
+
     custom.persistence.directories = [ "/etc/asusd" ];
   };
 }
