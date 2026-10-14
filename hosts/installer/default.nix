@@ -1,0 +1,26 @@
+{
+  inputs,
+  modulesPath,
+  pkgs,
+  ...
+}:
+{
+  imports = [ "${modulesPath}/installer/cd-dvd/installation-cd-minimal.nix" ];
+
+  nixpkgs.hostPlatform = "x86_64-linux";
+
+  nix.settings.experimental-features = [
+    "nix-command"
+    "flakes"
+  ];
+
+  console.keyMap = "fr";
+
+  environment.systemPackages = with pkgs; [
+    age
+    git
+    mkpasswd
+    sbctl
+    inputs.disko.packages.${pkgs.stdenv.hostPlatform.system}.disko
+  ];
+}

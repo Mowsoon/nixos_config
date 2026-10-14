@@ -69,6 +69,11 @@
             ./hosts/hephaestus
           ];
         };
+
+        installer = nixpkgs.lib.nixosSystem {
+          specialArgs = { inherit inputs; };
+          modules = [ ./hosts/installer ];
+        };
       };
 
       apps.${system}.hephaestus-vm = {
