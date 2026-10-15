@@ -46,7 +46,7 @@ writeShellApplication {
       stage=$(mktemp -d)
 
       mkdir -p "$stage/var/lib/sbctl/keys"
-      uuidgen > "$stage/var/lib/sbctl/GUID"
+      uuidgen | tr -d '\n' > "$stage/var/lib/sbctl/GUID"
       for key in PK KEK db; do
         make_test_key "$stage/var/lib/sbctl/keys/$key" "$key"
       done
@@ -96,7 +96,7 @@ writeShellApplication {
       -machine q35,smm=on,accel=kvm \
       -cpu host \
       -smp 4 \
-      -m 8192 \
+      -m 16384 \
       -global driver=cfi.pflash01,property=secure,value=on \
       -drive if=pflash,format=raw,unit=0,readonly=on,file=${OVMFFull.fd}/FV/OVMF_CODE.fd \
       -drive if=pflash,format=raw,unit=1,file="$state/efi-vars.fd" \
