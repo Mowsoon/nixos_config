@@ -178,14 +178,14 @@ installation. Rollback path: none for Arch; the state worth keeping is in the ar
 10. Register the boot entry, then delete the entry left by Arch.
 
     ```bash
-    efibootmgr --create --disk <target-disk> --part 1 --label "Linux Boot Manager" --loader '\EFI\systemd\systemd-bootx64.efi'
+    efibootmgr --create --disk /dev/disk/by-id/<target-disk> --part 1 --label "Linux Boot Manager" --loader '\EFI\systemd\systemd-bootx64.efi'
     efibootmgr
     efibootmgr --bootnum <stale-entry> --delete-bootnum
     ```
 
-    `<target-disk>` is the by-id path of the Samsung 990 PRO from step 3. `<stale-entry>` is the
-    four-digit number of the Arch entry shown by `efibootmgr`, distinct from the new entry and
-    from `Windows Boot Manager`.
+    `<target-disk>` is the by-id link name of the Samsung 990 PRO shown at step 3. `<stale-entry>`
+    is the four-digit number of the Arch entry shown by `efibootmgr`, distinct from the new entry
+    and from `Windows Boot Manager`.
 
 11. Unmount everything, remove the USB key and reboot.
 
@@ -245,12 +245,14 @@ installation. Rollback path: none for Arch; the state worth keeping is in the ar
 
 3. Follow [How to install the system](#how-to-install-the-system) with the substitutions listed in
    the reference below.
-4. Follow [How to complete the first boot](#how-to-complete-the-first-boot) without steps 5 and 8.
-   Before step 4, enroll the test keys. The rehearsal firmware enables Secure Boot by itself on
-   the next boot, so step 4 reduces to the verification.
+4. Follow [How to complete the first boot](#how-to-complete-the-first-boot) without steps 5, 6
+   and 8. Step 6 is covered by the `hephaestus-vm` machine. Before step 4, enroll the test keys.
+   The rehearsal firmware enables Secure Boot by itself on the next boot, so step 4 reduces to a
+   reboot followed by the verification.
 
    ```bash
    sudo sbctl enroll-keys --microsoft
+   sudo reboot
    ```
 
 5. Run only the hardware checks marked as applicable to the rehearsal.
@@ -273,7 +275,7 @@ installation. Rollback path: none for Arch; the state worth keeping is in the ar
 | Item | Workstation | Rehearsal |
 | --- | --- | --- |
 | Target disk model and serial | Samsung 990 PRO | `QEMU NVMe Ctrl`, serial `rehearsal` |
-| Target disk by-id path | `nvme-Samsung_SSD_990_PRO_1TB_<serial>` | `nvme-QEMU_NVMe_Ctrl_rehearsal` |
+| Target disk by-id link name | `nvme-Samsung_SSD_990_PRO_1TB_<serial>` | `nvme-QEMU_NVMe_Ctrl_rehearsal` |
 | Flake output | `#hephaestus` | `#hephaestus-rehearsal` |
 | T7 device | `/dev/sda1`, exFAT partition | `/dev/sda`, FAT image without a partition table |
 | Archive file | `arch-backup-<date>.tar.zst.age` | `arch-backup-rehearsal.tar.zst.age` |
@@ -292,11 +294,21 @@ installation. Rollback path: none for Arch; the state worth keeping is in the ar
 | BitLocker volume opens read-only | `sudo systemctl start mnt-windows.mount` | No |
 | GPU inside a container | `sudo docker run --rm --device nvidia.com/gpu=all ubuntu nvidia-smi` | No |
 | Hibernation resumes the session | `systemctl hibernate` | No |
-| Nix fixed-output builds pass OpenSnitch | Build a derivation absent from the binary cache | Yes |
+| Nix fixed-output builds pass OpenSnitch | See the command below the table | Yes |
 | No boot entry targets the Windows disk | `sudo bootctl list` | Yes |
-| Firmware boots the registered entry | `efibootmgr` shows `Linux Boot Manager` first in `BootOrder` | Yes |
+| Firmware boots the registered entry | `sudo bootctl status` lists `Linux Boot Manager` as `active, boot-order` | Yes |
 | Initrd modules match the hardware scan | `sudo nixos-generate-config --show-hardware-config` | Yes |
 | PCR set chosen from the recorded measurements | Compare the files in `inventory/` | No |
 
 `nixos-generate-config` prints one `ERROR: Not a Btrfs subvolume` line per impermanence bind
 mount before the configuration. These lines are expected.
+
+The fixed-output build check downloads a page with a deliberately wrong hash, so the build always
+runs instead of reusing a cached result.
+
+```bash
+nix build --impure --expr 'let pkgs = (builtins.getFlake "nixpkgs").legacyPackages.x86_64-linux; in pkgs.fetchurl { url = "https://example.com"; hash = pkgs.lib.fakeHash; }'
+```
+
+A `hash mismatch in fixed-output derivation` error proves that the download went through. A
+`Could not resolve host` error means that OpenSnitch blocked the builder.
