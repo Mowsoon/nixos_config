@@ -16,8 +16,11 @@
 
   console.keyMap = "fr";
 
+  zramSwap.enable = true;
+
   environment.systemPackages = with pkgs; [
     age
+    efibootmgr
     git
     mkpasswd
     sbctl
