@@ -5,6 +5,7 @@
     ../../modules/network/firewall.nix
     ../../modules/network/tuning.nix
     ../../modules/network/opensnitch.nix
+    ../../modules/network/time.nix
   ];
 
   programs.mtr.enable = true;
@@ -15,5 +16,6 @@
     firewall.enable = true;
     tuning.enable = true;
     opensnitch.enable = true;
+    time.enable = true;
   };
 }
