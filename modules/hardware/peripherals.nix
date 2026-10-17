@@ -9,7 +9,10 @@ in
 
   config = lib.mkIf cfg.enable {
     hardware = {
-      bluetooth.enable = true;
+      bluetooth = {
+        enable = true;
+        settings.General.Experimental = true;
+      };
       logitech.wireless.enable = true;
     };
 
