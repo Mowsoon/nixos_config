@@ -23,6 +23,8 @@ in
     ../../modules/core/persistence.nix
     ../../modules/core/snapshots.nix
     ../../modules/core/windows-volume.nix
+    ../../modules/core/nix-maintenance.nix
+    ../../modules/core/memory.nix
     ../../modules/virtualisation/docker.nix
     ../../modules/desktop/claude-desktop.nix
     ../../modules/desktop/plasma.nix
@@ -40,7 +42,10 @@ in
     "flakes"
   ];
 
-  boot.initrd.systemd.enable = true;
+  boot = {
+    initrd.systemd.enable = true;
+    loader.timeout = 1;
+  };
 
   custom = {
     secureBoot.enable = true;
@@ -54,6 +59,10 @@ in
     claudeDesktop.enable = true;
 
     plasma.enable = true;
+
+    nixMaintenance.enable = true;
+
+    memory.enable = true;
 
     rootRollback = {
       enable = true;
@@ -90,16 +99,16 @@ in
 
   security.sudo.extraConfig = "Defaults lecture = never";
 
-  zramSwap = {
-    enable = true;
-    algorithm = "zstd";
-    memoryPercent = 50;
-    priority = 100;
-  };
-
   console.keyMap = "fr";
   time.timeZone = "Europe/Dublin";
-  i18n.defaultLocale = "en_US.UTF-8";
+  i18n = {
+    defaultLocale = "en_US.UTF-8";
+    extraLocaleSettings = {
+      LC_TIME = "en_IE.UTF-8";
+      LC_PAPER = "en_IE.UTF-8";
+      LC_MEASUREMENT = "en_IE.UTF-8";
+    };
+  };
 
   users = {
     mutableUsers = false;
