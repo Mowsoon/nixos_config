@@ -8,9 +8,12 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    networking.networkmanager = {
-      enable = true;
-      wifi.backend = "iwd";
+    networking = {
+      networkmanager = {
+        enable = true;
+        wifi.backend = "iwd";
+      };
+      wireless.iwd.settings.General.AddressRandomization = "network";
     };
 
     custom = {
