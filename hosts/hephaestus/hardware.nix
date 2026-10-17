@@ -8,6 +8,8 @@
     ../../modules/hardware/asus.nix
     ../../modules/hardware/audio.nix
     ../../modules/hardware/peripherals.nix
+    ../../modules/hardware/power.nix
+    ../../modules/hardware/disk-health.nix
   ];
 
   boot = {
@@ -22,8 +24,6 @@
 
   hardware.enableRedistributableFirmware = true;
 
-  services.power-profiles-daemon.enable = true;
-
   custom = {
     nvidia.enable = true;
     asus = {
@@ -32,6 +32,7 @@
     };
     audio.enable = true;
     peripherals.enable = true;
-    persistence.directories = [ "/var/lib/power-profiles-daemon" ];
+    power.enable = true;
+    diskHealth.enable = true;
   };
 }
