@@ -26,7 +26,10 @@
 
   custom = {
     nvidia.enable = true;
-    asus.enable = true;
+    asus = {
+      enable = true;
+      chargeLimit = 80;
+    };
     audio.enable = true;
     peripherals.enable = true;
     persistence.directories = [ "/var/lib/power-profiles-daemon" ];
