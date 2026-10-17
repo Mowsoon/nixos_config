@@ -31,5 +31,16 @@ in
     ];
 
     programs.firefox.enable = true;
+    custom.network.opensnitch = {
+      allowedExecutables = {
+        firefox = "${config.programs.firefox.finalPackage}/lib/firefox/firefox";
+        kioworker = "${pkgs.kdePackages.kio}/libexec/kf6/.kioworker-wrapped";
+        plasmashell = "${pkgs.kdePackages.plasma-workspace}/bin/.plasmashell-wrapped";
+      }
+      // lib.optionalAttrs config.services.fwupd.enable {
+        fwupdmgr = "${config.services.fwupd.package}/bin/.fwupdmgr-wrapped";
+      };
+      allowedExecutablePatterns.discover = "^/nix/store/[a-z0-9]{32}-discover-[^/]+/(bin|libexec)/\\.(plasma-discover|DiscoverNotifier)-wrapped$";
+    };
   };
 }

@@ -17,6 +17,7 @@ in
     ./hardware.nix
     ./network.nix
     ./home.nix
+    ./opensnitch.nix
     ../../modules/core/unfree.nix
     ../../modules/core/root-rollback.nix
     ../../modules/core/persistence.nix

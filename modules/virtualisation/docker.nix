@@ -21,6 +21,6 @@ in
     hardware.nvidia-container-toolkit.enable = config.custom.nvidia.enable;
 
     custom.network.opensnitch.allowedExecutablePatterns.dockerd =
-      "^/nix/store/[a-z0-9]{32}-moby-[^/]+/libexec/docker/dockerd$";
+      "^/nix/store/[a-z0-9]{32}-moby-[^/]+/libexec/docker/(dockerd|docker-proxy)$";
   };
 }

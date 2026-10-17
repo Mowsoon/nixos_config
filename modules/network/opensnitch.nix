@@ -91,11 +91,11 @@ in
     };
 
     custom = {
-      network.opensnitch.allowedExecutables = {
-        nix = lib.getExe config.nix.package;
-      }
-      // lib.optionalAttrs config.services.timesyncd.enable {
-        systemd-timesyncd = "${config.systemd.package}/lib/systemd/systemd-timesyncd";
+      network.opensnitch = {
+        allowedExecutables = lib.optionalAttrs config.services.timesyncd.enable {
+          systemd-timesyncd = "${config.systemd.package}/lib/systemd/systemd-timesyncd";
+        };
+        allowedExecutablePatterns.nix = "^/nix/store/[a-z0-9]{32}-nix-[0-9][^/]*/bin/nix$";
       };
       persistence.directories = [ "/var/lib/opensnitch" ];
     };
