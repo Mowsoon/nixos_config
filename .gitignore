@@ -5,3 +5,4 @@ result-*
 *-efi-vars.fd
 *-swtpm/
 /rehearsal/
+.markdownlint.jsonc
