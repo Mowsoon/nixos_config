@@ -25,7 +25,10 @@ in
         open = true;
         package = config.boot.kernelPackages.nvidiaPackages.stable;
         modesetting.enable = true;
-        powerManagement.enable = true;
+        powerManagement = {
+          enable = true;
+          kernelSuspendNotifier = false;
+        };
         dynamicBoost.enable = true;
       };
     };
