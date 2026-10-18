@@ -1,8 +1,8 @@
 # nixos_config
 
-Declarative NixOS configuration that replaces the Arch Linux installation on the second boot entry
-of a dual-boot workstation. Every change is validated in a QEMU virtual machine before it reaches
-the physical host.
+Declarative NixOS configuration of a dual-boot workstation, an ASUS ROG Strix G17 laptop that runs
+Windows on a second disk. The configuration replaced an Arch Linux installation on 2026-10-17.
+Every change is validated in a QEMU virtual machine before it reaches the physical host.
 
 ## Overview
 
@@ -10,10 +10,16 @@ The repository is a Nix flake pinned to `nixos-unstable`. Each machine is a host
 
 | Host | Role |
 | --- | --- |
-| `vm-test` | Disposable QEMU machine used to validate the configuration |
-| `hephaestus` | Physical workstation, tested through its `vmWithDisko` variant |
+| `hephaestus` | Physical workstation, also bootable as a disko VM with its `vmWithDisko` variant |
+| `hephaestus-rehearsal` | `hephaestus` retargeted at the virtual disk of the installation rehearsal |
+| `installer` | Live USB image used to install `hephaestus` |
+| `vm-test` | Disposable QEMU machine used to validate the base configuration |
 
-Procedures run by hand on the workstation are documented under [docs](docs/README.md).
+The system boots through Secure Boot with custom keys, unlocks its encrypted disk with the TPM,
+and erases its root filesystem at every boot: only declared state persists. Outbound traffic is
+filtered per executable and DNS is encrypted. The design of each part is described in
+[docs/architecture](docs/architecture/overview.md); procedures and incidents are indexed in
+[docs](docs/README.md).
 
 ## Getting started
 
@@ -56,4 +62,7 @@ The machine reaches a login prompt in the terminal. Press `Ctrl+A` then `X` to s
 | `nix run .#hephaestus-vm` | Builds the `hephaestus` disko VM and boots it from a blank firmware and TPM |
 | `nix run .#rehearsal` | Boots the installer image against a blank disk to rehearse the installation |
 | `nix build .#nixosConfigurations.installer.config.system.build.isoImage` | Builds the installer image |
+| `sudo nixos-rebuild test --flake .#hephaestus` | Runs a new generation on the workstation until the next reboot |
+| `sudo nixos-rebuild switch --flake .#hephaestus` | Runs a new generation and makes it the boot default |
+| `sudo nixos-rebuild boot --flake .#hephaestus` | Makes a new generation the boot default without running it |
 | `nix flake update` | Moves `flake.lock` to the latest `nixos-unstable` revision |
