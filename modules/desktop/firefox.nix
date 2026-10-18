@@ -17,6 +17,7 @@ let
       "host-3.example"
       "site-3.example"
     ];
+    "site-4.example" = [ "host-4.example" ];
   };
   ublockDefaultRules = [
     "behind-the-scene * * noop"

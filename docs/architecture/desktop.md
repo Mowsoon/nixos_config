@@ -205,6 +205,7 @@ not advertising or tracking are the hosts to allow.
 | Telemetry, studies | Policies | Disabled |
 | Sponsored content | `FirefoxHome`, `FirefoxSuggest` policies | Disabled |
 | Default search engine | `SearchEngines` policy | DuckDuckGo |
+| Hardware video decoding | `media.hardware-video-decoding.force-enabled`, set by `hardware/nvidia.nix` | `true` |
 | Preferences status | `programs.firefox.preferencesStatus` | `locked` |
 
 | Extension | ID | Installation |
