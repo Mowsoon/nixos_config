@@ -68,7 +68,8 @@ swapfile described in [Storage](storage.md) and resumes through the initrd descr
 
 asusd drives the fan curves, the power profiles of the firmware, the keyboard backlight and the
 battery charge limit; ROG Control Center is its graphical front end. Fan curves and profiles
-changed in ROG Control Center are learned state stored in `/etc/asusd`, which is persisted.
+changed in ROG Control Center are learned state stored in `/etc/asusd`, which is persisted. They
+are tuned with the measured procedure in [Fan curve tuning](../operations/fan-curve-tuning.md).
 
 The battery charge limit is declared instead: a oneshot service, `asus-charge-limit`, applies
 `custom.asus.chargeLimit` through `asusctl` at every boot, after asusd starts. The limit is 80 %,
