@@ -27,7 +27,10 @@ in
     custom = {
       unfreePackages = [ "claude-desktop" ];
       network.opensnitch = {
-        allowedExecutables.claude-desktop = "${package}/lib/claude-desktop/claude-desktop";
+        allowedExecutables = {
+          claude-desktop = "${package}/lib/claude-desktop/claude-desktop";
+          claude-desktop-vm = "${pkgs.qemu_kvm}/bin/.qemu-system-x86_64-wrapped";
+        };
         allowedExecutablePatterns.claude-code = "^/home/[^/]+/\\.config/Claude/claude-code/[0-9.]+/[0-9a-f]+/claude$";
       };
     };

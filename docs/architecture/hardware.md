@@ -58,7 +58,9 @@ depends on every driver reaching its low-power state. Two settings bound the bat
 - UPower hibernates the machine when the battery reaches its critical level.
 
 Inside a Plasma session, PowerDevil decides what the lid switch and the power key do; these
-choices live in the Plasma energy settings, not in logind. Hibernation writes the image to the
+choices live in the Plasma energy settings, not in logind. Only the "Standby, then hibernate"
+sleep mode calls `SuspendThenHibernate` and so honours `HibernateDelaySec`; `systemctl suspend` and
+the plain "Standby" mode never hibernate. Hibernation writes the image to the
 swapfile described in [Storage](storage.md) and resumes through the initrd described in
 [Boot chain](boot-chain.md).
 
@@ -155,6 +157,29 @@ an attribute crosses its failure threshold.
    systemd-analyze cat-config systemd/sleep.conf
    ```
 
+## How to test sleep then hibernate without waiting
+
+1. Shorten the delay until the next reboot with a runtime drop-in, which lives in memory.
+
+   ```bash
+   sudo mkdir -p /run/systemd/sleep.conf.d
+   printf '[Sleep]\nHibernateDelaySec=2min\n' | sudo tee /run/systemd/sleep.conf.d/test.conf
+   ```
+
+2. Close the lid for more than 2 minutes, then open it. The machine must go through firmware and
+   LUKS unlock before the session comes back: it resumed from hibernation, not from sleep.
+3. Check the path logind took.
+
+   ```bash
+   journalctl -b -u systemd-suspend-then-hibernate.service --no-pager
+   ```
+
+4. Remove the drop-in, or reboot.
+
+   ```bash
+   sudo rm /run/systemd/sleep.conf.d/test.conf
+   ```
+
 ## How to read the health of a disk
 
 1. Print the SMART data of the Linux disk.
@@ -207,6 +232,18 @@ an attribute crosses its failure threshold.
 | `LIBVA_DRIVER_NAME` | `nvidia` |
 | `NVD_BACKEND` | `direct` |
 | Firefox `media.hardware-video-decoding.force-enabled` | `true` |
+
+### Plasma energy settings
+
+Set by hand in System Settings, Power Management, in the AC, Battery and Low Battery profiles;
+stored in `~/.config/powerdevilrc`.
+
+| Setting | Value | Profiles |
+| --- | --- | --- |
+| When laptop lid closed | Sleep | All |
+| When power button pressed | Show logout screen | All |
+| When sleeping, enter | Standby, then hibernate | All |
+| At critical level | Hibernate | Low Battery |
 
 ### Power settings
 

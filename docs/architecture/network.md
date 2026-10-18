@@ -192,6 +192,7 @@ rule disappears with it.
 | `allow-fwupdmgr` | Only when fwupd is enabled | `desktop/plasma.nix` |
 | `match-discover` | Discover and its notifier | `desktop/plasma.nix` |
 | `allow-claude-desktop` | Claude desktop application | `desktop/claude-desktop.nix` |
+| `allow-claude-desktop-vm` | QEMU of the Cowork virtual machine, whose network goes out through the QEMU process | `desktop/claude-desktop.nix` |
 | `match-claude-code` | Claude Code binary downloaded under `~/.config/Claude` | `desktop/claude-desktop.nix` |
 | `allow-git-remote-http`, `allow-ssh`, `allow-curl`, `allow-wget` | Git transports and download tools | `hosts/hephaestus/opensnitch.nix` |
 | `allow-python3`, `allow-go` | Language toolchains | `hosts/hephaestus/opensnitch.nix` |
