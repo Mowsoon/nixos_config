@@ -28,6 +28,11 @@ management settings are the result of two incidents:
 - `kernelSuspendNotifier = false` keeps those systemd units. With the kernel suspend notifier path
   of driver 595, the machine never powered off after writing a hibernation image
   ([incident](../incidents/hibernation-power-off.md)).
+- The nixpkgs module hooks those units to plain sleep and hibernation only. The NVIDIA module adds
+  the `nvidia-suspend-then-hibernate` unit and installs the driver's `system-sleep` hook, which
+  switches the driver from sleep to hibernation when the hibernation delay expires. Without them,
+  the driver refused "sleep, then hibernate"
+  ([incident](../incidents/suspend-then-hibernate-nvidia.md)).
 - `NVreg_EnableS0ixPowerManagement = 1` makes the driver handle `s2idle` as a low-power idle
   state instead of a full power cut. Without it, the desktop froze after resuming from sleep
   ([incident](../incidents/suspend-resume-freeze.md)).
@@ -194,6 +199,7 @@ an attribute crosses its failure threshold.
 | `hardware.nvidia.modesetting.enable` | `true` |
 | `hardware.nvidia.powerManagement.enable` | `true` |
 | `hardware.nvidia.powerManagement.kernelSuspendNotifier` | `false` |
+| Suspend-then-hibernate unit and hook | `nvidia-suspend-then-hibernate`, `/etc/systemd/system-sleep/nvidia` |
 | `hardware.nvidia.dynamicBoost.enable` | `true` |
 | `NVreg_EnableS0ixPowerManagement` | `1` |
 | `hardware.graphics.enable32Bit` | `true` |

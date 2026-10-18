@@ -6,6 +6,7 @@
 }:
 let
   cfg = config.custom.nvidia;
+  driver = config.hardware.nvidia.package.out;
 in
 {
   options.custom.nvidia = {
@@ -40,9 +41,31 @@ in
       };
     };
 
-    environment.sessionVariables = {
-      LIBVA_DRIVER_NAME = "nvidia";
-      NVD_BACKEND = "direct";
+    systemd.services = {
+      nvidia-suspend-then-hibernate = {
+        description = "NVIDIA system suspend-then-hibernate actions";
+        path = [ pkgs.kbd ];
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = "${driver}/bin/nvidia-sleep.sh 'suspend'";
+        };
+        before = [ "systemd-suspend-then-hibernate.service" ];
+        requiredBy = [ "systemd-suspend-then-hibernate.service" ];
+      };
+
+      nvidia-resume = {
+        after = [ "systemd-suspend-then-hibernate.service" ];
+        requiredBy = [ "systemd-suspend-then-hibernate.service" ];
+      };
+    };
+
+    environment = {
+      etc."systemd/system-sleep/nvidia".source = "${driver}/lib/systemd/system-sleep/nvidia";
+
+      sessionVariables = {
+        LIBVA_DRIVER_NAME = "nvidia";
+        NVD_BACKEND = "direct";
+      };
     };
 
     programs.firefox.preferences."media.hardware-video-decoding.force-enabled" = true;
