@@ -123,6 +123,18 @@ binaries are the `.<name>-wrapped` files behind the nixpkgs wrappers. The full l
 3. If the package is unfree, add its name to `custom.unfreePackages` in `hosts/hephaestus/home.nix`.
 4. Apply the configuration, then start the application from the launcher.
 
+## How to find the applications running through XWayland
+
+1. Open the applications to check.
+2. List the X11 clients connected to XWayland.
+
+   ```bash
+   nix shell nixpkgs#xlsclients -c xlsclients -l
+   ```
+
+3. Any application listed renders through XWayland and is blurry under fractional scaling. An
+   empty list means every open application is a native Wayland client.
+
 ## How to check the policies applied to Firefox
 
 1. Open `about:policies` in Firefox.
