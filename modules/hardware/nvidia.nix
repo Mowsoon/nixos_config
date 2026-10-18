@@ -30,6 +30,7 @@ in
           kernelSuspendNotifier = false;
         };
         dynamicBoost.enable = true;
+        moduleParams.nvidia.NVreg_EnableS0ixPowerManagement = 1;
       };
     };
   };
