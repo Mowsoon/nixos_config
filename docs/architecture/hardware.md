@@ -35,6 +35,14 @@ management settings are the result of two incidents:
 The driver reads its options only when it is loaded: a change to them takes effect after
 `nixos-rebuild boot` and a real reboot, never after a resume from hibernation.
 
+Video decoding goes through `nvidia-vaapi-driver`, which translates VA-API, the decoding interface
+Firefox and most players use, to NVDEC, the decoder of the GPU. It uses its `direct` backend,
+because the EGL one no longer works since driver 525. That backend calls an internal interface of
+the kernel driver that NVIDIA does not keep stable, so a driver update can break it; Firefox then
+falls back to software decoding. Firefox blocklists hardware decoding on NVIDIA, which the NVIDIA
+module lifts with `media.hardware-video-decoding.force-enabled`. The RDD sandbox, the process that
+decodes web video, stays enabled.
+
 ### Sleep and power
 
 The firmware exposes Modern Standby only: `s2idle` is the single sleep state, and its consumption
@@ -189,6 +197,10 @@ an attribute crosses its failure threshold.
 | `hardware.nvidia.dynamicBoost.enable` | `true` |
 | `NVreg_EnableS0ixPowerManagement` | `1` |
 | `hardware.graphics.enable32Bit` | `true` |
+| `hardware.graphics.extraPackages` | `nvidia-vaapi-driver` |
+| `LIBVA_DRIVER_NAME` | `nvidia` |
+| `NVD_BACKEND` | `direct` |
+| Firefox `media.hardware-video-decoding.force-enabled` | `true` |
 
 ### Power settings
 
@@ -203,7 +215,7 @@ an attribute crosses its failure threshold.
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `custom.nvidia.enable` | `false` | NVIDIA driver and its power management |
+| `custom.nvidia.enable` | `false` | NVIDIA driver, its power management and VA-API video decoding |
 | `custom.asus.enable` | `false` | asusd, ROG Control Center, charge limit service |
 | `custom.asus.chargeLimit` | `100` | Charge percentage at which charging stops, 20 to 100 |
 | `custom.audio.enable` | `false` | PipeWire with ALSA, PulseAudio and JACK layers |
@@ -217,6 +229,7 @@ an attribute crosses its failure threshold.
 | --- | --- |
 | NVIDIA power management | <https://download.nvidia.com/XFree86/Linux-x86_64/595.104.02/README/powermanagement.html> |
 | NVIDIA on NixOS | <https://wiki.nixos.org/wiki/Nvidia> |
+| nvidia-vaapi-driver | <https://github.com/elFarto/nvidia-vaapi-driver> |
 | asusctl | <https://gitlab.com/asus-linux/asusctl> |
 | `systemd-sleep.conf` | <https://www.freedesktop.org/software/systemd/man/latest/systemd-sleep.conf.html> |
 | `hardware.nvidia` | <https://search.nixos.org/options?channel=unstable&query=hardware.nvidia> |

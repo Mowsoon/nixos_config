@@ -1,4 +1,9 @@
-{ config, lib, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.custom.nvidia;
 in
@@ -19,6 +24,7 @@ in
       graphics = {
         enable = true;
         enable32Bit = true;
+        extraPackages = [ pkgs.nvidia-vaapi-driver ];
       };
 
       nvidia = {
@@ -33,5 +39,12 @@ in
         moduleParams.nvidia.NVreg_EnableS0ixPowerManagement = 1;
       };
     };
+
+    environment.sessionVariables = {
+      LIBVA_DRIVER_NAME = "nvidia";
+      NVD_BACKEND = "direct";
+    };
+
+    programs.firefox.preferences."media.hardware-video-decoding.force-enabled" = true;
   };
 }
