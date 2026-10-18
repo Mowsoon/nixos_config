@@ -61,6 +61,16 @@ Discord, Spotify, LibreOffice and Solaar are user packages. Two user services ru
 session: the OpenSnitch UI, which shows the prompts of the outbound firewall, and EasyEffects, the
 audio effects processor. Their own settings and presets are kept in the persistent home.
 
+### Default applications
+
+The association between file types and applications is declared in `home/mowsoon/mime.nix`.
+Home Manager writes `~/.config/mimeapps.list` as a read-only link into the store, so the Plasma
+"Default Applications" page and the "Remember application association" box of "Open With" no
+longer save anything: a new association is a change in Nix. Glob keys such as `image/*` are
+expanded at build time against the shared-mime-info database, and an exact key wins over a glob,
+which is how `text/html` goes to Firefox while the rest of `text/*` goes to Neovim. Neovim is a
+terminal application; Plasma opens it in Konsole.
+
 ### Docker
 
 Docker runs as a rootful daemon, started on the first use of its socket rather than at boot. Its
@@ -147,6 +157,7 @@ directories.
 | `packages.nix` | Command-line tools, toolchains, direnv |
 | `audio.nix` | EasyEffects service |
 | `desktop.nix` | Desktop applications, OpenSnitch UI |
+| `mime.nix` | Default applications, zathura, mpv |
 | `editor/nixvim.nix` | NixVim entry point |
 | `editor/cores/` | Options, key mappings, commands, colour scheme |
 | `editor/plugins/` | Plugins grouped in `dev`, `ui` and `utils` |
@@ -183,6 +194,18 @@ directories.
 | `/usr/bin/virtiofsd` | Link to `virtiofsd` |
 | `~/.config/Claude/claude-code/<version>/<hash>/claude` | Claude Code binary, run through `nix-ld` |
 
+### Default applications
+
+| Types | Application |
+| --- | --- |
+| `text/html`, `application/xhtml+xml`, `http`, `https`, `about` and unknown URL schemes | Firefox |
+| `text/*` except HTML, JSON, XML, YAML, TOML, shell scripts | Neovim |
+| `application/pdf` | zathura with the MuPDF plugin |
+| `image/*` | Gwenview |
+| `video/*`, `audio/*` | mpv |
+| `inode/directory` | Dolphin |
+| Zip, tar, compressed tar, gzip, 7z, RAR | Ark |
+
 ### Options
 
 | Option | Default | Description |
@@ -202,3 +225,5 @@ directories.
 | nix-ld | <https://github.com/nix-community/nix-ld> |
 | `virtualisation.docker` | <https://search.nixos.org/options?channel=unstable&query=virtualisation.docker> |
 | `programs.nix-ld` | <https://search.nixos.org/options?channel=unstable&query=programs.nix-ld> |
+| `xdg.mimeApps` | <https://nix-community.github.io/home-manager/options.xhtml#opt-xdg.mimeApps.enable> |
+| MIME applications specification | <https://specifications.freedesktop.org/mime-apps-spec/latest/> |

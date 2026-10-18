@@ -5,6 +5,7 @@
     ./packages.nix
     ./audio.nix
     ./desktop.nix
+    ./mime.nix
     ./editor/nixvim.nix
   ];
 

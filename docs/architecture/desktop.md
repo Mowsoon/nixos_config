@@ -31,6 +31,7 @@ the display (palette, wallpaper, fonts applied everywhere).
 | Display manager, session type, keyboard layout, fonts installed | `modules/desktop/plasma.nix` |
 | Applications installed | `home/mowsoon/desktop.nix`, Firefox in `firefox.nix` |
 | Firefox settings, extensions, search engine | `modules/desktop/firefox.nix` |
+| Default applications per file type | `home/mowsoon/mime.nix` |
 | Outbound rules of desktop components | `plasma.nix` and `hosts/hephaestus/opensnitch.nix` |
 | Theme, wallpaper, panels, shortcuts, scaling | Plasma settings, `~/.config` |
 | Lid switch, power key, sleep mode | Plasma energy settings (PowerDevil), `~/.config/powerdevilrc` |
@@ -169,7 +170,13 @@ binaries are the `.<name>-wrapped` files behind the nixpkgs wrappers. The full l
 
    `<site>` is the host name of the visited site, `<host>` the third-party host set to `noop`.
 
-5. Apply the configuration and restart Firefox.
+5. Apply the configuration and restart Firefox twice. uBlock Origin reads its cached copy of the
+   managed settings at start and refreshes the cache afterwards, so new rules apply from the
+   second start.
+
+When the blocked hosts are not obvious, the built-in browser of the Claude desktop app, which runs
+without uBlock Origin, lists every script and frame a page loads. The third-party ones that are
+not advertising or tracking are the hosts to allow.
 
 ## Reference
 
