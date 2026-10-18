@@ -217,6 +217,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `custom.network.opensnitch` | `network/opensnitch.nix` | Outbound firewall |
 | `custom.network.time` | `network/time.nix` | chrony with NTS |
 | `custom.plasma` | `desktop/plasma.nix` | Plasma 6 and SDDM |
+| `custom.firefox` | `desktop/firefox.nix` | Firefox policies, extensions and settings |
 | `custom.claudeDesktop` | `desktop/claude-desktop.nix` | Claude desktop application |
 | `custom.docker` | `virtualisation/docker.nix` | Docker daemon |
 

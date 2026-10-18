@@ -27,6 +27,7 @@ in
     ../../modules/core/memory.nix
     ../../modules/virtualisation/docker.nix
     ../../modules/desktop/claude-desktop.nix
+    ../../modules/desktop/firefox.nix
     ../../modules/desktop/plasma.nix
     ../../modules/security/secure-boot.nix
     ../../modules/security/luks.nix
@@ -59,6 +60,8 @@ in
     claudeDesktop.enable = true;
 
     plasma.enable = true;
+
+    firefox.enable = true;
 
     nixMaintenance.enable = true;
 

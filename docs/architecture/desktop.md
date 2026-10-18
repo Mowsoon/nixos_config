@@ -23,21 +23,50 @@ sandboxed requests go through the KDE portal implementation.
 
 The boundary between what is declared and what is left to Plasma follows one rule: the system
 layer is declared, the appearance and the interactive behaviour of the desktop are not, until the
-theme is declared as a whole.
+theme is declared. Theming is declared in two parts: the settings of each application first, then
+the display (palette, wallpaper, fonts applied everywhere).
 
 | Area | Where it lives |
 | --- | --- |
 | Display manager, session type, keyboard layout, fonts installed | `modules/desktop/plasma.nix` |
-| Applications installed | `home/mowsoon/desktop.nix`, Firefox in `plasma.nix` |
+| Applications installed | `home/mowsoon/desktop.nix`, Firefox in `firefox.nix` |
+| Firefox settings, extensions, search engine | `modules/desktop/firefox.nix` |
 | Outbound rules of desktop components | `plasma.nix` and `hosts/hephaestus/opensnitch.nix` |
 | Theme, wallpaper, panels, shortcuts, scaling | Plasma settings, `~/.config` |
 | Lid switch, power key, sleep mode | Plasma energy settings (PowerDevil), `~/.config/powerdevilrc` |
 | Region and format overrides for the session | Plasma region settings, `~/.config/plasma-localerc` |
-| Application settings and presets | Each application, under `~/.config` or `~/.local/share` |
+| Settings of the applications not yet declared | Each application, under `~/.config` or `~/.local/share` |
 
 The home directory is persistent and snapshotted, so these settings survive reboots and can be
-restored from a snapshot. A declared theme, applied to the desktop, the terminal, the editor and the
-boot menu, is a Phase 7 subject of the migration roadmap.
+restored from a snapshot. The display part of the theme, applied to the desktop, the terminal, the
+editor and the boot menu, is a Phase 7 subject of the migration roadmap.
+
+### Firefox
+
+Firefox is configured through its enterprise policies. NixOS writes them to
+`/etc/firefox/policies/policies.json`, which Firefox reads at every start, for every profile. A
+setting declared there cannot be changed from the interface; this is why Firefox reports that it is
+managed by an organisation. Preferences from `about:config` are passed through the same file and
+are locked.
+
+The profile itself stays mutable in the persistent home: history, cookies, open tabs and the
+Bitwarden session live there and are not declared.
+
+- Tracking protection is locked on the strict category, and Global Privacy Control is sent.
+- DNS over HTTPS is disabled and locked, so every lookup goes through systemd-resolved and Quad9
+  over TLS, like the rest of the system.
+- HTTPS-First upgrades every connection that supports it and falls back to HTTP otherwise.
+  HTTPS-Only stays off because it also upgrades local development host names.
+- Bitwarden replaces the built-in password manager and form autofill, which are disabled to avoid
+  two concurrent vaults.
+- uBlock Origin and Bitwarden are force-installed from addons.mozilla.org at their latest version.
+  They update themselves and are not pinned by the flake, which keeps security fixes flowing.
+- The uBlock Origin filter lists are set through the extension managed storage. The declared list
+  replaces the whole local selection; the "My filters" pane stays available.
+- DuckDuckGo is the default search engine, in normal and private windows.
+- Telemetry, studies, sponsored shortcuts, stories and suggestions are disabled.
+
+The Firefox theme belongs to the display part of theming and is not declared yet.
 
 ### Fonts
 
@@ -84,6 +113,33 @@ binaries are the `.<name>-wrapped` files behind the nixpkgs wrappers. The full l
 3. If the package is unfree, add its name to `custom.unfreePackages` in `hosts/hephaestus/home.nix`.
 4. Apply the configuration, then start the application from the launcher.
 
+## How to check the policies applied to Firefox
+
+1. Open `about:policies` in Firefox.
+2. Read the Active tab. A policy listed in the Errors tab was rejected, usually because of a wrong
+   key or value type.
+
+## How to add a Firefox extension
+
+1. Install the extension once from addons.mozilla.org.
+2. Open `about:support` and read its ID in the Add-ons table.
+3. Read the slug of its addons.mozilla.org page: the last segment of
+   `https://addons.mozilla.org/firefox/addon/<slug>/`.
+4. Add the ID and the slug to `ExtensionSettings` in `modules/desktop/firefox.nix`.
+
+   ```nix
+   {
+     programs.firefox.policies.ExtensionSettings."<id>" = {
+       installation_mode = "force_installed";
+       install_url = "https://addons.mozilla.org/firefox/downloads/latest/<slug>/latest.xpi";
+     };
+   }
+   ```
+
+   `<id>` is the ID read in `about:support`, `<slug>` the slug of the addons.mozilla.org page.
+
+5. Apply the configuration and restart Firefox.
+
 ## Reference
 
 ### Session settings
@@ -96,7 +152,32 @@ binaries are the `.<name>-wrapped` files behind the nixpkgs wrappers. The full l
 | `services.xserver.xkb.layout` | `fr` |
 | `console.keyMap` | `fr` |
 | `environment.sessionVariables.NIXOS_OZONE_WL` | `1` |
-| `programs.firefox.enable` | `true` |
+
+### Firefox
+
+| Setting | Mechanism | Value |
+| --- | --- | --- |
+| Tracking protection | `EnableTrackingProtection` policy | `strict`, locked |
+| Global Privacy Control | `privacy.globalprivacycontrol.enabled` | `true` |
+| HTTPS-First | `dom.security.https_first` | `true` |
+| DNS over HTTPS | `DNSOverHTTPS` policy | Disabled, locked |
+| WebRTC local addresses | `media.peerconnection.ice.default_address_only` | `true` |
+| Internationalised domain names | `network.IDN_show_punycode` | Shown as punycode |
+| Password manager, address and card autofill | Policies | Disabled |
+| Telemetry, studies | Policies | Disabled |
+| Sponsored content | `FirefoxHome`, `FirefoxSuggest` policies | Disabled |
+| Default search engine | `SearchEngines` policy | DuckDuckGo |
+| Preferences status | `programs.firefox.preferencesStatus` | `locked` |
+
+| Extension | ID | Installation |
+| --- | --- | --- |
+| uBlock Origin | `uBlock0@raymondhill.net` | Forced, latest from AMO, private windows, toolbar |
+| Bitwarden | `{446900e4-71c2-419f-a6a7-df9c091e268b}` | Forced, latest from AMO, private windows, toolbar |
+
+| uBlock Origin filter lists | Tokens |
+| --- | --- |
+| Stock defaults | `user-filters`, `ublock-filters`, `ublock-badware`, `ublock-privacy`, `ublock-unbreak`, `ublock-quick-fixes`, `easylist`, `easyprivacy`, `urlhaus-1`, `plowe-0` |
+| Added | `adguard-spyware-url` (tracking parameters), `block-lan` (public sites reaching the LAN), `curben-phishing` |
 
 ### Fonts
 
@@ -118,7 +199,8 @@ binaries are the `.<name>-wrapped` files behind the nixpkgs wrappers. The full l
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `custom.plasma.enable` | `false` | Plasma 6, SDDM on Wayland, keyboard layout, fonts, Firefox, desktop OpenSnitch rules |
+| `custom.plasma.enable` | `false` | Plasma 6, SDDM on Wayland, keyboard layout, fonts, desktop OpenSnitch rules |
+| `custom.firefox.enable` | `false` | Firefox with its policies, extensions and OpenSnitch rule |
 
 ### Upstream documentation
 
@@ -127,6 +209,9 @@ binaries are the `.<name>-wrapped` files behind the nixpkgs wrappers. The full l
 | KDE on NixOS | <https://wiki.nixos.org/wiki/KDE> |
 | XDG desktop portals | <https://flatpak.github.io/xdg-desktop-portal/> |
 | Stylix | <https://github.com/danth/stylix> |
+| Firefox policies | <https://mozilla.github.io/enterprise-admin-reference/reference/policies/> |
+| uBlock Origin managed settings | <https://github.com/gorhill/uBlock/wiki/Deploying-uBlock-Origin:-configuration> |
+| `programs.firefox` | <https://search.nixos.org/options?channel=unstable&query=programs.firefox> |
 | `services.desktopManager.plasma6` | <https://search.nixos.org/options?channel=unstable&query=services.desktopManager.plasma6> |
 | `services.displayManager.sddm` | <https://search.nixos.org/options?channel=unstable&query=services.displayManager.sddm> |
 | `fonts.packages` | <https://search.nixos.org/options?channel=unstable&query=fonts.packages> |

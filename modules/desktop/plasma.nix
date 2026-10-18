@@ -30,10 +30,8 @@ in
       noto-fonts-color-emoji
     ];
 
-    programs.firefox.enable = true;
     custom.network.opensnitch = {
       allowedExecutables = {
-        firefox = "${config.programs.firefox.finalPackage}/lib/firefox/firefox";
         kioworker = "${pkgs.kdePackages.kio}/libexec/kf6/.kioworker-wrapped";
         plasmashell = "${pkgs.kdePackages.plasma-workspace}/bin/.plasmashell-wrapped";
       }

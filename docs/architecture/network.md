@@ -186,7 +186,7 @@ rule disappears with it.
 | `allow-systemd-resolved` | resolved daemon | `network/dns.nix` |
 | `allow-chronyd` | chrony daemon | `network/time.nix` |
 | `match-dockerd` | `dockerd` and `docker-proxy` of any moby version | `virtualisation/docker.nix` |
-| `allow-firefox` | Firefox binary | `desktop/plasma.nix` |
+| `allow-firefox` | Firefox binary | `desktop/firefox.nix` |
 | `allow-kioworker` | KDE I/O workers | `desktop/plasma.nix` |
 | `allow-plasmashell` | Plasma shell | `desktop/plasma.nix` |
 | `allow-fwupdmgr` | Only when fwupd is enabled | `desktop/plasma.nix` |
