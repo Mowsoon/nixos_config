@@ -63,6 +63,15 @@ Bitwarden session live there and are not declared.
   They update themselves and are not pinned by the flake, which keeps security fixes flowing.
 - The uBlock Origin filter lists are set through the extension managed storage. The declared list
   replaces the whole local selection; the "My filters" pane stays available.
+- uBlock Origin runs in medium mode: third-party scripts and frames are blocked on every site. A
+  site that needs one gets a `noop` rule for that third-party host on that site only. A `noop`
+  rule lifts the medium-mode block alone, so the filter lists keep blocking trackers served by the
+  allowed host.
+- uBlock Origin evaluates dynamic rules only in advanced user mode, which is declared on as well.
+  It also shows the per-host cells used to set `noop` rules in the popup.
+- The dynamic rules ("My rules") are declared and overwrite the local ones at every Firefox start.
+  A rule saved with the padlock in the popup is lost at the next start; a fix becomes permanent
+  only once declared.
 - DuckDuckGo is the default search engine, in normal and private windows.
 - Telemetry, studies, sponsored shortcuts, stories and suggestions are disabled.
 
@@ -140,6 +149,28 @@ binaries are the `.<name>-wrapped` files behind the nixpkgs wrappers. The full l
 
 5. Apply the configuration and restart Firefox.
 
+## How to allow a third party on a site broken by medium mode
+
+1. On the broken page, open the uBlock Origin popup and expand the per-host list.
+2. Set the blocked third-party host to `noop` (the grey cell) for this site, without clicking the
+   padlock: the rule lasts for the session only.
+3. Reload the page. Repeat for the next host until the page works, keeping the fewest hosts.
+4. Add the hosts to `allowedThirdParties` in `modules/desktop/firefox.nix`, keyed by the site.
+
+   ```nix
+   {
+     allowedThirdParties = {
+       "<site>" = [
+         "<host>"
+       ];
+     };
+   }
+   ```
+
+   `<site>` is the host name of the visited site, `<host>` the third-party host set to `noop`.
+
+5. Apply the configuration and restart Firefox.
+
 ## Reference
 
 ### Session settings
@@ -173,6 +204,13 @@ binaries are the `.<name>-wrapped` files behind the nixpkgs wrappers. The full l
 | --- | --- | --- |
 | uBlock Origin | `uBlock0@raymondhill.net` | Forced, latest from AMO, private windows, toolbar |
 | Bitwarden | `{446900e4-71c2-419f-a6a7-df9c091e268b}` | Forced, latest from AMO, private windows, toolbar |
+
+| uBlock Origin dynamic rules | Effect |
+| --- | --- |
+| `behind-the-scene * ... noop` | uBlock Origin defaults, kept because the declared set replaces all rules |
+| `* * 3p-script block` | Third-party scripts blocked everywhere |
+| `* * 3p-frame block` | Third-party frames blocked everywhere |
+| `<site> <host> * noop` | One per entry of `allowedThirdParties` |
 
 | uBlock Origin filter lists | Tokens |
 | --- | --- |
@@ -211,6 +249,7 @@ binaries are the `.<name>-wrapped` files behind the nixpkgs wrappers. The full l
 | Stylix | <https://github.com/danth/stylix> |
 | Firefox policies | <https://mozilla.github.io/enterprise-admin-reference/reference/policies/> |
 | uBlock Origin managed settings | <https://github.com/gorhill/uBlock/wiki/Deploying-uBlock-Origin:-configuration> |
+| uBlock Origin medium mode | <https://github.com/gorhill/uBlock/wiki/Blocking-mode:-medium-mode> |
 | `programs.firefox` | <https://search.nixos.org/options?channel=unstable&query=programs.firefox> |
 | `services.desktopManager.plasma6` | <https://search.nixos.org/options?channel=unstable&query=services.desktopManager.plasma6> |
 | `services.displayManager.sddm` | <https://search.nixos.org/options?channel=unstable&query=services.displayManager.sddm> |
