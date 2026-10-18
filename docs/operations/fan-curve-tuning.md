@@ -13,6 +13,11 @@ can carry a custom eight-point curve, temperature to duty cycle. Custom curves a
 of asusd, stored in the persisted `/etc/asusd`, and are not declared in Nix: a store link would be
 read-only to asusd.
 
+The idle state depends on the profile. In Performance, power-profiles-daemon sets the CPU energy
+preference to `performance`: cores stay in boost and the SoC draws about 50 W at idle, with Tctl
+around 85 to 90 °C. In Balanced, the same machine idles at about 22 W and 55 to 62 °C. A high
+idle temperature in Performance is therefore expected and is not a reason to stop.
+
 Fans only help when the limit is thermal. If the CPU clock drops while its temperature stays
 below the thermal ceiling, the limit is the power envelope of the firmware, and no fan curve
 changes the result. The procedure therefore measures the limit before it tunes anything.
@@ -33,7 +38,11 @@ to the factory values with `asusctl` (see `asusctl fan-curve --help`).
    metric listed in the Reference section, then a load runner that starts the sampler, runs one
    workload, stops the sampler and keeps the workload output. The run identifier (profile, curve,
    workload, repetition) is part of every file name.
-3. Before each run, wait until Tctl is below 50 °C, so that every run starts from the same state.
+3. Before each run, switch to the Balanced profile and let the machine cool until it reaches its
+   idle plateau: Tctl has moved by less than 1 °C over the last 60 seconds and is below 70 °C.
+   Then switch to the profile under test and start the workload. Every run starts from the same
+   thermal state. Do not wait for an absolute temperature such as 50 °C: this laptop idles at
+   55 to 62 °C in Balanced and never reaches it.
 4. Measure the baseline: for each profile, with the factory curves, run each workload of the
    Reference section three times.
 5. Analyse the baseline over the steady-state window only. For each run, compute the mean CPU
@@ -66,7 +75,7 @@ to the factory values with `asusctl` (see `asusctl fan-curve --help`).
 | Change curves only through `asusctl`, never by editing `/etc/asusd` while asusd runs | asusd overwrites its files and owns their format |
 | Never set a duty cycle below the factory curve at 70 °C or above | The firmware curve is the thermal safety floor |
 | Never set a fan to 0 % | No passive cooling is possible under load |
-| Stop the load at once if Tctl reaches 98 °C or any sensor reports a critical value | Margin under the 100 °C limit of the CPU |
+| Stop the load at once if Tctl stays at or above 98 °C for more than 10 seconds, or any sensor reports a critical value | Margin under the 100 °C limit of the CPU; single-core boost spikes of 94 °C on one CCD are normal |
 | Do not change power limits (PPT, SPL) or undervolt | Hardware risk, decided separately by the user |
 | Do not change the Nix configuration | Curves are mutable state; the repository only documents them |
 
