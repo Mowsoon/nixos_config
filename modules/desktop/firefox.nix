@@ -1,4 +1,9 @@
-{ config, lib, ... }:
+{
+  config,
+  lib,
+  inputs,
+  ...
+}:
 let
   cfg = config.custom.firefox;
   fromAmo = slug: "https://addons.mozilla.org/firefox/downloads/latest/${slug}/latest.xpi";
@@ -8,21 +13,7 @@ let
     private_browsing = true;
     default_area = "navbar";
   };
-  allowedThirdParties = {
-    "site-1.example" = [
-      "host-1.example"
-      "host-2.example"
-    ];
-    "site-2.example" = [
-      "host-3.example"
-      "site-3.example"
-    ];
-    "site-4.example" = [ "host-4.example" ];
-    "site-3.example" = [
-      "site-4.example"
-      "host-4.example"
-    ];
-  };
+  allowedThirdParties = import "${inputs.nixos-private}/firefox/ublock-allowances.nix";
   ublockDefaultRules = [
     "behind-the-scene * * noop"
     "behind-the-scene * image noop"

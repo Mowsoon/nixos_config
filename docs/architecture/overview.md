@@ -57,6 +57,23 @@ The root filesystem is rolled back to an empty Btrfs subvolume at every cold boo
 system needs is rebuilt from the Nix store at activation. Only identity, secrets and learned state
 are persisted, through the contribution list above. The details are in [Storage](storage.md).
 
+### Private input
+
+The repository is public. Data that reveals personal habits, such as the sites whose third-party
+scripts uBlock Origin lets through, lives in a separate private repository, `nixos_private`,
+declared as the `nixos-private` input with `flake = false`. Nix fetches it as a plain source tree
+over SSH, and modules import plain Nix files from it. `flake.lock` pins its revision and hash, so
+only the repository URL and a commit hash are public.
+
+Fetching the input needs a GitHub SSH key that can read the private repository. The key belongs
+to the user, not to root: the flake is evaluated as the user, and only the activation runs with
+elevated privileges, as described in [How to apply a change to the
+workstation](#how-to-apply-a-change-to-the-workstation).
+
+A fork has no access to this repository. It must provide its own source tree with the same
+layout, either by changing the URL of the input or by overriding it at each command, as described
+in [How to build without the private repository](#how-to-build-without-the-private-repository).
+
 ### Validation chain
 
 A change moves through increasingly realistic machines before it reaches the hardware:
@@ -131,13 +148,18 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 2. Run the new generation without making it the boot default.
 
    ```bash
-   sudo nixos-rebuild test --flake ~/.config/nixos#hephaestus
+   nixos-rebuild test --flake ~/.config/nixos#hephaestus --elevate sudo
    ```
+
+   Run it without `sudo`: the flake is evaluated and built as the user, whose SSH key fetches the
+   private input, and `--elevate sudo` raises privileges only to activate the generation. Under
+   `sudo nixos-rebuild`, root evaluates the flake, has no key for the private repository, and
+   fails as soon as the pinned revision is missing from the store.
 
 3. Make it the boot default once it works.
 
    ```bash
-   sudo nixos-rebuild switch --flake ~/.config/nixos#hephaestus
+   nixos-rebuild switch --flake ~/.config/nixos#hephaestus --elevate sudo
    ```
 
    A change to the kernel, the initrd, the encrypted container or the NVIDIA driver takes effect
@@ -149,6 +171,33 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
    ```bash
    readlink /run/booted-system/kernel /run/current-system/kernel
    ```
+
+## How to build without the private repository
+
+1. Create a directory holding every file of the private input layout listed in the Reference
+   section. An empty attribute set `{ }` in the uBlock Origin allowances file allows no third
+   party.
+
+   ```nix
+   {
+     "<site>" = [ "<host>" ];
+   }
+   ```
+
+   `<site>` is the registrable domain of a visited site, `<host>` the registrable domain of a
+   third party whose scripts and frames that site needs.
+
+2. Point the input at that directory, either permanently or for one command.
+
+   ```bash
+   nix flake lock --override-input nixos-private path:<directory>
+   nix flake check --override-input nixos-private path:<directory> --no-write-lock-file
+   ```
+
+   `<directory>` is the absolute path of the directory created in step 1. The first command
+   writes the override into `flake.lock`; the second applies it to one command only and leaves
+   `flake.lock` untouched. A fork can instead set the `nixos-private` URL in `flake.nix` to its
+   own repository.
 
 ## Reference
 
@@ -177,6 +226,13 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `nixos-hardware` | Common AMD, NVIDIA and laptop profiles |
 | `home-manager` | User environment as a NixOS module |
 | `nixvim` | Editor configuration as Home Manager options |
+| `nixos-private` | Private repository over SSH, `flake = false`: personal data imported by modules |
+
+### Private input layout
+
+| File | Imported by | Schema |
+| --- | --- | --- |
+| `firefox/ublock-allowances.nix` | `modules/desktop/firefox.nix` | Attribute set: site registrable domain to list of third-party registrable domains |
 
 ### Host files of `hephaestus`
 

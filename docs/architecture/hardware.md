@@ -179,7 +179,7 @@ an attribute crosses its failure threshold.
 1. Change the option in the module, then install the generation as the next boot entry.
 
    ```bash
-   sudo nixos-rebuild boot --flake ~/.config/nixos#hephaestus
+   nixos-rebuild boot --flake ~/.config/nixos#hephaestus --elevate sudo
    ```
 
 2. Reboot with `systemctl reboot`. A resume from hibernation restores the previous kernel and

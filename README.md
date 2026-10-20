@@ -24,6 +24,8 @@ filtered per executable and DNS is encrypted. The design of each part is describ
 ## Getting started
 
 Prerequisites: Nix with the `nix-command` and `flakes` experimental features enabled.
+The `hephaestus` systems also import a private input that a fork cannot read; see [Build without
+the private repository](docs/architecture/overview.md#how-to-build-without-the-private-repository).
 
 1. Generate the password hash of the `mowsoon` user for the test machine.
 
@@ -62,7 +64,7 @@ The machine reaches a login prompt in the terminal. Press `Ctrl+A` then `X` to s
 | `nix run .#hephaestus-vm` | Builds the `hephaestus` disko VM and boots it from a blank firmware and TPM |
 | `nix run .#rehearsal` | Boots the installer image against a blank disk to rehearse the installation |
 | `nix build .#nixosConfigurations.installer.config.system.build.isoImage` | Builds the installer image |
-| `sudo nixos-rebuild test --flake .#hephaestus` | Runs a new generation on the workstation until the next reboot |
-| `sudo nixos-rebuild switch --flake .#hephaestus` | Runs a new generation and makes it the boot default |
-| `sudo nixos-rebuild boot --flake .#hephaestus` | Makes a new generation the boot default without running it |
+| `nixos-rebuild test --flake .#hephaestus --elevate sudo` | Runs a new generation on the workstation until the next reboot |
+| `nixos-rebuild switch --flake .#hephaestus --elevate sudo` | Runs a new generation and makes it the boot default |
+| `nixos-rebuild boot --flake .#hephaestus --elevate sudo` | Makes a new generation the boot default without running it |
 | `nix flake update` | Moves `flake.lock` to the latest `nixos-unstable` revision |

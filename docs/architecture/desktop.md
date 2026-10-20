@@ -68,6 +68,8 @@ Bitwarden session live there and are not declared.
   site that needs one gets a `noop` rule for that third-party host on that site only. A `noop`
   rule lifts the medium-mode block alone, so the filter lists keep blocking trackers served by the
   allowed host.
+- The per-site allowances name the sites the user visits, so they live in the private input
+  described in [Architecture overview](overview.md#private-input), not in this repository.
 - uBlock Origin evaluates dynamic rules only in advanced user mode, which is declared on as well.
   It also shows the per-host cells used to set `noop` rules in the popup.
 - The dynamic rules ("My rules") are declared and overwrite the local ones at every Firefox start.
@@ -168,21 +170,30 @@ binaries are the `.<name>-wrapped` files behind the nixpkgs wrappers. The full l
 2. Set the blocked third-party host to `noop` (the grey cell) for this site, without clicking the
    padlock: the rule lasts for the session only.
 3. Reload the page. Repeat for the next host until the page works, keeping the fewest hosts.
-4. Add the hosts to `allowedThirdParties` in `modules/desktop/firefox.nix`, keyed by the site.
+4. Add the hosts to `firefox/ublock-allowances.nix` in the clone of the private repository,
+   keyed by the site. The sites a user visits are personal data: they never go into this public
+   repository, its documentation or its commit messages.
 
    ```nix
    {
-     allowedThirdParties = {
-       "<site>" = [
-         "<host>"
-       ];
-     };
+     "<site>" = [
+       "<host>"
+     ];
    }
    ```
 
-   `<site>` is the host name of the visited site, `<host>` the third-party host set to `noop`.
+   `<site>` is the registrable domain of the visited site, `<host>` the registrable domain of the
+   third party set to `noop`.
 
-5. Apply the configuration and restart Firefox twice. uBlock Origin reads its cached copy of the
+5. Commit and push the private repository, then move the pinned revision of the input in this
+   repository. The input is fetched over SSH with the key of the user, so this runs without
+   `sudo`.
+
+   ```bash
+   nix flake update nixos-private
+   ```
+
+6. Apply the configuration and restart Firefox twice. uBlock Origin reads its cached copy of the
    managed settings at start and refreshes the cache afterwards, so new rules apply from the
    second start.
 
@@ -230,7 +241,7 @@ not advertising or tracking are the hosts to allow.
 | `behind-the-scene * ... noop` | uBlock Origin defaults, kept because the declared set replaces all rules |
 | `* * 3p-script block` | Third-party scripts blocked everywhere |
 | `* * 3p-frame block` | Third-party frames blocked everywhere |
-| `<site> <host> * noop` | One per entry of `allowedThirdParties` |
+| `<site> <host> * noop` | One per entry of `firefox/ublock-allowances.nix` in the private input |
 
 | uBlock Origin filter lists | Tokens |
 | --- | --- |

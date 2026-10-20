@@ -87,7 +87,7 @@ Run this after a NVIDIA driver or kernel update.
 2. Build and install the generation as the next boot entry.
 
    ```bash
-   sudo nixos-rebuild boot --flake ~/.config/nixos#hephaestus
+   nixos-rebuild boot --flake ~/.config/nixos#hephaestus --elevate sudo
    ```
 
 3. Reboot with `systemctl reboot`, never by resuming from hibernation.

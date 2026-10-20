@@ -153,6 +153,22 @@
         "type": "github"
       }
     },
+    "nixos-private": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1792535818,
+        "narHash": "sha256-MKUyvayrDjv4onDoGx95fAOaRMi2GKaudL9YK/RwQKY=",
+        "ref": "refs/heads/main",
+        "rev": "b6b35acd59d002a5f05b2e0030c2c36aa7314621",
+        "revCount": 1,
+        "type": "git",
+        "url": "ssh://git@github.com/Mowsoon/nixos_private"
+      },
+      "original": {
+        "type": "git",
+        "url": "ssh://git@github.com/Mowsoon/nixos_private"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1789546076,
@@ -233,6 +249,7 @@
         "impermanence": "impermanence",
         "lanzaboote": "lanzaboote",
         "nixos-hardware": "nixos-hardware",
+        "nixos-private": "nixos-private",
         "nixpkgs": "nixpkgs_2",
         "nixvim": "nixvim"
       }

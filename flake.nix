@@ -33,6 +33,11 @@
         home-manager.follows = "";
       };
     };
+
+    nixos-private = {
+      url = "git+ssh://git@github.com/Mowsoon/nixos_private";
+      flake = false;
+    };
   };
 
   outputs =
