@@ -1,4 +1,6 @@
+{ inputs, ... }:
 let
+  hardwareIds = import "${inputs.nixos-private}/hosts/hephaestus/hardware-ids.nix";
   btrfsOptions = [
     "compress=zstd:3"
     "noatime"
@@ -11,7 +13,7 @@ in
 {
   disko.devices.disk.main = {
     type = "disk";
-    device = "/dev/disk/by-id/nvme-Samsung_SSD_990_PRO_1TB_<system-disk-serial>";
+    device = "/dev/disk/by-id/${hardwareIds.systemDisk}";
     content = {
       type = "gpt";
       partitions = {

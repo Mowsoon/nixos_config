@@ -1,5 +1,11 @@
-{ lib, pkgs, ... }:
+{
+  inputs,
+  lib,
+  pkgs,
+  ...
+}:
 let
+  hardwareIds = import "${inputs.nixos-private}/hosts/hephaestus/hardware-ids.nix";
   earlyMounts =
     lib.genAttrs
       [
@@ -87,8 +93,8 @@ in
 
     windowsVolume = {
       enable = true;
-      device = "/dev/disk/by-partuuid/<windows-partuuid>";
-      diskSerial = "<windows-disk-serial>";
+      device = "/dev/disk/by-partuuid/${hardwareIds.windowsPartuuid}";
+      diskSerial = hardwareIds.windowsDiskSerial;
     };
   };
 

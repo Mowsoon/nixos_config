@@ -59,11 +59,14 @@ are persisted, through the contribution list above. The details are in [Storage]
 
 ### Private input
 
-The repository is public. Data that reveals personal habits, such as the sites whose third-party
-scripts uBlock Origin lets through, lives in a separate private repository, `nixos_private`,
-declared as the `nixos-private` input with `flake = false`. Nix fetches it as a plain source tree
-over SSH, and modules import plain Nix files from it. `flake.lock` pins its revision and hash, so
-only the repository URL and a commit hash are public.
+The repository is public. Data that reveals personal habits or identifies the hardware, such as
+the sites whose third-party scripts uBlock Origin lets through or the serial numbers and partition
+UUID of the disks, lives in a separate private repository, `nixos_private`, declared as the
+`nixos-private` input with `flake = false`. Nix fetches it as a plain source tree over SSH, and
+modules import plain Nix files from it. Each file holds values only, an attribute set without
+functions; the public side builds everything derived from them, such as the `/dev/disk/...`
+paths. `flake.lock` pins its revision and hash, so only the repository URL and a commit hash are
+public.
 
 Fetching the input needs a GitHub SSH key that can read the private repository. The key belongs
 to the user, not to root: the flake is evaluated as the user, and only the activation runs with
@@ -175,8 +178,8 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 ## How to build without the private repository
 
 1. Create a directory holding every file of the private input layout listed in the Reference
-   section. An empty attribute set `{ }` in the uBlock Origin allowances file allows no third
-   party.
+   section. The first file maps sites to the third parties uBlock Origin lets through; an empty
+   attribute set `{ }` allows none.
 
    ```nix
    {
@@ -186,6 +189,21 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 
    `<site>` is the registrable domain of a visited site, `<host>` the registrable domain of a
    third party whose scripts and frames that site needs.
+
+   The second file identifies the disks of the target machine.
+
+   ```nix
+   {
+     systemDisk = "<by-id-name>";
+     windowsPartuuid = "<partuuid>";
+     windowsDiskSerial = "<serial>";
+   }
+   ```
+
+   `<by-id-name>` is the name of the system disk under `/dev/disk/by-id`, without the directory.
+   `<partuuid>` is the PARTUUID of the encrypted Windows partition, `<serial>` the serial number
+   of the Windows disk. `ls -l /dev/disk/by-id /dev/disk/by-partuuid` lists the first two, and
+   `lsblk -o NAME,SERIAL` the third.
 
 2. Point the input at that directory, either permanently or for one command.
 
@@ -233,6 +251,13 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | File | Imported by | Schema |
 | --- | --- | --- |
 | `firefox/ublock-allowances.nix` | `modules/desktop/firefox.nix` | Attribute set: site registrable domain to list of third-party registrable domains |
+| `hosts/hephaestus/hardware-ids.nix` | `hosts/hephaestus/disko.nix`, `hosts/hephaestus/default.nix` | Attribute set of strings: `systemDisk`, `windowsPartuuid`, `windowsDiskSerial` |
+
+| Attribute | Content | Used as |
+| --- | --- | --- |
+| `systemDisk` | Name of the system disk under `/dev/disk/by-id` | `/dev/disk/by-id/<name>`, `disko.devices.disk.main.device` |
+| `windowsPartuuid` | PARTUUID of the encrypted Windows partition | `/dev/disk/by-partuuid/<uuid>`, `custom.windowsVolume.device` |
+| `windowsDiskSerial` | Serial number of the Windows disk | `custom.windowsVolume.diskSerial` |
 
 ### Host files of `hephaestus`
 

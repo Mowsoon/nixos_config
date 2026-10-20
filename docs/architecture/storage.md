@@ -81,6 +81,11 @@ device-mapper mapping itself refuses writes. The mount uses the kernel `ntfs` dr
 `ro,nosuid,nodev,noexec`. The disk is hidden from udisks, so the desktop file manager cannot
 offer to mount it read-write.
 
+The partition UUID of the Windows volume and the serial number of its disk identify the hardware,
+so they are not in this repository: `hosts/hephaestus/default.nix` reads them from the private
+input, as described in [Architecture overview](overview.md#private-input). The system disk path
+of `hosts/hephaestus/disko.nix` comes from the same file.
+
 Read-only access is a safety rule, not a preference: writing to an NTFS volume that Windows left
 in a hibernated or fast-startup state corrupts it, and a Linux hibernation with the volume mounted
 would do the same in the other direction. No key file is stored on Linux, so root access to Linux
