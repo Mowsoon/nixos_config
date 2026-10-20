@@ -13,6 +13,14 @@ The kernel is the zen variant (`linuxPackages_zen`), tuned for desktop latency. 
 `amd-pstate` driver in active mode, and power-profiles-daemon switches between the power saver,
 balanced and performance profiles. `kvm-amd` is loaded for virtual machines.
 
+power-profiles-daemon pairs the Performance platform profile with the `performance` governor and
+the `performance` energy performance preference (EPP), which keeps the cores in boost at idle. A
+runtime test on 2026-10-19 kept the Performance platform profile with the `powersave` governor
+and the `balance_performance` EPP: the machine idles at about 25 W and 59 °C instead of 47 W and
+91 °C, with no throughput loss under an all-core load, where both settings hold the 95 °C
+thermal target at the same clock. Making this pairing permanent is pending a Nix change; until
+then the Performance profile runs with the `performance` EPP.
+
 ### Graphics
 
 The firmware MUX switch decides which GPU drives the internal panel, and it is set to the discrete
@@ -72,6 +80,12 @@ changed in ROG Control Center are learned state stored in `/etc/asusd`, which is
 are tuned with the measured procedure in [Fan curve tuning](../operations/fan-curve-tuning.md). The
 thermal interface is replaced with
 [Thermal interface replacement](../operations/thermal-interface-replacement.md).
+
+asusd also acts on the platform profile and the EPP, alongside power-profiles-daemon. Its learned
+configuration, `/etc/asusd/asusd.ron`, switches the platform profile to Performance when the
+charger is plugged in and to Quiet when it is unplugged, and writes the EPP linked to the profile
+on every profile change. A profile chosen through power-profiles-daemon or Plasma therefore
+changes at every charger event, and a runtime EPP is overwritten at the next profile change.
 
 The battery charge limit is declared instead: a oneshot service, `asus-charge-limit`, applies
 `custom.asus.chargeLimit` through `asusctl` at every boot, after asusd starts. The limit is 80 %,
@@ -256,6 +270,59 @@ stored in `~/.config/powerdevilrc`.
 | `services.upower.criticalPowerAction` | `Hibernate` |
 | `services.power-profiles-daemon.enable` | `true` |
 | Battery charge limit | 80 % |
+
+### Fan curves
+
+Measured on 2026-10-18 with the [Fan curve tuning](../operations/fan-curve-tuning.md) procedure.
+Custom curves are disabled on every profile, so the firmware curves apply. Duty cycle on the 0 to
+255 scale. At 100 % duty the fans run at about 7410 RPM (CPU) and 7405 RPM (GPU).
+
+| Profile | Fan | Temperatures (°C) | PWM | Custom curve |
+| --- | --- | --- | --- | --- |
+| Quiet | CPU | 64, 69, 74, 79, 84, 89, 89, 89 | 2, 12, 17, 43, 58, 76, 76, 76 | Disabled |
+| Quiet | GPU | 64, 69, 74, 79, 84, 89, 89, 89 | 2, 10, 22, 43, 58, 81, 81, 81 | Disabled |
+| Balanced | CPU | 47, 52, 57, 62, 67, 72, 77, 77 | 2, 12, 17, 43, 58, 76, 99, 99 | Disabled |
+| Balanced | GPU | 47, 52, 57, 62, 67, 72, 77, 77 | 2, 10, 22, 43, 58, 81, 104, 104 | Disabled |
+| Performance | CPU | 43, 48, 53, 58, 63, 68, 73, 78 | 17, 43, 66, 76, 114, 137, 158, 188 | Disabled |
+| Performance | GPU | 43, 48, 53, 58, 63, 68, 73, 78 | 22, 43, 63, 81, 119, 145, 160, 196 | Disabled |
+
+Steady state of an all-core load (`cpu` workload of the procedure) on mains power, factory curves:
+
+| Measurement | Quiet | Balanced | Performance |
+| --- | --- | --- | --- |
+| Tctl | 86.5 °C | 93.2 °C | 95.2 °C |
+| Mean CPU clock | 2950 MHz | 3031 MHz | 3674 MHz |
+| CPU / GPU fan | 3120 / 3433 RPM | 2812 / 3115 RPM | 6040 / 6261 RPM |
+
+### Energy performance preference
+
+Runtime test of 2026-10-19, Performance platform profile, factory curves, mains power. Idle is
+300 s on the idle plateau; load is the mean of 3 runs per setting, alternated in the same window.
+
+| Measurement | `performance` governor and EPP | `powersave` governor, `balance_performance` EPP |
+| --- | --- | --- |
+| Idle SoC PPT (amdgpu hwmon) | 47.5 W | 25.3 W |
+| Idle Tctl | 91.1 °C | 58.6 °C |
+| Idle CPU / GPU fan | 6021 / 6270 RPM | 3300 / 3585 RPM |
+| `cpu` workload throughput | 14,216 bogo ops/s | 14,226 bogo ops/s |
+| `mixed` workload throughput (`cpu` stressor) | 27,726 bogo ops/s | 27,847 bogo ops/s |
+| Tctl under load | 95.2 °C | 95.2 °C |
+| Status | Applied by power-profiles-daemon | Pending a Nix change |
+
+### asusd profile settings
+
+Learned state in `/etc/asusd/asusd.ron`, not declared in Nix.
+
+| Setting | Value | Effect |
+| --- | --- | --- |
+| `change_platform_profile_on_ac` | `true` | Switches the platform profile on every charger event |
+| `platform_profile_on_ac` | `Performance` | Profile applied when the charger is plugged in |
+| `change_platform_profile_on_battery` | `true` | Switches the platform profile when the charger is unplugged |
+| `platform_profile_on_battery` | `Quiet` | Profile applied on battery |
+| `platform_profile_linked_epp` | `true` | Writes the EPP linked to the profile on every profile change |
+| `profile_performance_epp` | `Performance` | EPP written with the Performance profile |
+| `profile_balanced_epp` | `BalancePower` | EPP written with the Balanced profile |
+| `profile_quiet_epp` | `Power` | EPP written with the Quiet profile |
 
 ### Options
 
