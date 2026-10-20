@@ -8,6 +8,8 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    powerManagement.cpuFreqGovernor = "powersave";
+
     services = {
       power-profiles-daemon.enable = true;
       upower = {
@@ -16,7 +18,13 @@ in
       };
     };
 
-    systemd.sleep.settings.Sleep.HibernateDelaySec = "2h";
+    systemd = {
+      sleep.settings.Sleep.HibernateDelaySec = "2h";
+      services.power-profiles-daemon.serviceConfig.ExecStart = [
+        ""
+        "${config.services.power-profiles-daemon.package}/libexec/power-profiles-daemon --block-driver=amd_pstate"
+      ];
+    };
 
     custom.persistence.directories = [ "/var/lib/power-profiles-daemon" ];
   };

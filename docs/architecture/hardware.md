@@ -18,8 +18,13 @@ the `performance` energy performance preference (EPP), which keeps the cores in 
 runtime test on 2026-10-19 kept the Performance platform profile with the `powersave` governor
 and the `balance_performance` EPP: the machine idles at about 25 W and 59 °C instead of 47 W and
 91 °C, with no throughput loss under an all-core load, where both settings hold the 95 °C
-thermal target at the same clock. Making this pairing permanent is pending a Nix change; until
-then the Performance profile runs with the `performance` EPP.
+thermal target at the same clock.
+
+This pairing is declared. power-profiles-daemon starts with `--block-driver=amd_pstate`: it
+still switches the platform profile for Plasma, but no longer writes the governor or the EPP. The
+governor is fixed to `powersave`, under which amd-pstate follows the EPP. asusd alone writes the
+EPP linked to each profile, and `custom.asus.performanceEpp` sets the one of the Performance
+profile to `balance_performance`.
 
 ### Graphics
 
@@ -86,6 +91,15 @@ configuration, `/etc/asusd/asusd.ron`, switches the platform profile to Performa
 charger is plugged in and to Quiet when it is unplugged, and writes the EPP linked to the profile
 on every profile change. A profile chosen through power-profiles-daemon or Plasma therefore
 changes at every charger event, and a runtime EPP is overwritten at the next profile change.
+
+That file stays learned state, written by asusd itself, for instance when the charge limit is
+applied. One value is declared on top of it: before asusd starts, a pre-start script rewrites
+`profile_performance_epp` to `custom.asus.performanceEpp`. The script runs outside the sandbox of
+the unit (`+` prefix): the system call filter of asusd kills `sed -i`, which calls `fchown` to
+keep the owner of the file it rewrites. If the line is missing, after an asusd
+update that renames it, the script fails and asusd does not start, so the change cannot go
+unnoticed. On the very first boot, before asusd has created the file, the script does nothing and
+the value applies from the next start.
 
 The battery charge limit is declared instead: a oneshot service, `asus-charge-limit`, applies
 `custom.asus.chargeLimit` through `asusctl` at every boot, after asusd starts. The limit is 80 %,
@@ -268,7 +282,8 @@ stored in `~/.config/powerdevilrc`.
 | --- | --- |
 | `systemd.sleep.settings.Sleep.HibernateDelaySec` | `2h` |
 | `services.upower.criticalPowerAction` | `Hibernate` |
-| `services.power-profiles-daemon.enable` | `true` |
+| `services.power-profiles-daemon.enable` | `true`, started with `--block-driver=amd_pstate` |
+| `powerManagement.cpuFreqGovernor` | `powersave` |
 | Battery charge limit | 80 % |
 
 ### Fan curves
@@ -307,11 +322,11 @@ Runtime test of 2026-10-19, Performance platform profile, factory curves, mains 
 | `cpu` workload throughput | 14,216 bogo ops/s | 14,226 bogo ops/s |
 | `mixed` workload throughput (`cpu` stressor) | 27,726 bogo ops/s | 27,847 bogo ops/s |
 | Tctl under load | 95.2 °C | 95.2 °C |
-| Status | Applied by power-profiles-daemon | Pending a Nix change |
+| Status | Former power-profiles-daemon pairing | Declared |
 
 ### asusd profile settings
 
-Learned state in `/etc/asusd/asusd.ron`, not declared in Nix.
+Learned state in `/etc/asusd/asusd.ron`; only `profile_performance_epp` is enforced from Nix.
 
 | Setting | Value | Effect |
 | --- | --- | --- |
@@ -320,7 +335,7 @@ Learned state in `/etc/asusd/asusd.ron`, not declared in Nix.
 | `change_platform_profile_on_battery` | `true` | Switches the platform profile when the charger is unplugged |
 | `platform_profile_on_battery` | `Quiet` | Profile applied on battery |
 | `platform_profile_linked_epp` | `true` | Writes the EPP linked to the profile on every profile change |
-| `profile_performance_epp` | `Performance` | EPP written with the Performance profile |
+| `profile_performance_epp` | `BalancePerformance`, from `custom.asus.performanceEpp` | EPP written with the Performance profile |
 | `profile_balanced_epp` | `BalancePower` | EPP written with the Balanced profile |
 | `profile_quiet_epp` | `Power` | EPP written with the Quiet profile |
 
@@ -331,9 +346,10 @@ Learned state in `/etc/asusd/asusd.ron`, not declared in Nix.
 | `custom.nvidia.enable` | `false` | NVIDIA driver, its power management and VA-API video decoding |
 | `custom.asus.enable` | `false` | asusd, ROG Control Center, charge limit service |
 | `custom.asus.chargeLimit` | `100` | Charge percentage at which charging stops, 20 to 100 |
+| `custom.asus.performanceEpp` | `null` | EPP that asusd writes with the Performance profile, enforced in `asusd.ron` before asusd starts |
 | `custom.audio.enable` | `false` | PipeWire with ALSA, PulseAudio and JACK layers |
 | `custom.peripherals.enable` | `false` | Bluetooth, Logitech receivers, input-remapper |
-| `custom.power.enable` | `false` | Power profiles, delayed hibernation, hibernation on critical battery |
+| `custom.power.enable` | `false` | Power profiles without CPU driver, `powersave` governor, delayed hibernation, hibernation on critical battery |
 | `custom.diskHealth.enable` | `false` | smartd with desktop notifications |
 
 ### Upstream documentation

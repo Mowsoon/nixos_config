@@ -29,6 +29,7 @@
     asus = {
       enable = true;
       chargeLimit = 80;
+      performanceEpp = "BalancePerformance";
     };
     audio.enable = true;
     peripherals.enable = true;
