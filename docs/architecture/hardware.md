@@ -112,6 +112,36 @@ WirePlumber as session manager. rtkit grants it real-time scheduling. Device acc
 the logind seat of the session. The effects processor, EasyEffects, runs as a user service
 declared in the user environment.
 
+The built-in microphone is a digital microphone on the Realtek ALC294 codec, exposed as the
+`analog-input-mic` route of the Ryzen HD Audio controller. The AMD audio coprocessor (ACP) also
+has a PDM microphone interface, but its machine driver does not bind on this model: the G713PI is
+absent from the DMI quirk table of `snd-soc-acp6x-mach`, and a test build that forced it timed
+out when starting the DMA. The codec path is the one in use, as it was on the previous Arch
+installation.
+
+The capture gain is the sum of two codec controls, `Capture` and `Mic Boost`, which WirePlumber
+drives from the volume of the source. At 100 % they add 60 dB, enough for the low-frequency room
+noise to saturate the converter, and the signal then looks like random full-scale noise. The
+source volume is 0.30: `Capture` at +28.5 dB, `Mic Boost` at 0 dB and no software gain, which
+leaves about 4 dB of headroom on normal speech. WirePlumber stores this value in
+`~/.local/state/wireplumber`; it is not declared, so a client that resets the volume to 100 %
+undoes it.
+
+EasyEffects processes the microphone with the declared input preset `microphone`, tuned for voice
+calls on the laptop speakers in a room with steady fan and appliance noise. The echo canceller
+comes first, while the signal is still linear, so it can subtract what the speakers play. It needs
+a few seconds of far-end audio to adapt, and it attenuates the local voice while both sides talk at
+once. A microphone test that plays the voice straight back to the speakers, such as the one of
+Discord, keeps it in that state and sounds choppy: it is not a valid listening test without
+headphones. DeepFilterNet replaces RNNoise, which removed the unvoiced consonants at the end of
+words. The expander only attenuates what stays below the speech level, with a long release that
+keeps word endings, and the limiter comes last. Discord receives the processed signal through the
+virtual source "Easy Effects Source", with its own noise suppression, echo cancellation and
+automatic gain control off.
+
+EasyEffects moves every recording stream to its virtual source. A recording that must read the
+raw microphone, for a measurement, sets `node.dont-move` on its stream.
+
 ### Peripherals
 
 BlueZ runs with its experimental features, which report the battery level of Bluetooth headsets
@@ -339,6 +369,41 @@ Learned state in `/etc/asusd/asusd.ron`; only `profile_performance_epp` is enfor
 | `profile_balanced_epp` | `BalancePower` | EPP written with the Balanced profile |
 | `profile_quiet_epp` | `Power` | EPP written with the Quiet profile |
 
+### Built-in microphone
+
+| Item | Value |
+| --- | --- |
+| PipeWire source | `alsa_input.pci-0000_09_00.6.analog-stereo`, route `analog-input-mic` |
+| Codec pin | ALC294 node `0x12`, fixed internal digital microphone |
+| Source volume | 0.30 |
+| `Capture` | 61 of 63, +28.5 dB |
+| `Mic Boost` | 0 of 3, 0 dB |
+| Room noise | Mostly below 80 Hz, hiss above 12 kHz |
+
+### Microphone input chain
+
+| Order | Stage | Settings | Purpose |
+| --- | --- | --- | --- |
+| 1 | Echo canceller | WebRTC, echo cancellation and high-pass on, noise suppression and AGC off | Removes the speaker output from the microphone |
+| 2 | DeepFilterNet | Attenuation limit 40 dB | Removes the steady background noise, keeps consonants |
+| 3 | Expander | Downward, threshold -50 dB, ratio 3, attack 5 ms, release 200 ms, sidechain RMS with 100 Hz high-pass | Attenuates the residual noise between words |
+| 4 | Equalizer | High-pass 90 Hz, -2 dB at 250 Hz, +2 dB at 3 kHz, low-pass 14 kHz | Removes rumble and hiss, reduces boxiness, adds presence |
+| 5 | Compressor | Downward, threshold -30 dB, ratio 3, attack 10 ms, release 120 ms, makeup 11 dB | Evens out the voice and brings it to the target loudness |
+| 6 | De-esser | Split above 5 kHz, threshold -22 dB, ratio 3 | Softens sibilants |
+| 7 | Limiter | Threshold -1.5 dB, x4 oversampling, gain boost off | Caps the true peak |
+
+### Microphone measurements
+
+Read text followed by 10 s of silence, recorded at the source volume of 0.30. The noise floor is
+the RMS level of the silence, the loudness and true peak are measured on the speech.
+
+| Measure | Target | Raw | Processed |
+| --- | --- | --- | --- |
+| Noise floor | Below -60 dBFS | -47.5 dBFS | -97.3 dBFS |
+| Integrated loudness | About -18 LUFS | -25.7 LUFS | -18.6 LUFS |
+| True peak | -1 dBTP or lower | -6.9 dBTP | -1.5 dBTP |
+| Speaker echo, voice played at speaker volume 0.40 | Inaudible | -22.4 LUFS | -70 LUFS |
+
 ### Options
 
 | Option | Default | Description |
@@ -363,6 +428,8 @@ Learned state in `/etc/asusd/asusd.ron`; only `profile_performance_epp` is enfor
 | `systemd-sleep.conf` | <https://www.freedesktop.org/software/systemd/man/latest/systemd-sleep.conf.html> |
 | `hardware.nvidia` | <https://search.nixos.org/options?channel=unstable&query=hardware.nvidia> |
 | `services.asusd` | <https://search.nixos.org/options?channel=unstable&query=services.asusd> |
+| EasyEffects | <https://github.com/wwmm/easyeffects> |
+| DeepFilterNet | <https://github.com/Rikorose/DeepFilterNet> |
 | `services.pipewire` | <https://search.nixos.org/options?channel=unstable&query=services.pipewire> |
 | `hardware.bluetooth` | <https://search.nixos.org/options?channel=unstable&query=hardware.bluetooth> |
 | `services.smartd` | <https://search.nixos.org/options?channel=unstable&query=services.smartd> |
