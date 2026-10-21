@@ -49,6 +49,10 @@ management settings are the result of two incidents:
 - `NVreg_EnableS0ixPowerManagement = 1` makes the driver handle `s2idle` as a low-power idle
   state instead of a full power cut. Without it, the desktop froze after resuming from sleep
   ([incident](../incidents/suspend-resume-freeze.md)).
+- `NVreg_DynamicPowerManagement = 0` turns off runtime D3, which powers the GPU down while the
+  panel is off. With the MUX on the discrete GPU it saved nothing measurable, and waking the GPU
+  from it during the console switch before sleep deadlocked the driver
+  ([incident](../incidents/sleep-after-hibernation-deadlock.md)).
 
 The driver reads its options only when it is loaded: a change to them takes effect after
 `nixos-rebuild boot` and a real reboot, never after a resume from hibernation.
@@ -165,13 +169,14 @@ an attribute crosses its failure threshold.
 2. Check the power management options the driver was loaded with.
 
    ```bash
-   grep -E 'EnableS0ixPowerManagement|UseKernelSuspendNotifiers|PreserveVideoMemoryAllocations' /proc/driver/nvidia/params
+   grep -E 'EnableS0ixPowerManagement|UseKernelSuspendNotifiers|PreserveVideoMemoryAllocations|DynamicPowerManagement:' /proc/driver/nvidia/params
    ```
 
    ```text
    PreserveVideoMemoryAllocations: 1
    EnableS0ixPowerManagement: 1
    UseKernelSuspendNotifiers: 0
+   DynamicPowerManagement: 0
    ```
 
 ## How to test a driver or kernel option
@@ -288,6 +293,7 @@ an attribute crosses its failure threshold.
 | Suspend-then-hibernate unit and hook | `nvidia-suspend-then-hibernate`, `/etc/systemd/system-sleep/nvidia` |
 | `hardware.nvidia.dynamicBoost.enable` | `true` |
 | `NVreg_EnableS0ixPowerManagement` | `1` |
+| `NVreg_DynamicPowerManagement` | `0` |
 | `hardware.graphics.enable32Bit` | `true` |
 | `hardware.graphics.extraPackages` | `nvidia-vaapi-driver` |
 | `LIBVA_DRIVER_NAME` | `nvidia` |
