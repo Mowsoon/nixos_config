@@ -27,6 +27,12 @@ moved into the home directory after the first boot.
 The installation downloads the inputs of the flake from GitHub and several GiB of packages from
 the binary cache, so the installer needs network access from the start.
 
+The private input is the exception. It is fetched over SSH, and root on the installer has no key
+for it, so `disko` and `nixos-install` read it from the clone restored from the archive.
+`nixos-install` takes `--override-input`; the `disko` command does not, so its script is built
+with `nix build`, which takes the flag, and run directly. This is the script `disko` itself builds
+and runs. `--no-write-lock-file` keeps the restored `flake.lock` free of a local path.
+
 Lanzaboote does not register a boot entry in the firmware variables. Without an explicit entry,
 the firmware boots the removable fallback loader of whichever disk comes first in its order, and
 the entry left by Arch points at an EFI system partition that no longer exists. The procedure
@@ -63,7 +69,7 @@ Blast radius: the USB key is overwritten entirely.
 
 ## How to prepare the switch
 
-1. Push every commit of this repository.
+1. Push every commit of this repository and of the private repository.
 2. Record the current boot measurements in the inventory.
 
    ```bash
@@ -80,7 +86,7 @@ Blast radius: the USB key is overwritten entirely.
 
    ```bash
    sudo -v
-   sudo tar --create --zstd --xattrs --acls --file=- --exclude=rehearsal --exclude='result*' --exclude='*.qcow2' /var/lib/sbctl /etc/cryptsetup-keys.d /etc/NetworkManager/system-connections ~/.ssh ~/.config/nixos/ | nix run nixpkgs#age -- --passphrase --output "<t7-mount>/arch-backup-<date>.tar.zst.age"
+   sudo tar --create --zstd --xattrs --acls --file=- --exclude=rehearsal --exclude='result*' --exclude='*.qcow2' /var/lib/sbctl /etc/cryptsetup-keys.d /etc/NetworkManager/system-connections ~/.ssh ~/.config/nixos/ ~/.config/nixos-private/ | nix run nixpkgs#age -- --passphrase --output "<t7-mount>/arch-backup-<date>.tar.zst.age"
    nix run nixpkgs#age -- -d "<t7-mount>/arch-backup-<date>.tar.zst.age" | tar --zstd -tf - | sed 's|/[^/]*$||' | sort -u
    ```
 
@@ -96,7 +102,8 @@ Blast radius: the USB key is overwritten entirely.
 Blast radius: every partition of the Linux NVMe disk is destroyed, including the Arch
 installation. Rollback path: none for Arch; the state worth keeping is in the archive.
 
-1. Open a root shell. The installer user has password-free `sudo`.
+1. Open a root shell. The installer user has password-free `sudo`. The later steps run in this
+   shell.
 
    ```bash
    sudo -i
@@ -115,8 +122,9 @@ installation. Rollback path: none for Arch; the state worth keeping is in the ar
    ls -l /dev/disk/by-id/ | grep nvme
    ```
 
-   The link named after the Samsung 990 PRO in `hosts/hephaestus/disko.nix` points at the disk
-   whose model is the Samsung 990 PRO. Stop here if it does not.
+   The link named after the Samsung 990 PRO, the `systemDisk` value of
+   `hosts/hephaestus/hardware-ids.nix` in the private repository, points at the disk whose model
+   is the Samsung 990 PRO. Stop here if it does not.
 
 4. Mount the T7 disk read-only, find the archive, and extract it into a staging directory.
 
@@ -130,16 +138,26 @@ installation. Rollback path: none for Arch; the state worth keeping is in the ar
    `<t7-partition>` is the T7 partition shown by `lsblk`, such as `sda1`. `<archive-file>` is the
    archive listed by `ls`.
 
-5. Partition, encrypt and mount the target disk. `disko` asks for the LUKS passphrase. A transient
-   download error such as an HTTP 504 from GitHub is solved by running the command again.
+5. Name the restored configuration directory and the option that points the private input at the
+   restored clone. Both variables live in the root shell of step 1.
 
    ```bash
-   disko --mode destroy,format,mount --flake /tmp/restore/home/<arch-user>/.config/nixos#hephaestus
+   config=/tmp/restore/home/<arch-user>/.config
+   private=(--override-input nixos-private "path:$config/nixos-private" --no-write-lock-file)
    ```
 
    `<arch-user>` is the user name of the Arch installation.
 
-6. Restore the system state into the persistent subvolume. The BitLocker key file in
+6. Partition, encrypt and mount the target disk. The script asks to type `yes`, then for the LUKS
+   passphrase. A transient download error such as an HTTP 504 from GitHub is solved by running
+   the commands again.
+
+   ```bash
+   script=$(nix build --no-link --print-out-paths "${private[@]}" "$config/nixos#nixosConfigurations.hephaestus.config.system.build.destroyFormatMount")
+   "$script/bin/disko-destroy-format-mount"
+   ```
+
+7. Restore the system state into the persistent subvolume. The BitLocker key file in
    `etc/cryptsetup-keys.d` is not restored.
 
    ```bash
@@ -150,7 +168,7 @@ installation. Rollback path: none for Arch; the state worth keeping is in the ar
    chmod 700 /mnt/persist/restore
    ```
 
-7. Write the user password hash. `mkpasswd` alone reads the password once, without confirmation,
+8. Write the user password hash. `mkpasswd` alone reads the password once, without confirmation,
    and root has no password: a typo locks the session. The commands below read it twice and write
    the hash only when both entries match.
 
@@ -162,20 +180,20 @@ installation. Rollback path: none for Arch; the state worth keeping is in the ar
    chmod 600 /mnt/persist/secrets/mowsoon.hash
    ```
 
-8. Expose the sbctl keys at the path lanzaboote reads during the installation.
+9. Expose the sbctl keys at the path lanzaboote reads during the installation.
 
    ```bash
    mkdir -p /mnt/var/lib/sbctl
    mount --bind /mnt/persist/var/lib/sbctl /mnt/var/lib/sbctl
    ```
 
-9. Install the system.
+10. Install the system.
 
-   ```bash
-   nixos-install --flake /tmp/restore/home/<arch-user>/.config/nixos#hephaestus --no-root-password --no-channel-copy
-   ```
+    ```bash
+    nixos-install --flake "$config/nixos#hephaestus" "${private[@]}" --no-root-password --no-channel-copy
+    ```
 
-10. Register the boot entry, then delete the entry left by Arch.
+11. Register the boot entry, then delete the entry left by Arch.
 
     ```bash
     efibootmgr --create --disk /dev/disk/by-id/<target-disk> --part 1 --label "Linux Boot Manager" --loader '\EFI\systemd\systemd-bootx64.efi'
@@ -187,7 +205,7 @@ installation. Rollback path: none for Arch; the state worth keeping is in the ar
     is the four-digit number of the Arch entry shown by `efibootmgr`, distinct from the new entry
     and from `Windows Boot Manager`.
 
-11. Unmount everything, remove the USB key and reboot.
+12. Unmount everything, remove the USB key and reboot.
 
     ```bash
     umount -R /mnt
@@ -205,7 +223,8 @@ installation. Rollback path: none for Arch; the state worth keeping is in the ar
    sudo cp -a /persist/restore/home/<arch-user>/.ssh ~/
    mkdir -p ~/.config
    sudo cp -a /persist/restore/home/<arch-user>/.config/nixos ~/.config/
-   sudo chown -R mowsoon:users ~/.ssh ~/.config/nixos
+   sudo cp -a /persist/restore/home/<arch-user>/.config/nixos-private ~/.config/
+   sudo chown -R mowsoon:users ~/.ssh ~/.config/nixos ~/.config/nixos-private
    sudo rm -rf /persist/restore
    ```
 
@@ -234,7 +253,9 @@ installation. Rollback path: none for Arch; the state worth keeping is in the ar
 
 ## How to rehearse the installation
 
-1. Commit the state to rehearse. The rehearsal archive contains a copy of `HEAD`.
+1. Commit the state to rehearse in both repositories. The rehearsal archive contains a copy of
+   `HEAD` of this repository and a clone of the private repository found next to it, in
+   `../nixos-private`.
 2. Start from a blank state and boot the rehearsal machine. The first run asks for a test
    passphrase for the rehearsal archive.
 
@@ -269,6 +290,7 @@ installation. Rollback path: none for Arch; the state worth keeping is in the ar
 | `etc/cryptsetup-keys.d` | Not restored |
 | `home/<arch-user>/.ssh` | `~/.ssh` |
 | `home/<arch-user>/.config/nixos` | `~/.config/nixos` |
+| `home/<arch-user>/.config/nixos-private` | `~/.config/nixos-private` |
 
 ### Rehearsal substitutions
 
@@ -276,11 +298,11 @@ installation. Rollback path: none for Arch; the state worth keeping is in the ar
 | --- | --- | --- |
 | Target disk model and serial | Samsung 990 PRO | `QEMU NVMe Ctrl`, serial `rehearsal` |
 | Target disk by-id link name | `nvme-Samsung_SSD_990_PRO_1TB_<serial>` | `nvme-QEMU_NVMe_Ctrl_rehearsal` |
-| Flake output | `#hephaestus` | `#hephaestus-rehearsal` |
+| Configuration name, in `#<name>` and `nixosConfigurations.<name>` | `hephaestus` | `hephaestus-rehearsal` |
 | T7 device | `/dev/sda1`, exFAT partition | `/dev/sda`, FAT image without a partition table |
 | Archive file | `arch-backup-<date>.tar.zst.age` | `arch-backup-rehearsal.tar.zst.age` |
 | `<arch-user>` | User name of the Arch installation | Host user that generated the rehearsal archive |
-| Stale Arch boot entry | Present, deleted at install step 10 | Absent, the deletion is skipped |
+| Stale Arch boot entry | Present, deleted at install step 11 | Absent, the deletion is skipped |
 | Secure Boot keys | Preserved keys, already enrolled | Test keys, enrolled after the first boot |
 
 ### Hardware checks
