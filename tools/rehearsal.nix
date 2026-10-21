@@ -32,6 +32,7 @@ writeShellApplication {
   text = ''
     state=rehearsal
     repo=$(git rev-parse --show-toplevel)
+    private=$(realpath "$repo/../nixos-private")
 
     make_test_key() {
       local dir=$1 name=$2
@@ -61,6 +62,7 @@ writeShellApplication {
       mkdir -p "$stage/home/$USER/.ssh" "$stage/home/$USER/.config/nixos"
       ssh-keygen -q -t ed25519 -N "" -C rehearsal -f "$stage/home/$USER/.ssh/id_ed25519"
       git -C "$repo" archive HEAD | tar -x -C "$stage/home/$USER/.config/nixos"
+      git clone --quiet "$private" "$stage/home/$USER/.config/nixos-private"
 
       echo "Choose a test passphrase for the rehearsal archive."
       tar --create --zstd --xattrs --acls --file=- -C "$stage" var etc home \
