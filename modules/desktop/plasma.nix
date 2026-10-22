@@ -6,6 +6,12 @@
 }:
 let
   cfg = config.custom.plasma;
+  kwin = pkgs.kdePackages.kwin.overrideAttrs (old: {
+    patches = old.patches ++ [
+      ../../pkgs/kwin/0001-workspace-don-t-log-a-critical-error-while-the-sessi.patch
+      ../../pkgs/kwin/0002-backends-drm-don-t-warn-about-commits-rejected-after.patch
+    ];
+  });
 in
 {
   options.custom.plasma = {
@@ -22,7 +28,20 @@ in
       xserver.xkb.layout = "fr";
     };
 
-    environment.sessionVariables.NIXOS_OZONE_WL = "1";
+    system.replaceDependencies.replacements = [
+      {
+        oldDependency = pkgs.kdePackages.kwin;
+        newDependency = kwin;
+      }
+    ];
+
+    environment = {
+      sessionVariables.NIXOS_OZONE_WL = "1";
+      etc."xdg/ksmserverrc".text = ''
+        [General]
+        loginMode[$i]=emptySession
+      '';
+    };
 
     fonts.packages = with pkgs; [
       nerd-fonts.jetbrains-mono

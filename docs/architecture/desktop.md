@@ -12,12 +12,24 @@ SDDM runs its greeter in a Wayland compositor and starts the Plasma Wayland sess
 layout `fr` is declared for the greeter and the session; the virtual consoles use the `fr` keymap
 as well.
 
+Every login starts an empty session. Plasma would otherwise relaunch the applications open at the
+previous logout, through ksmserver for the applications that support session management and
+through `plasma-fallback-session-restore` for the others. Both read `loginMode` in the `General`
+group of `ksmserverrc`; the Plasma module sets it to `emptySession` in `/etc/xdg/ksmserverrc` and
+marks it immutable with `[$i]`, so neither the user file nor the Plasma settings can change it.
+
 `NIXOS_OZONE_WL=1` is set for every session. Electron and Chromium applications packaged by
 nixpkgs read it and start with their native Wayland backend instead of XWayland, which gives sharp
 rendering under fractional scaling.
 
 The XDG desktop portals come from the Plasma module: file pickers, screen sharing and other
 sandboxed requests go through the KDE portal implementation.
+
+KWin carries two patches from `pkgs/kwin/`. They lower to debug level the errors it logs when the
+session has lost the GPUs, which happens at every sleep, resume and shutdown because
+`nvidia-sleep.sh` switches virtual terminals. The patched KWin replaces the packaged one through
+`system.replaceDependencies`, so only KWin is compiled
+([incident](../incidents/kwin-inactive-session-errors.md)).
 
 ### Declared and mutable settings
 
@@ -28,7 +40,7 @@ the display (palette, wallpaper, fonts applied everywhere).
 
 | Area | Where it lives |
 | --- | --- |
-| Display manager, session type, keyboard layout, fonts installed | `modules/desktop/plasma.nix` |
+| Display manager, session type, session restore, keyboard layout, fonts installed | `modules/desktop/plasma.nix` |
 | Applications installed | `home/mowsoon/desktop.nix`, Firefox in `firefox.nix` |
 | Firefox settings, extensions, search engine | `modules/desktop/firefox.nix` |
 | Default applications per file type | `home/mowsoon/mime.nix` |
@@ -213,6 +225,8 @@ not advertising or tracking are the hosts to allow.
 | `services.xserver.xkb.layout` | `fr` |
 | `console.keyMap` | `fr` |
 | `environment.sessionVariables.NIXOS_OZONE_WL` | `1` |
+| `loginMode` in `/etc/xdg/ksmserverrc` | `emptySession`, immutable |
+| `system.replaceDependencies.replacements` | `kdePackages.kwin` with the patches of `pkgs/kwin/` |
 
 ### Firefox
 
