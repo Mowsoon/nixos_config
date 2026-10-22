@@ -182,6 +182,16 @@ directories.
 | `cctl` | `clusterctl` |
 | `tf` | `terraform` |
 | `sudo` | `sudo` followed by a space, so aliases expand after `sudo` |
+| `nrt`, `nrs`, `nrb` | `nixos-rebuild test`, `switch`, `boot` on `#hephaestus` with `--elevate sudo` |
+| `nrbr` | `nrb`, then `systemctl reboot` when it succeeds |
+| `nrr` | `sudo nixos-rebuild switch --rollback` |
+| `nkern` | Booted and current kernel paths; a difference means a reboot is pending |
+| `cdn` | `cd ~/.config/nixos` |
+| `hib`, `sus`, `sush` | `systemctl hibernate`, `suspend`, `suspend-then-hibernate` |
+| `jb`, `jbu <unit>` | `journalctl -b`, `journalctl -b --no-pager -u <unit>` |
+| `jke` | `journalctl -k -p err`, kernel messages of priority error and above |
+| `gst`, `gaa`, `gcm` | `git status`, `git add -A`, `git commit -m` |
+| `ns <pkg>...` | Shell function: `nix shell nixpkgs#<pkg>...` |
 
 ### Docker settings
 

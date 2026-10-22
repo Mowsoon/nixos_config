@@ -1,4 +1,7 @@
 { lib, pkgs, ... }:
+let
+  rebuild = action: "nixos-rebuild ${action} --flake ~/.config/nixos#hephaestus --elevate sudo";
+in
 {
   programs.zsh = {
     enable = true;
@@ -26,6 +29,26 @@
       f = "flux";
       cctl = "clusterctl";
       tf = "terraform";
+
+      nrs = rebuild "switch";
+      nrt = rebuild "test";
+      nrb = rebuild "boot";
+      nrbr = "${rebuild "boot"} && systemctl reboot";
+      nrr = "sudo nixos-rebuild switch --rollback";
+      nkern = "readlink /run/booted-system/kernel /run/current-system/kernel";
+      cdn = "cd ~/.config/nixos";
+
+      hib = "systemctl hibernate";
+      sus = "systemctl suspend";
+      sush = "systemctl suspend-then-hibernate";
+
+      jb = "journalctl -b";
+      jbu = "journalctl -b --no-pager -u";
+      jke = "journalctl -k -p err";
+
+      gst = "git status";
+      gaa = "git add -A";
+      gcm = "git commit -m";
     };
 
     plugins = [
@@ -43,6 +66,7 @@
         fi
       '')
       "source ${./p10k.zsh}"
+      "ns() { nix shell \${@/#/nixpkgs#} }"
     ];
   };
 }
