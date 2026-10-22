@@ -264,7 +264,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | File | Content |
 | --- | --- |
 | `default.nix` | Core, security, desktop and virtualisation modules; users, locale, boot settings, VM variant |
-| `hardware.nix` | Kernel, hardware profiles, NVIDIA, ASUS, audio, peripherals, power, disk health |
+| `hardware.nix` | Kernel, hardware profiles, NVIDIA, ASUS, audio, peripherals, power, disk health, Wi-Fi |
 | `disko.nix` | Partitions, LUKS container and Btrfs subvolumes |
 | `network.nix` | Network modules |
 | `home.nix` | Home Manager, login shell, unfree user applications |
@@ -291,6 +291,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `custom.peripherals` | `hardware/peripherals.nix` | Bluetooth, Logitech receivers, input-remapper |
 | `custom.power` | `hardware/power.nix` | Power profiles, delayed hibernation, critical battery |
 | `custom.diskHealth` | `hardware/disk-health.nix` | SMART monitoring |
+| `custom.mt7921` | `hardware/mt7921.nix` | Patched mt76 Wi-Fi modules |
 | `custom.network.manager` | `network/manager.nix` | NetworkManager with iwd |
 | `custom.network.dns` | `network/dns.nix` | systemd-resolved over TLS |
 | `custom.network.firewall` | `network/firewall.nix` | nftables firewall |

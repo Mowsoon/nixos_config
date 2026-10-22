@@ -153,6 +153,15 @@ to Plasma. Pairing keys are persisted. The udev rules for Logitech wireless rece
 configure the devices without root. input-remapper is available for remapping external keyboards;
 its presets live in the persistent home.
 
+### Wi-Fi
+
+The MediaTek MT7922 card runs the `mt7921e` driver of the mt76 family. The in-tree driver resumes
+from hibernation as from sleep and waits for a firmware that the power cut has stopped, which logs
+a restore timeout on every resume. The mt7921 module rebuilds the mt76 directory of the kernel
+source with a patch that gives the driver a separate restore callback, against the cached kernel,
+and installs it ahead of the in-tree modules
+([incident](../incidents/mt7921e-hibernation-restore.md)).
+
 ### Disk health
 
 smartd monitors every detected disk and sends a desktop notification through the system bus when
@@ -269,6 +278,7 @@ an attribute crosses its failure threshold.
 | Integrated GPU | AMD Radeon 610M, unused behind the MUX |
 | Linux disk | Samsung 990 PRO, NVMe |
 | Windows disk | Western Digital SN560, NVMe |
+| Wi-Fi | MediaTek MT7922, `mt7921e` driver |
 | Sleep states | `s2idle` only, hibernation to disk |
 
 ### Kernel and firmware
@@ -422,6 +432,7 @@ the RMS level of the silence, the loudness and true peak are measured on the spe
 | `custom.peripherals.enable` | `false` | Bluetooth, Logitech receivers, input-remapper |
 | `custom.power.enable` | `false` | Power profiles without CPU driver, `powersave` governor, delayed hibernation, hibernation on critical battery |
 | `custom.diskHealth.enable` | `false` | smartd with desktop notifications |
+| `custom.mt7921.enable` | `false` | mt76 Wi-Fi modules rebuilt with the MT7921 hibernation restore patch |
 
 ### Upstream documentation
 

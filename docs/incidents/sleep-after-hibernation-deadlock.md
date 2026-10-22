@@ -51,7 +51,7 @@ sleep after a hibernation resume, and is attributed to the same runtime D3 path 
 
 The Wi-Fi error `mt7921e ... pci_pm_restore returns -110`, logged on every hibernation resume, is
 not the cause: the driver reloads its firmware right after, and sleeps that followed it resumed
-correctly.
+correctly. It is fixed separately ([incident](mt7921e-hibernation-restore.md)).
 
 Resolution: `modules/hardware/nvidia.nix` sets
 `hardware.nvidia.moduleParams.nvidia.NVreg_DynamicPowerManagement = 0`. With the MUX set to the

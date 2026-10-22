@@ -10,6 +10,7 @@
     ../../modules/hardware/peripherals.nix
     ../../modules/hardware/power.nix
     ../../modules/hardware/disk-health.nix
+    ../../modules/hardware/mt7921.nix
   ];
 
   boot = {
@@ -35,5 +36,6 @@
     peripherals.enable = true;
     power.enable = true;
     diskHealth.enable = true;
+    mt7921.enable = true;
   };
 }
