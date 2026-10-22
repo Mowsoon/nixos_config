@@ -123,6 +123,12 @@ absent from the DMI quirk table of `snd-soc-acp6x-mach`, and a test build that f
 out when starting the DMA. The codec path is the one in use, as it was on the previous Arch
 installation.
 
+The ACP and the HD Audio controller are two functions of one audio block that the firmware powers
+off in sleep. Its ACPI methods race when both functions resume at the same time, and the controller
+then stays unpowered until the next boot. `custom.audio.serializeAmdAcpResume` makes the kernel
+suspend and resume both functions one after the other
+([incident](../incidents/amd-acp-hda-resume-race.md)).
+
 The capture gain is the sum of two codec controls, `Capture` and `Mic Boost`, which WirePlumber
 drives from the volume of the source. At 100 % they add 60 dB, enough for the low-frequency room
 noise to saturate the converter, and the signal then looks like random full-scale noise. The
@@ -429,6 +435,7 @@ the RMS level of the silence, the loudness and true peak are measured on the spe
 | `custom.asus.chargeLimit` | `100` | Charge percentage at which charging stops, 20 to 100 |
 | `custom.asus.performanceEpp` | `null` | EPP that asusd writes with the Performance profile, enforced in `asusd.ron` before asusd starts |
 | `custom.audio.enable` | `false` | PipeWire with ALSA, PulseAudio and JACK layers |
+| `custom.audio.serializeAmdAcpResume` | `false` | `power/async` disabled on the revision `0x62` ACP and the AMD HD Audio controller |
 | `custom.peripherals.enable` | `false` | Bluetooth, Logitech receivers, input-remapper |
 | `custom.power.enable` | `false` | Power profiles without CPU driver, `powersave` governor, delayed hibernation, hibernation on critical battery |
 | `custom.diskHealth.enable` | `false` | smartd with desktop notifications |

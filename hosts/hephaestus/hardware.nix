@@ -32,7 +32,10 @@
       chargeLimit = 80;
       performanceEpp = "BalancePerformance";
     };
-    audio.enable = true;
+    audio = {
+      enable = true;
+      serializeAmdAcpResume = true;
+    };
     peripherals.enable = true;
     power.enable = true;
     diskHealth.enable = true;
