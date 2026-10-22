@@ -63,7 +63,15 @@ in
     };
 
     environment = {
-      etc."systemd/system-sleep/nvidia".source = "${driver}/lib/systemd/system-sleep/nvidia";
+      etc."systemd/system-sleep/nvidia".source = pkgs.writeShellScript "nvidia-system-sleep" ''
+        export PATH=${
+          lib.makeBinPath [
+            pkgs.coreutils
+            pkgs.kbd
+          ]
+        }
+        exec ${driver}/lib/systemd/system-sleep/nvidia "$@"
+      '';
 
       sessionVariables = {
         LIBVA_DRIVER_NAME = "nvidia";

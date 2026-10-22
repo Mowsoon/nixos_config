@@ -1,0 +1,38 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Mowsoon <Mowsoon@users.noreply.github.com>
+Date: Thu, 22 Oct 2026 00:00:00 +0000
+Subject: [PATCH 2/2] backends/drm: don't warn about commits rejected after
+ losing DRM master
+
+When another process switches the VT, for example nvidia-sleep.sh before
+a suspend, the kernel revokes DRM master before KWin receives the pause
+event for the device. A commit submitted in that window fails with
+EACCES, and the commit thread logs "atomic commit failed: Permission
+denied" as a warning, although nothing is wrong: the output is
+reconfigured once the session is active again.
+
+EACCES on an atomic commit only means that the caller is not the DRM
+master. Log that case at debug level and keep the warning for other
+errors.
+---
+ src/backends/drm/drm_commit_thread.cpp | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/src/backends/drm/drm_commit_thread.cpp b/src/backends/drm/drm_commit_thread.cpp
+index deafa26..9735013 100644
+--- a/src/backends/drm/drm_commit_thread.cpp
++++ b/src/backends/drm/drm_commit_thread.cpp
+@@ -196,7 +196,12 @@ void DrmCommitThread::submit()
+             m_commitsToDelete.push_back(std::move(commit));
+         }
+         m_commits.clear();
+-        qCWarning(KWIN_DRM) << "atomic commit failed:" << strerror(errno);
++        if (errno == EACCES) {
++            // the session lost DRM master, for example to a VT switch
++            qCDebug(KWIN_DRM) << "atomic commit failed:" << strerror(errno);
++        } else {
++            qCWarning(KWIN_DRM) << "atomic commit failed:" << strerror(errno);
++        }
+     }
+     QMetaObject::invokeMethod(this, &DrmCommitThread::clearDroppedCommits, Qt::ConnectionType::QueuedConnection);
+ }

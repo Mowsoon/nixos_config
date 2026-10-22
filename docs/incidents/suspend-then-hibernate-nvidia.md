@@ -32,7 +32,12 @@ expires; NixOS does not install it.
 Resolution: `modules/hardware/nvidia.nix` adds the unit NVIDIA ships on other distributions,
 `nvidia-suspend-then-hibernate`, which runs `nvidia-sleep.sh suspend` before
 `systemd-suspend-then-hibernate.service`, makes that service also pull in `nvidia-resume`, and
-links the driver's hook to `/etc/systemd/system-sleep/nvidia`.
+installs the driver's hook as `/etc/systemd/system-sleep/nvidia`.
+
+systemd-sleep runs its hooks with a minimal `PATH`. Linked as is, the hook ran `nvidia-sleep.sh
+resume` after a plain sleep or hibernation and failed on `cat`, `rm` and `chvt`, leaving the
+console switch back to `nvidia-resume.service`. The hook is installed through a wrapper that puts
+`coreutils` and `kbd` on its `PATH`.
 
 ## How to verify the fix
 
@@ -59,6 +64,12 @@ links the driver's hook to `/etc/systemd/system-sleep/nvidia`.
 
    ```bash
    sudo rm /run/systemd/sleep.conf.d/test.conf
+   ```
+
+5. Confirm the hook found its tools. The command must print nothing.
+
+   ```bash
+   journalctl -b 0 | grep 'nvidia-sleep.sh.*command not found'
    ```
 
 ## Reference

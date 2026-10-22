@@ -1,0 +1,44 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Mowsoon <Mowsoon@users.noreply.github.com>
+Date: Thu, 22 Oct 2026 00:00:00 +0000
+Subject: [PATCH 1/2] workspace: don't log a critical error while the session
+ is inactive
+
+When the session is inactive, for example while another VT is in the
+foreground during a suspend, the DRM backend refuses output changes with
+OutputConfigurationError::NotActive. updateOutputConfiguration() already
+treats that as expected and waits for the next VT switch, which applies
+the configuration again, but it still logs "Applying output
+configuration failed!" at critical level.
+
+On a system with two GPUs, logind resumes the devices one after the
+other when the session becomes active again. The first resumed GPU
+triggers updateOutputConfiguration() while the GPU that drives the
+outputs is still inactive, so the critical message is logged on every
+resume from suspend or hibernation, and when the session ends at
+shutdown, although the outputs come back as configured.
+
+Log the NotActive case at debug level and keep the critical message for
+real failures.
+---
+ src/workspace.cpp | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/src/workspace.cpp b/src/workspace.cpp
+index be2aada..81e8e39 100644
+--- a/src/workspace.cpp
++++ b/src/workspace.cpp
+@@ -686,7 +686,12 @@ void Workspace::updateOutputConfiguration()
+         }
+     } while (error == OutputConfigurationError::TooManyEnabledOutputs && !toEnable.isEmpty() && !alreadyHaveEnabledOutputs);
+ 
+-    qCCritical(KWIN_CORE, "Applying output configuration failed!");
++    if (error == OutputConfigurationError::NotActive) {
++        // the configuration gets applied again once the session is active
++        qCDebug(KWIN_CORE, "Not applying output configuration while the session is inactive");
++    } else {
++        qCCritical(KWIN_CORE, "Applying output configuration failed!");
++    }
+     // Update the output order to a fallback list, to avoid dangling pointers
+     updateOutputOrder();
+     // If applying the output configuration failed, brightness devices weren't assigned either.
