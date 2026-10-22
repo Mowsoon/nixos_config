@@ -81,6 +81,11 @@ the plain "Standby" mode never hibernate. Hibernation writes the image to the
 swapfile described in [Storage](storage.md) and resumes through the initrd described in
 [Boot chain](boot-chain.md).
 
+USB keyboards and mice wake the machine from sleep, but a `system-sleep` hook disarms their wakeup
+for the duration of hibernation: an input event that reaches the platform while it enters S4
+leaves the laptop powered on with the image already written
+([incident](../incidents/hibernation-input-wakeup-hang.md)).
+
 ### ASUS platform
 
 asusd drives the fan curves, the power profiles of the firmware, the keyboard backlight and the
@@ -438,6 +443,7 @@ the RMS level of the silence, the loudness and true peak are measured on the spe
 | `custom.audio.serializeAmdAcpResume` | `false` | `power/async` disabled on the revision `0x62` ACP and the AMD HD Audio controller |
 | `custom.peripherals.enable` | `false` | Bluetooth, Logitech receivers, input-remapper |
 | `custom.power.enable` | `false` | Power profiles without CPU driver, `powersave` governor, delayed hibernation, hibernation on critical battery |
+| `custom.power.disarmInputWakeupForHibernation` | `false` | `system-sleep` hook that disables the wakeup of USB HID devices during hibernation |
 | `custom.diskHealth.enable` | `false` | smartd with desktop notifications |
 | `custom.mt7921.enable` | `false` | mt76 Wi-Fi modules rebuilt with the MT7921 hibernation restore patch |
 

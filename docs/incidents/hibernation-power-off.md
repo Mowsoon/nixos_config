@@ -48,6 +48,9 @@ a hibernation resumes the image, which holds the previous kernel and the
 previous module options, even when `nixos-rebuild boot` has installed a new
 generation. The first run of the NVIDIA test was invalid for this reason.
 
+The rarer failures seen after this fix, on 2026-10-21 and 2026-10-22, have a different cause:
+[hibernation-input-wakeup-hang](hibernation-input-wakeup-hang.md).
+
 ## How to verify the fix
 
 1. Confirm the running system is the latest generation. Both paths must be

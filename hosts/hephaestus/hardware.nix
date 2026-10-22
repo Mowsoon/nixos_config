@@ -37,7 +37,10 @@
       serializeAmdAcpResume = true;
     };
     peripherals.enable = true;
-    power.enable = true;
+    power = {
+      enable = true;
+      disarmInputWakeupForHibernation = true;
+    };
     diskHealth.enable = true;
     mt7921.enable = true;
   };
