@@ -82,9 +82,9 @@ swapfile described in [Storage](storage.md) and resumes through the initrd descr
 [Boot chain](boot-chain.md).
 
 USB keyboards and mice wake the machine from sleep, but a `system-sleep` hook disarms their wakeup
-for the duration of hibernation: an input event that reaches the platform while it enters S4
-leaves the laptop powered on with the image already written
-([incident](../incidents/hibernation-input-wakeup-hang.md)).
+for the duration of hibernation, and chrony no longer fires RTC interrupts: a wakeup event that
+reaches the platform while it enters S4 leaves the laptop powered on with the image already written
+([incident](../incidents/hibernation-wakeup-hang.md)).
 
 ### ASUS platform
 

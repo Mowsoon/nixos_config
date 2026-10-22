@@ -17,7 +17,11 @@ in
         "ptbtime1.ptb.de"
         "ptbtime2.ptb.de"
       ];
-      extraConfig = "nocerttimecheck 1";
+      enableRTCTrimming = false;
+      extraConfig = ''
+        nocerttimecheck 1
+        rtcsync
+      '';
     };
 
     custom = {

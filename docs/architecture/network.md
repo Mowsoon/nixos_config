@@ -91,6 +91,12 @@ would prevent: `nocerttimecheck 1` lets chrony skip the certificate date check u
 been synchronised once. systemd-timesyncd is disabled by the chrony module, and its OpenSnitch
 rule disappears with it.
 
+chrony does not measure the RTC drift (`enableRTCTrimming = false`): its measurement turns on RTC
+interrupts that this AMD platform reports as wakeup events, which cancel or hang hibernation
+([incident](../incidents/hibernation-wakeup-hang.md)). `rtcsync` lets the kernel copy the
+synchronised time to the RTC every 11 minutes instead, so Windows and the firmware read a correct
+clock.
+
 ## How to allow a program through OpenSnitch
 
 1. Find the real executable of the running program.
