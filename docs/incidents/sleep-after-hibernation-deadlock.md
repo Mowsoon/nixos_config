@@ -2,8 +2,8 @@
 
 ## Overview
 
-Twice, the first sleep after a resume from hibernation never came back, and the only way out was
-a forced power-off:
+The first sleep after a resume from hibernation failed repeatedly, and the only way out was a
+forced power-off. Two different causes were found:
 
 - On 2026-10-19, an idle "sleep, then hibernate" started from Plasma hung before the system went
   to sleep. The kernel reported `systemd-logind` and `chvt` blocked for minutes, and systemd
@@ -45,65 +45,78 @@ complete_change_console
 vt_ioctl
 ```
 
-The 2026-10-21 hang left no trace: kernel messages written during sleep never reach the journal.
-It happened in the same situation, the GPU idle behind a locked and blanked screen at the first
-sleep after a hibernation resume, and is attributed to the same runtime D3 path without proof.
-
-The Wi-Fi error `mt7921e ... pci_pm_restore returns -110`, logged on every hibernation resume, is
-not the cause: the driver reloads its firmware right after, and sleeps that followed it resumed
-correctly. It is fixed separately ([incident](mt7921e-hibernation-restore.md)).
-
-Resolution: `modules/hardware/nvidia.nix` sets
+Resolution of the 2026-10-19 hang: `modules/hardware/nvidia.nix` sets
 `hardware.nvidia.moduleParams.nvidia.NVreg_DynamicPowerManagement = 0`. With the MUX set to the
 discrete GPU, the GPU drives the panel whenever the screen is on, so runtime D3 only applied
 while the screen was off and saved nothing that matters next to sleep and hibernation.
 
+### Lock screen carried through hibernation
+
+From 2026-10-21 to 2026-10-23, every sleep started after a resume from hibernation, while the
+session was still locked, hung: the journal stops at `PM: suspend entry (s2idle)`, the keyboard
+stays fully lit instead of its sleep pattern (two ZQSD blinks, then waves), and the next key press
+makes the firmware reset or power off the machine. The firmware register read at boot recorded
+`software wrote 0xE to reset control register 0xCF9` and `ACPI power state transition occurred`
+after the resets, nothing after the power-offs.
+
+Cause: the lock screen process (`kscreenlocker_greet`) that was on screen when the machine
+hibernated. Plasma locks the session before hibernation, so after the resume the same greeter
+process, restored from the image, is still displayed. While it is, the next sleep hangs in the
+device suspend phase. Logging in closes it; a later sleep then starts a new greeter and works.
+What inside the greeter, KWin or the NVIDIA driver makes the device suspend hang is not known.
+
+Resolution: `modules/desktop/plasma.nix` adds `restart-lock-screen-after-hibernation`, a oneshot
+service ordered after `systemd-hibernate.service` and `systemd-suspend-then-hibernate.service`. It
+kills `kscreenlocker_greet`; the screen locker starts a new greeter at once and the session stays
+locked.
+
 Findings that narrowed the cause:
 
-| Observation | Conclusion |
-| --- | --- |
-| Hung task report of 2026-10-19 | The NVIDIA runtime resume takes the console lock already held by the console switch |
-| `DynamicPowerManagement: 3` in `/proc/driver/nvidia/params` | Runtime D3 was enabled by the driver default, not by the configuration |
-| Two failures out of four sleeps that followed a hibernation resume, none on other sleeps | The failure needs the GPU state left after a hibernation resume and a blanked screen |
-| Wi-Fi recovers after its restore error, and later sleeps succeed | The `mt7921e` error is unrelated |
+| Test | Result | Conclusion |
+| --- | --- | --- |
+| Sleep without login after a cold boot, in every variant | Works | The hibernation resume is required |
+| Login, then sleep two seconds later | Works | Logging in protects; elapsed time does not matter |
+| Hardware state before and after unlocking: 1100 device power states, LEDs, backlight, outputs, ASUS attributes, GPU power, USB | Identical, only `LockedHint` changes | Unlocking changes software state only |
+| Sleep requested by `systemctl` while locked | Hangs | The Plasma sleep request path is not the cause |
+| `pm_test` at `devices`, and with `pm_async = 0` | Power-off or hang | The hang is in the device suspend phase, not a race between devices |
+| Greeter killed while locked, then sleep, twice | Works | The greeter carried through hibernation is the cause |
 
-The driver reads its options only when it is loaded. The fix takes effect after
+Hypotheses ruled out on the way:
+
+- the `mt7921e` restore error ([incident](mt7921e-hibernation-restore.md));
+- the ACP and HD Audio race ([incident](amd-acp-hda-resume-race.md));
+- keyboard, mouse and RTC wakeups ([incident](hibernation-wakeup-hang.md));
+- NVIDIA bug 5156763, fixed in 595.104.02 (`InHibernate` cleared in `dynamic-power.c`);
+- the GCOFF path: `S0ixPowerManagementVideoMemoryThreshold = 0` did not help;
+- the kernel suspend callback of the NVIDIA driver, which only counts when the GPU is already
+  suspended;
+- asusd, whose keyboard sleep task never runs.
+
+The driver reads its options only when it is loaded: the RTD3 change takes effect after
 `nixos-rebuild boot` and a real reboot, never after a resume from hibernation.
 
 ## How to verify the fix
 
-1. Confirm the running system is the latest generation. Both paths must be identical.
+1. Confirm the service is installed.
 
    ```bash
-   readlink /run/booted-system /nix/var/nix/profiles/system
+   systemctl cat restart-lock-screen-after-hibernation
    ```
 
-2. Confirm the driver no longer uses runtime D3.
-
-   ```bash
-   grep 'DynamicPowerManagement:' /proc/driver/nvidia/params
-   ```
-
-   ```text
-   DynamicPowerManagement: 0
-   ```
-
-3. Hibernate, power on, and leave the lock screen untouched until the screen turns off.
+2. Hibernate, power on, and do not log in. After the resume, the lock screen flickers once while
+   it is replaced.
 
    ```bash
    systemctl hibernate
    ```
 
-4. Start a sleep, wait one minute, then wake the machine.
+3. From the lock screen, choose Sleep, wait one minute, then press a key. The machine must wake
+   to the lock screen, and the keyboard must show its sleep pattern while asleep.
+
+4. Confirm the service ran.
 
    ```bash
-   systemctl suspend-then-hibernate
-   ```
-
-5. Confirm the boot recorded no blocked task. The command must print nothing.
-
-   ```bash
-   journalctl -b 0 -k | grep 'blocked for more than'
+   journalctl -b -u restart-lock-screen-after-hibernation
    ```
 
 ## If the hang comes back

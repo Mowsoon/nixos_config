@@ -18,6 +18,10 @@ through `plasma-fallback-session-restore` for the others. Both read `loginMode` 
 group of `ksmserverrc`; the Plasma module sets it to `emptySession` in `/etc/xdg/ksmserverrc` and
 marks it immutable with `[$i]`, so neither the user file nor the Plasma settings can change it.
 
+After every resume from hibernation, a service kills the lock screen greeter, which the screen
+locker restarts at once: the greeter carried through hibernation makes the next sleep hang
+([incident](../incidents/sleep-after-hibernation-deadlock.md)).
+
 `NIXOS_OZONE_WL=1` is set for every session. Electron and Chromium applications packaged by
 nixpkgs read it and start with their native Wayland backend instead of XWayland, which gives sharp
 rendering under fractional scaling.

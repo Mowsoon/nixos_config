@@ -28,6 +28,22 @@ in
       xserver.xkb.layout = "fr";
     };
 
+    systemd.services.restart-lock-screen-after-hibernation = {
+      description = "Replace the lock screen that went through hibernation";
+      after = [
+        "systemd-hibernate.service"
+        "systemd-suspend-then-hibernate.service"
+      ];
+      wantedBy = [
+        "systemd-hibernate.service"
+        "systemd-suspend-then-hibernate.service"
+      ];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = "-${pkgs.procps}/bin/pkill -f kscreenlocker_greet";
+      };
+    };
+
     system.replaceDependencies.replacements = [
       {
         oldDependency = pkgs.kdePackages.kwin;
