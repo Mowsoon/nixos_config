@@ -27,6 +27,20 @@ in
 
     networking.networkmanager.connectionConfig."connection.dns-over-tls" = 0;
 
+    systemd = {
+      services.resolved-reset-server-features = {
+        description = "Retry the DNS servers after a clock change";
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = "${config.systemd.package}/bin/resolvectl reset-server-features";
+        };
+      };
+      timers.resolved-reset-server-features = {
+        wantedBy = [ "timers.target" ];
+        timerConfig.OnClockChange = true;
+      };
+    };
+
     custom.network.opensnitch.allowedExecutables.systemd-resolved =
       "${config.systemd.package}/lib/systemd/systemd-resolved";
   };

@@ -97,6 +97,12 @@ interrupts that this AMD platform reports as wakeup events, which cancel or hang
 synchronised time to the RTC every 11 minutes instead, so Windows and the firmware read a correct
 clock.
 
+A wrong clock must not lock the machine out of the network: DNS over TLS rejects every certificate
+while the clock is off, and chrony needs DNS to reach its servers. The addresses of the stable NTS
+servers are therefore pinned in `/etc/hosts`, chrony steps the clock whenever it is more than one
+second off (`makestep 1 -1`), and a timer resets the resolver's servers after every clock step
+([incident](../incidents/wrong-clock-dns-deadlock.md)).
+
 ## How to allow a program through OpenSnitch
 
 1. Find the real executable of the running program.
