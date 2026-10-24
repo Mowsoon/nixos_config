@@ -264,7 +264,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | File | Content |
 | --- | --- |
 | `default.nix` | Core, security, desktop and virtualisation modules; users, locale, boot settings, VM variant |
-| `hardware.nix` | Kernel, hardware profiles, NVIDIA, ASUS, audio, peripherals, power, disk health, Wi-Fi |
+| `hardware.nix` | Kernel, hardware profiles, NVIDIA, ASUS, audio, peripherals, lighting, power, disk health, Wi-Fi |
 | `disko.nix` | Partitions, LUKS container and Btrfs subvolumes |
 | `network.nix` | Network modules |
 | `home.nix` | Home Manager, login shell, unfree user applications |
@@ -289,6 +289,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `custom.asus` | `hardware/asus.nix` | asusd and battery charge limit |
 | `custom.audio` | `hardware/audio.nix` | PipeWire |
 | `custom.peripherals` | `hardware/peripherals.nix` | Bluetooth, Logitech receivers, input-remapper |
+| `custom.rgb` | `hardware/rgb.nix` | OpenRGB SDK server for the Logitech keyboard |
 | `custom.power` | `hardware/power.nix` | Power profiles, delayed hibernation, critical battery |
 | `custom.diskHealth` | `hardware/disk-health.nix` | SMART monitoring |
 | `custom.mt7921` | `hardware/mt7921.nix` | Patched mt76 Wi-Fi modules |

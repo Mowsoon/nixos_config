@@ -8,6 +8,7 @@
     ../../modules/hardware/asus.nix
     ../../modules/hardware/audio.nix
     ../../modules/hardware/peripherals.nix
+    ../../modules/hardware/rgb.nix
     ../../modules/hardware/power.nix
     ../../modules/hardware/disk-health.nix
     ../../modules/hardware/mt7921.nix
@@ -37,6 +38,7 @@
       serializeAmdAcpResume = true;
     };
     peripherals.enable = true;
+    rgb.enable = true;
     power = {
       enable = true;
       disarmInputWakeupForHibernation = true;

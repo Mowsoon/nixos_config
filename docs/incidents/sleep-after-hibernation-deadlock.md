@@ -87,7 +87,10 @@ Hypotheses ruled out on the way:
 - the ACP and HD Audio race ([incident](amd-acp-hda-resume-race.md));
 - keyboard, mouse and RTC wakeups ([incident](hibernation-wakeup-hang.md));
 - NVIDIA bug 5156763, fixed in 595.104.02 (`InHibernate` cleared in `dynamic-power.c`);
-- the GCOFF path: `S0ixPowerManagementVideoMemoryThreshold = 0` did not help;
+- the GPU power-off method: forcing GC6 with `S0ixPowerManagementVideoMemoryThreshold = 0` and
+  forcing GCOFF with `8192` both hang. GCOFF is not usable anyway: after a normal sleep, KWin
+  fails to rebuild its framebuffers (`<image> and <target> are incompatible`) and the screen stays
+  black;
 - the kernel suspend callback of the NVIDIA driver, which only counts when the GPU is already
   suspended;
 - asusd, whose keyboard sleep task never runs.

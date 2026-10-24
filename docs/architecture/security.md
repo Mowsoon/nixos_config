@@ -60,6 +60,10 @@ talk to the Nix daemon, so a system service account cannot build or fetch anythi
 The user is not in the `docker` group. Membership of that group is equivalent to root, because the
 daemon mounts any host path into a container on request; Docker commands go through `sudo`.
 
+Hardware access granted through udev stays per device. Packages that ship broad rules, such as
+OpenRGB, which tags I2C buses and `/dev/port` for the session user, are installed without them,
+and their service receives only the device it drives ([Hardware](hardware.md#lighting)).
+
 ### Software supply
 
 Unfree packages are allowed one by one: each module that needs one adds its name to

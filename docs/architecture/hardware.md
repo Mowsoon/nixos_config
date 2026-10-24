@@ -164,6 +164,31 @@ to Plasma. Pairing keys are persisted. The udev rules for Logitech wireless rece
 configure the devices without root. input-remapper is available for remapping external keyboards;
 its presets live in the persistent home.
 
+### Lighting
+
+The OpenRGB SDK server drives the lighting of the Logitech G915 X through its LIGHTSPEED receiver
+and listens on the loopback address only. The keyboard backlight of the laptop stays with asusd:
+OpenRGB ships a detector for the same ASUS controller, and two daemons writing to it would fight.
+The server therefore runs under a dynamic user that can open only the hidraw nodes of the receiver,
+granted through the `openrgb-receiver` group by a single udev rule. The upstream udev rules of
+OpenRGB are left out: besides thousands of RGB devices, they give the session user the ASUS
+controller, every I2C bus and `/dev/port`, which is raw access to the processor I/O ports. No
+OpenRGB state is persisted; its configuration is regenerated at every boot.
+
+The keyboard stores nothing that OpenRGB sends. Frames are volatile: the keyboard keeps the last
+frame while powered, and plays its own onboard effect after a power cycle when the server is
+stopped. While the server runs, it takes control back at every reconnection of the keyboard and
+repaints only the LEDs it believes changed, so a client must send one complete frame after each
+connection and each wake-up, or keys keep stale colours from the keyboard buffer. OpenRGB mirrors
+the idle timers of the keyboard: it dims after one minute without a key press, stops sending
+frames and puts the keyboard to sleep after five, and resumes on the next key press. Frames do not
+keep the keyboard awake.
+
+The radio carries about 320 HID++ packets per second, each acknowledged in about 2 ms. OpenRGB
+groups keys by colour and sends only what changed, so the frame rate depends on how many colours
+change per frame, not on the rate the client asks for; frames above the ceiling are dropped, not
+queued.
+
 ### Wi-Fi
 
 The MediaTek MT7922 card runs the `mt7921e` driver of the mt76 family. The in-tree driver resumes
@@ -431,6 +456,22 @@ the RMS level of the silence, the loudness and true peak are measured on the spe
 | True peak | -1 dBTP or lower | -6.9 dBTP | -1.5 dBTP |
 | Speaker echo, voice played at speaker volume 0.40 | Inaudible | -22.4 LUFS | -70 LUFS |
 
+### G915 X lighting measurements
+
+Measured through the OpenRGB SDK server, counting the HID++ writes on the receiver with `strace`.
+
+| Item | Value |
+| --- | --- |
+| Addressable LEDs | 121: 106 keys in a 6 by 21 AZERTY matrix, 15 extras (media keys, G1 to G9, logo) |
+| Firmware modes | Off, Static, Breathing, Spectrum Cycle, Color Wave, Ripple (reacts to key presses) |
+| Radio throughput | About 320 packets per second, one packet every 3.0 ms |
+| Acknowledgement latency | 2.0 ms median, 6 ms at the 99th percentile |
+| Full frame, every LED a different colour | 32 packets, about 10 frames per second |
+| Uniform colour | 4 packets, about 70 frames per second |
+| A few keys changing on a fixed background | 3 to 7 packets, 22 to 30 frames per second |
+| Idle and sleep timers | 1 minute (dim), 5 minutes (sleep), read from the keyboard |
+| Rated battery life | 36 h at full brightness, 90 h at half, 800 h with lighting off |
+
 ### Options
 
 | Option | Default | Description |
@@ -442,6 +483,7 @@ the RMS level of the silence, the loudness and true peak are measured on the spe
 | `custom.audio.enable` | `false` | PipeWire with ALSA, PulseAudio and JACK layers |
 | `custom.audio.serializeAmdAcpResume` | `false` | `power/async` disabled on the revision `0x62` ACP and the AMD HD Audio controller |
 | `custom.peripherals.enable` | `false` | Bluetooth, Logitech receivers, input-remapper |
+| `custom.rgb.enable` | `false` | OpenRGB SDK server on `127.0.0.1:6742`, confined to the Logitech LIGHTSPEED receiver |
 | `custom.power.enable` | `false` | Power profiles without CPU driver, `powersave` governor, delayed hibernation, hibernation on critical battery |
 | `custom.power.disarmInputWakeupForHibernation` | `false` | `system-sleep` hook that disables the wakeup of USB HID devices during hibernation |
 | `custom.diskHealth.enable` | `false` | smartd with desktop notifications |
@@ -455,9 +497,12 @@ the RMS level of the silence, the loudness and true peak are measured on the spe
 | NVIDIA on NixOS | <https://wiki.nixos.org/wiki/Nvidia> |
 | nvidia-vaapi-driver | <https://github.com/elFarto/nvidia-vaapi-driver> |
 | asusctl | <https://gitlab.com/asus-linux/asusctl> |
+| OpenRGB | <https://gitlab.com/CalcProgrammer1/OpenRGB> |
+| G915 X specifications | <https://www.logitechg.com/en-gb/products/gaming-keyboards/g915-x-wireless-mechanical-gaming-keyboard.html> |
 | `systemd-sleep.conf` | <https://www.freedesktop.org/software/systemd/man/latest/systemd-sleep.conf.html> |
 | `hardware.nvidia` | <https://search.nixos.org/options?channel=unstable&query=hardware.nvidia> |
 | `services.asusd` | <https://search.nixos.org/options?channel=unstable&query=services.asusd> |
+| `services.hardware.openrgb` | <https://search.nixos.org/options?channel=unstable&query=services.hardware.openrgb> |
 | EasyEffects | <https://github.com/wwmm/easyeffects> |
 | DeepFilterNet | <https://github.com/Rikorose/DeepFilterNet> |
 | `services.pipewire` | <https://search.nixos.org/options?channel=unstable&query=services.pipewire> |
