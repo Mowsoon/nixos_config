@@ -82,16 +82,22 @@ Blast radius: the USB key is overwritten entirely.
    sudo wc -c /var/lib/sbctl/GUID
    ```
 
-4. Create the archive on the T7 disk, then verify it by listing its directories.
+4. Mount the T7 disk with the `uid` and `gid` options, so that the user who runs `age` can write
+   to the exFAT file system, which has no owner of its own. Create the archive on it, then verify
+   it by listing its directories. The archive excludes the `hephaestus-swtpm` directory, which
+   holds the TPM state of the virtual machine.
 
    ```bash
+   sudo mkdir -p <t7-mount>
+   sudo mount -o uid=$(id -u),gid=$(id -g) /dev/<t7-partition> <t7-mount>
    sudo -v
-   sudo tar --create --zstd --xattrs --acls --file=- --exclude=rehearsal --exclude='result*' --exclude='*.qcow2' /var/lib/sbctl /etc/cryptsetup-keys.d /etc/NetworkManager/system-connections ~/.ssh ~/.config/nixos/ ~/.config/nixos-private/ | nix run nixpkgs#age -- --passphrase --output "<t7-mount>/arch-backup-<date>.tar.zst.age"
+   sudo tar --create --zstd --xattrs --acls --file=- --exclude=rehearsal --exclude='result*' --exclude='*.qcow2' --exclude=hephaestus-swtpm /var/lib/sbctl /etc/cryptsetup-keys.d /etc/NetworkManager/system-connections ~/.ssh ~/.config/nixos/ ~/.config/nixos-private/ | nix run nixpkgs#age -- --passphrase --output "<t7-mount>/arch-backup-<date>.tar.zst.age"
    nix run nixpkgs#age -- -d "<t7-mount>/arch-backup-<date>.tar.zst.age" | tar --zstd -tf - | sed 's|/[^/]*$||' | sort -u
    ```
 
-   `<t7-mount>` is the mount point of the T7 disk. The passphrase is stored in the password
-   manager before the listing runs.
+   `<t7-mount>` is the mount point of the T7 disk. `<t7-partition>` is the T7 partition shown by
+   `lsblk`, such as `sda1`. The passphrase is stored in the password manager before the listing
+   runs.
 
 5. Plug the Ethernet cable.
 6. Shut down, open the firmware setup, disable Secure Boot, and boot the USB key from the firmware
@@ -168,15 +174,14 @@ installation. Rollback path: none for Arch; the state worth keeping is in the ar
    chmod 700 /mnt/persist/restore
    ```
 
-8. Write the user password hash. `mkpasswd` alone reads the password once, without confirmation,
-   and root has no password: a typo locks the session. The commands below read it twice and write
-   the hash only when both entries match.
+8. Write the user password hash. `mkpasswd` reads the password once, without confirmation, and
+   root has no password: type it carefully, since a typo locks the session. Reading the password
+   twice with `read` and piping it to `mkpasswd -s` with `printf` failed during the switch of
+   2026-10-17, while `mkpasswd` alone worked.
 
    ```bash
    install -d -m 700 /mnt/persist/secrets
-   read -rsp "Password: " first && echo && read -rsp "Again: " second && echo
-   [ "$first" = "$second" ] && printf '%s' "$first" | mkpasswd -m yescrypt -s > /mnt/persist/secrets/mowsoon.hash
-   unset first second
+   mkpasswd -m yescrypt > /mnt/persist/secrets/mowsoon.hash
    chmod 600 /mnt/persist/secrets/mowsoon.hash
    ```
 
@@ -243,9 +248,17 @@ installation. Rollback path: none for Arch; the state worth keeping is in the ar
    sudo bootctl status
    ```
 
-   `Secure Boot: enabled (user)` is expected.
+   `Secure Boot: enabled (user)` is expected. During the switch of 2026-10-17, the firmware fell
+   back to setup mode, which the status reports as `Secure Boot: disabled (setup)`. In that case,
+   enroll the preserved keys again, reboot into the firmware setup, enable Secure Boot, and verify
+   the state again.
 
-5. Boot Windows once from the firmware boot menu. BitLocker opens without its recovery key.
+   ```bash
+   sudo sbctl enroll-keys --microsoft
+   ```
+
+5. Boot Windows once from the firmware boot menu, with the BitLocker recovery key at hand.
+   BitLocker asks for it once after the key enrollment, then opens without it.
 6. Enroll the recovery key, the TPM2 slot and the header backup, following
    [LUKS enrollment](luks-enrollment.md).
 7. Run the hardware checks listed in the reference below.
