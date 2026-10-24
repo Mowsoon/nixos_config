@@ -6,7 +6,7 @@ from typing import Protocol
 
 from dbus_fast import BusType, Message, MessageType, RequestNameReply
 from dbus_fast.aio import MessageBus
-from dbus_fast.annotations import DBusStr
+from dbus_fast.annotations import DBusStr, DBusUInt32
 from dbus_fast.constants import NameFlag
 from dbus_fast.errors import DBusError
 from dbus_fast.service import ServiceInterface, method
@@ -23,12 +23,17 @@ SCRIPT_INTERFACE = "org.kde.kwin.Script"
 PLUGIN_NAME = "rgb-effects-active-window"
 CALL_TIMEOUT_SECONDS = 5.0
 BUS_ERRORS = (OSError, DBusError, EOFError)
+MAX_FOCUS_SECONDS = 86400
 
 logger = logging.getLogger(__name__)
 
 
 class WindowListener(Protocol):
     def window_activated(self, resource_class: str) -> None: ...
+
+    def focus_started(self, seconds: float) -> None: ...
+
+    def focus_stopped(self) -> None: ...
 
 
 class EffectsInterface(ServiceInterface):
@@ -39,6 +44,16 @@ class EffectsInterface(ServiceInterface):
     @method(name="WindowActivated")
     def window_activated(self, resource_class: DBusStr) -> None:
         self._listener.window_activated(resource_class)
+
+    @method(name="StartFocus")
+    def start_focus(self, seconds: DBusUInt32) -> None:
+        if not 1 <= seconds <= MAX_FOCUS_SECONDS:
+            raise DBusError("org.freedesktop.DBus.Error.InvalidArgs", "focus seconds out of range")
+        self._listener.focus_started(float(seconds))
+
+    @method(name="StopFocus")
+    def stop_focus(self) -> None:
+        self._listener.focus_stopped()
 
 
 class Session:

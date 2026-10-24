@@ -2,16 +2,25 @@ import argparse
 import asyncio
 import importlib.resources
 import logging
+import os
 import signal
 import time
+from collections.abc import Callable
 from pathlib import Path
 
+from rgb_effects.accent import AccentWatcher
 from rgb_effects.config import EffectsConfig, load_config
-from rgb_effects.daemon import Daemon, EventWaiter, Pacing, RetryPolicy, Runtime, Scene
-from rgb_effects.ember import Ember
+from rgb_effects.daemon import Daemon, EventWaiter, Pacing, Runtime, Scene
+from rgb_effects.engine.activity import Activity
+from rgb_effects.engine.background import Background, BackgroundSettings
+from rgb_effects.engine.compose import Engine, EngineSettings
+from rgb_effects.engine.geometry import KeyboardLayout, build_geometry
+from rgb_effects.engine.hud import Hud, HudSettings
+from rgb_effects.engine.physics import Physics, PhysicsSettings
 from rgb_effects.errors import ConfigError, SessionError
 from rgb_effects.keyboard import OpenRgbKeyboard
 from rgb_effects.keys import KeySource
+from rgb_effects.retry import RetryPolicy
 from rgb_effects.power import PowerMonitor
 from rgb_effects.session import Session
 from rgb_effects.windows import WindowColors
@@ -21,6 +30,8 @@ logger = logging.getLogger("rgb_effects")
 CLIENT_NAME = "rgb-effects"
 RETRY = RetryPolicy(initial_seconds=2.0, maximum_seconds=60.0)
 POWER_SUPPLIES = Path("/sys/class/power_supply")
+ACTIVITY_SECONDS = 3.0
+NOISE_SEED = 1915
 
 
 class SystemClock:
@@ -38,17 +49,49 @@ def _arguments(argv: list[str] | None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _engine_factory(config: EffectsConfig) -> Callable[[KeyboardLayout], Engine]:
+    engine, physics = config.engine, config.physics
+    physics_settings = PhysicsSettings(
+        ember_cold_seconds=physics.ember_cold_seconds,
+        ember_hot_seconds=physics.ember_hot_seconds,
+    )
+    settings = EngineSettings(
+        engine.palette_size, engine.sleep_seconds, physics.falling_keys_per_second
+    )
+    hud = HudSettings(
+        config.hud.bindings, config.hud.colors, config.hud.dim, config.hud.clock_hold_seconds
+    )
+
+    def build(layout: KeyboardLayout) -> Engine:
+        geometry = build_geometry(layout)
+        background = Background(
+            geometry.shape, BackgroundSettings(idle_seconds=engine.idle_seconds), NOISE_SEED
+        )
+        return Engine(
+            geometry,
+            background,
+            Physics(geometry.shape, physics_settings),
+            Activity(ACTIVITY_SECONDS, time.monotonic()),
+            Hud(hud, layout.led_names),
+            settings,
+        )
+
+    return build
+
+
 def _daemon(config: EffectsConfig) -> Daemon:
     scene = Scene(
         schedule=config.schedule,
         windows=WindowColors(config.window_colors),
-        ember=Ember(config.ember.palette, config.ember.duration_seconds),
+        engine_factory=_engine_factory(config),
         pacing=Pacing(
             refresh_seconds=config.refresh_seconds,
             frame_seconds=1 / config.fps,
             battery_frame_seconds=1 / config.battery_fps,
             low_battery_ceiling=config.low_battery.ceiling,
+            packets_per_second=config.engine.packets_per_second,
         ),
+        physics_ceiling=config.physics.minimum_brightness,
     )
     runtime = Runtime(
         keyboard=OpenRgbKeyboard(config.server, config.device, CLIENT_NAME),
@@ -65,10 +108,17 @@ def _power_monitor(daemon: Daemon, config: EffectsConfig) -> PowerMonitor:
     return PowerMonitor(daemon, battery, config.refresh_seconds, RETRY, asyncio.sleep)
 
 
+def _accent_watcher(daemon: Daemon, config: EffectsConfig) -> AccentWatcher:
+    config_home = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
+    path = config_home / "kdeglobals"
+    return AccentWatcher(path, daemon, config.refresh_seconds, asyncio.sleep)
+
+
 async def _run_all(daemon: Daemon, config: EffectsConfig) -> None:
     async with asyncio.TaskGroup() as group:
         group.create_task(daemon.run())
         group.create_task(_power_monitor(daemon, config).run())
+        group.create_task(_accent_watcher(daemon, config).run())
         if config.key_socket is not None:
             source = KeySource(config.key_socket, daemon, RETRY, asyncio.sleep)
             group.create_task(source.run())

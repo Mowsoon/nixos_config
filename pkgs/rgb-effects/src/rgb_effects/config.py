@@ -18,9 +18,19 @@ class ServerConfig:
 
 
 @dataclass(frozen=True, slots=True)
-class EmberConfig:
-    palette: tuple[Color, ...]
-    duration_seconds: float
+class EngineConfig:
+    palette_size: int
+    packets_per_second: int
+    idle_seconds: float
+    sleep_seconds: float
+
+
+@dataclass(frozen=True, slots=True)
+class PhysicsConfig:
+    minimum_brightness: float
+    ember_cold_seconds: float
+    ember_hot_seconds: float
+    falling_keys_per_second: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -31,12 +41,22 @@ class LowBatteryConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class HudConfig:
+    bindings: dict[str, dict[str, tuple[str, ...]]]
+    colors: dict[str, Color]
+    dim: float
+    clock_hold_seconds: float
+
+
+@dataclass(frozen=True, slots=True)
 class EffectsConfig:
     server: ServerConfig
     device: str
     schedule: Schedule
     window_colors: dict[str, Color]
-    ember: EmberConfig
+    engine: EngineConfig
+    physics: PhysicsConfig
+    hud: HudConfig
     key_socket: Path | None
     refresh_seconds: float
     fps: int
@@ -87,18 +107,32 @@ def _window_colors(data: dict[str, Any]) -> dict[str, Color]:
     return colors
 
 
-def _ember(data: dict[str, Any]) -> EmberConfig:
-    colors = _field(data, "colors", list)
-    if not colors or not all(isinstance(color, str) for color in colors):
-        raise ConfigError("ember colors must be a non-empty list of strings")
-    duration = _field(data, "durationMs", int)
-    if not 50 <= duration <= 10000:
-        raise ConfigError(f"ember durationMs {duration} is outside 50..10000")
-    brightness = _field(data, "brightness", float)
+def _bounded(data: dict[str, Any], name: str, low: int, high: int) -> int:
+    value = _field(data, name, int)
+    if not low <= value <= high:
+        raise ConfigError(f"{name} {value} is outside {low}..{high}")
+    return value
+
+
+def _engine(data: dict[str, Any]) -> EngineConfig:
+    return EngineConfig(
+        palette_size=_bounded(data, "paletteSize", 6, 8),
+        packets_per_second=_bounded(data, "packetsPerSecond", 30, 320),
+        idle_seconds=float(_bounded(data, "idleSeconds", 5, 600)),
+        sleep_seconds=float(_bounded(data, "sleepSeconds", 30, 3600)),
+    )
+
+
+def _physics(data: dict[str, Any]) -> PhysicsConfig:
+    brightness = _field(data, "minimumBrightness", float)
     if not 0.0 <= brightness <= 1.0:
-        raise ConfigError(f"ember brightness {brightness} is outside 0..1")
-    palette = tuple(parse_hex(color).scaled(brightness) for color in colors)
-    return EmberConfig(palette=palette, duration_seconds=duration / 1000)
+        raise ConfigError(f"minimumBrightness {brightness} is outside 0..1")
+    cold = _bounded(data, "emberColdMs", 50, 10000)
+    hot = _bounded(data, "emberHotMs", 50, 10000)
+    if hot < cold:
+        raise ConfigError("emberHotMs must not be shorter than emberColdMs")
+    words = _bounded(data, "sandWordsPerMinute", 0, 200)
+    return PhysicsConfig(brightness, cold / 1000, hot / 1000, words * 5 / 60)
 
 
 def _fps(data: dict[str, Any], name: str) -> int:
@@ -117,6 +151,45 @@ def _low_battery(data: dict[str, Any]) -> LowBatteryConfig:
         raise ConfigError(f"lowBattery brightness {ceiling} is outside 0..1")
     model = _non_empty(_field(data, "model", str), "model")
     return LowBatteryConfig(model=model, threshold=threshold, ceiling=ceiling)
+
+
+MODIFIER_ORDER = ("ctrl", "alt", "super")
+
+
+def _combo(name: str) -> str:
+    parts = name.split("+")
+    if len(set(parts)) != len(parts) or not set(parts) <= set(MODIFIER_ORDER):
+        raise ConfigError(f"hud binding {name!r} must combine ctrl, alt and super")
+    return "+".join(part for part in MODIFIER_ORDER if part in parts)
+
+
+def _labels(value: Any, where: str) -> tuple[str, ...]:
+    if not isinstance(value, list) or not all(isinstance(label, str) for label in value):
+        raise ConfigError(f"hud keys of {where} must be a list of strings")
+    return tuple(value)
+
+
+def _bindings(data: dict[str, Any]) -> dict[str, dict[str, tuple[str, ...]]]:
+    bindings: dict[str, dict[str, tuple[str, ...]]] = {}
+    for name, categories in data.items():
+        if not isinstance(categories, dict):
+            raise ConfigError(f"hud binding {name!r} must map categories to keys")
+        bindings[_combo(name)] = {
+            category: _labels(keys, f"{name}.{category}") for category, keys in categories.items()
+        }
+    return bindings
+
+
+def _hud(data: dict[str, Any]) -> HudConfig:
+    dim = _field(data, "dim", float)
+    if not 0.0 <= dim <= 1.0:
+        raise ConfigError(f"hud dim {dim} is outside 0..1")
+    return HudConfig(
+        bindings=_bindings(_field(data, "bindings", dict)),
+        colors=_window_colors(_field(data, "colors", dict)),
+        dim=dim,
+        clock_hold_seconds=_bounded(data, "clockHoldMs", 100, 5000) / 1000,
+    )
 
 
 def _key_socket(data: dict[str, Any]) -> Path | None:
@@ -146,7 +219,9 @@ def parse_config(data: Any) -> EffectsConfig:
         device=_non_empty(_field(data, "device", str), "device"),
         schedule=Schedule(tuple(_keyframe(entry) for entry in _field(data, "schedule", list))),
         window_colors=_window_colors(_field(data, "windowColors", dict)),
-        ember=_ember(_field(data, "ember", dict)),
+        engine=_engine(_field(data, "engine", dict)),
+        physics=_physics(_field(data, "physics", dict)),
+        hud=_hud(_field(data, "hud", dict)),
         key_socket=_key_socket(data),
         refresh_seconds=refresh,
         fps=_fps(data, "fps"),

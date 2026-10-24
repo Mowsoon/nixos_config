@@ -10,6 +10,7 @@ python = "^3.11"
 openrgb-python = "^0.3"
 dbus-fast = "^5.0"
 evdev = "^1.9"
+numpy = "^2.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.0"
@@ -22,6 +23,7 @@ pytest-asyncio = "^1.0"
 [tool.poetry.scripts]
 rgb-effects = "rgb_effects.cli:main"
 rgb-keyreader = "rgb_effects.keyreader:main"
+rgb-focus = "rgb_effects.focus:main"
 
 [tool.black]
 line-length = 100

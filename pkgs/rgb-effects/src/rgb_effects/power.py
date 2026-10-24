@@ -7,7 +7,8 @@ from dbus_fast import BusType, Message, MessageType, Variant
 from dbus_fast.aio import MessageBus
 from dbus_fast.errors import DBusError
 
-from rgb_effects.daemon import PowerState, RetryPolicy, Sleep
+from rgb_effects.daemon import PowerState
+from rgb_effects.retry import RetryPolicy, Sleep
 
 logger = logging.getLogger(__name__)
 

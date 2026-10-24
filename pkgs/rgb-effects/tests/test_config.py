@@ -18,7 +18,24 @@ VALID: dict[str, Any] = {
     "batteryFps": 15,
     "lowBattery": {"model": "G915 X LS", "threshold": 20, "brightness": 0.4},
     "keySocket": "/run/rgb-keyreader.sock",
-    "ember": {"colors": ["#ffffff", "#ff6a00"], "durationMs": 900, "brightness": 0.5},
+    "engine": {
+        "paletteSize": 8,
+        "packetsPerSecond": 180,
+        "idleSeconds": 30,
+        "sleepSeconds": 300,
+    },
+    "physics": {
+        "minimumBrightness": 0.6,
+        "emberColdMs": 800,
+        "emberHotMs": 2500,
+        "sandWordsPerMinute": 15,
+    },
+    "hud": {
+        "bindings": {"ctrl": {"edit": ["C", "V"]}, "alt+ctrl": {"window": ["Tab"]}},
+        "colors": {"edit": "#00e5ff"},
+        "dim": 0.25,
+        "clockHoldMs": 500,
+    },
     "schedule": [
         {"time": "06:30", "color": "#9fb8ff", "brightness": 0.35},
         {"time": "18:00", "color": "#ffb070", "brightness": 0.6},
@@ -48,12 +65,13 @@ def test_parse_config_reads_window_colors() -> None:
     assert parse_config(VALID).window_colors == {"firefox": Color(255, 113, 57)}
 
 
-def test_parse_config_scales_ember_palette_by_brightness() -> None:
-    assert parse_config(VALID).ember.palette == (Color(128, 128, 128), Color(128, 53, 0))
+def test_parse_config_reads_ember_durations_in_seconds() -> None:
+    physics = parse_config(VALID).physics
+    assert (physics.ember_cold_seconds, physics.ember_hot_seconds) == (0.8, 2.5)
 
 
-def test_parse_config_reads_ember_duration_in_seconds() -> None:
-    assert parse_config(VALID).ember.duration_seconds == 0.9
+def test_parse_config_converts_words_per_minute_to_keys_per_second() -> None:
+    assert parse_config(VALID).physics.falling_keys_per_second == 1.25
 
 
 def test_parse_config_accepts_null_key_socket() -> None:
@@ -62,6 +80,10 @@ def test_parse_config_accepts_null_key_socket() -> None:
 
 def test_parse_config_reads_low_battery_ceiling() -> None:
     assert parse_config(VALID).low_battery.ceiling == 0.4
+
+
+def test_parse_config_normalises_hud_combinations() -> None:
+    assert set(parse_config(VALID).hud.bindings) == {"ctrl", "ctrl+alt"}
 
 
 def test_parse_config_accepts_integer_refresh() -> None:
@@ -91,10 +113,18 @@ def test_parse_config_accepts_integer_refresh() -> None:
         (["lowBattery", "model"], ""),
         (["keySocket"], "run/rgb-keyreader.sock"),
         (["keySocket"], 3),
-        (["ember", "colors"], []),
-        (["ember", "colors"], ["#ffffff", 1]),
-        (["ember", "durationMs"], 10),
-        (["ember", "brightness"], 2),
+        (["engine", "paletteSize"], 9),
+        (["engine", "packetsPerSecond"], 400),
+        (["engine", "idleSeconds"], 1),
+        (["physics", "minimumBrightness"], 2),
+        (["physics", "emberColdMs"], 10),
+        (["physics", "emberHotMs"], 700),
+        (["physics", "sandWordsPerMinute"], 500),
+        (["hud", "bindings"], {"shift": {"edit": ["C"]}}),
+        (["hud", "bindings"], {"ctrl": {"edit": "C"}}),
+        (["hud", "colors"], {"edit": "cyan"}),
+        (["hud", "dim"], 2),
+        (["hud", "clockHoldMs"], 10),
     ],
 )
 def test_parse_config_rejects_invalid_field(path: list[str], value: Any) -> None:

@@ -1,26 +1,30 @@
 import asyncio
 import logging
-import secrets
-from collections.abc import Awaitable, Callable, Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
 from rgb_effects.color import Color
-from rgb_effects.ember import Ember
+from rgb_effects.engine.compose import Engine, FrameRequest
+from rgb_effects.engine.geometry import KeyboardLayout
+from rgb_effects.engine.palette import PaletteInputs
 from rgb_effects.errors import KeyboardUnavailableError
 from rgb_effects.keymap import led_index_by_code
+from rgb_effects.keys import KeyEvent
+from rgb_effects.retry import RetryPolicy, Sleep
 from rgb_effects.schedule import Schedule
 from rgb_effects.windows import WindowColors
 
 logger = logging.getLogger(__name__)
 
 Frame = tuple[Color, ...]
-PULSE_STEP = 3
-Sleep = Callable[[float], Awaitable[None]]
+EngineFactory = Callable[[KeyboardLayout], Engine]
+MIN_PACKETS_PER_FRAME = 2
+ENTER_CODES = frozenset({28, 96})
 
 
 class Keyboard(Protocol):
-    async def connect(self) -> tuple[str, ...]: ...
+    async def connect(self) -> KeyboardLayout: ...
 
     async def show(self, colors: Sequence[Color]) -> None: ...
 
@@ -40,23 +44,12 @@ class Waiter(Protocol):
 
 
 @dataclass(frozen=True, slots=True)
-class RetryPolicy:
-    initial_seconds: float
-    maximum_seconds: float
-
-    def next_delay(self, current: float) -> float:
-        return min(current * 2, self.maximum_seconds)
-
-    def jittered(self, delay: float) -> float:
-        return delay * (0.5 + secrets.SystemRandom().random())
-
-
-@dataclass(frozen=True, slots=True)
 class Pacing:
     refresh_seconds: float
     frame_seconds: float
     battery_frame_seconds: float
     low_battery_ceiling: float
+    packets_per_second: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,8 +62,9 @@ class PowerState:
 class Scene:
     schedule: Schedule
     windows: WindowColors
-    ember: Ember
+    engine_factory: EngineFactory
     pacing: Pacing
+    physics_ceiling: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -91,7 +85,7 @@ class EventWaiter:
             async with asyncio.timeout(timeout):
                 await self._event.wait()
         except TimeoutError:
-            logger.debug("refresh after %.0f s", timeout)
+            logger.debug("refresh after %.2f s", timeout)
         finally:
             self._event.clear()
 
@@ -107,50 +101,81 @@ class Daemon:
     def __init__(self, scene: Scene, runtime: Runtime) -> None:
         self._scene = scene
         self._runtime = runtime
-        self._led_count = 0
+        self._engine: Engine | None = None
         self._led_index: Mapping[int, int] = {}
         self._power = PowerState(on_battery=False, keyboard_low=False)
-
-    def power_changed(self, state: PowerState) -> None:
-        self._power = state
-        self._runtime.waiter.wake()
+        self._accent: Color | None = None
 
     def window_activated(self, resource_class: str) -> None:
         if self._scene.windows.activate(resource_class):
             self._runtime.waiter.wake()
 
-    def key_pressed(self, code: int | None) -> None:
-        now = self._runtime.clock.monotonic()
-        if code is None:
-            self._scene.ember.ignite_all(self._led_count, now, PULSE_STEP)
-        elif code in self._led_index:
-            self._scene.ember.ignite(self._led_index[code], now)
-        else:
-            return
+    def accent_changed(self, color: Color | None) -> None:
+        self._accent = color
         self._runtime.waiter.wake()
 
-    def render(self) -> Frame:
-        minute = self._runtime.clock.minute_of_day()
-        schedule = self._scene.schedule
-        window = self._scene.windows.current
-        if window is None:
-            background = schedule.color_at(minute)
+    def power_changed(self, state: PowerState) -> None:
+        self._power = state
+        self._runtime.waiter.wake()
+
+    def key_event(self, event: KeyEvent) -> None:
+        engine = self._engine
+        if engine is None:
+            return
+        now = self._runtime.clock.monotonic()
+        if event.code is None:
+            engine.pulse(now)
+        elif event.pressed:
+            self._press(engine, event.code, now)
         else:
-            background = window.scaled(schedule.brightness_at(minute))
-        frame = tuple(background for _ in range(self._led_count))
-        frame = self._scene.ember.overlay(frame, self._runtime.clock.monotonic())
-        if not self._power.keyboard_low:
-            return frame
-        ceiling = self._scene.pacing.low_battery_ceiling
-        return tuple(color.capped(ceiling) for color in frame)
+            engine.hud.key_up(event.code)
+        self._runtime.waiter.wake()
+
+    def focus_started(self, seconds: float) -> None:
+        engine = self._engine
+        if engine is not None:
+            engine.hud.start_focus(seconds, self._runtime.clock.monotonic())
+            self._runtime.waiter.wake()
+
+    def focus_stopped(self) -> None:
+        engine = self._engine
+        if engine is not None:
+            engine.hud.stop_focus()
+            self._runtime.waiter.wake()
+
+    def _press(self, engine: Engine, code: int, now: float) -> None:
+        engine.hud.key_down(code, now)
+        engine.key_pressed(self._led_index.get(code), now)
+        if code in ENTER_CODES:
+            engine.enter()
+
+    def render(self) -> Frame:
+        engine = self._engine
+        if engine is None:
+            return ()
+        return engine.frame(self._request())
+
+    def _request(self) -> FrameRequest:
+        clock, schedule, pacing = self._runtime.clock, self._scene.schedule, self._scene.pacing
+        minute = clock.minute_of_day()
+        inputs = PaletteInputs(
+            hue=schedule.hue_at(minute),
+            ceiling=schedule.brightness_at(minute),
+            physics_ceiling=self._scene.physics_ceiling,
+            window=self._scene.windows.current,
+            accent=self._accent,
+        )
+        frame_seconds = self._frame_seconds()
+        packets = max(MIN_PACKETS_PER_FRAME, int(pacing.packets_per_second * frame_seconds))
+        cap = pacing.low_battery_ceiling if self._power.keyboard_low else None
+        return FrameRequest(clock.monotonic(), minute, inputs, packets, cap)
+
+    def _frame_seconds(self) -> float:
+        pacing = self._scene.pacing
+        return pacing.battery_frame_seconds if self._power.on_battery else pacing.frame_seconds
 
     def _pause_seconds(self) -> float:
-        pacing = self._scene.pacing
-        if not self._scene.ember.active(self._runtime.clock.monotonic()):
-            return pacing.refresh_seconds
-        if self._power.on_battery:
-            return pacing.battery_frame_seconds
-        return pacing.frame_seconds
+        return self._frame_seconds() if self._awake() else self._scene.pacing.refresh_seconds
 
     async def run(self) -> None:
         retry = self._runtime.retry
@@ -171,10 +196,10 @@ class Daemon:
             await self._runtime.keyboard.close()
 
     async def _attach(self) -> None:
-        led_names = await self._runtime.keyboard.connect()
-        self._led_count = len(led_names)
-        self._led_index = led_index_by_code(led_names)
-        logger.info("connected to the keyboard with %d LEDs", self._led_count)
+        layout = await self._runtime.keyboard.connect()
+        self._led_index = led_index_by_code(layout.led_names)
+        self._engine = self._scene.engine_factory(layout)
+        logger.info("connected to the keyboard with %d LEDs", len(layout.led_names))
 
     async def _serve(self) -> None:
         keyboard = self._runtime.keyboard
@@ -184,6 +209,10 @@ class Daemon:
         while True:
             await self._runtime.waiter.wait(self._pause_seconds())
             current = self.render()
-            if current != frame:
+            if current != frame or self._awake():
                 await keyboard.show(current)
                 frame = current
+
+    def _awake(self) -> bool:
+        engine = self._engine
+        return engine is not None and engine.awake(self._runtime.clock.monotonic())

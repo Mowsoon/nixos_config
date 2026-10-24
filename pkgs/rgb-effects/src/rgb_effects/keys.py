@@ -1,26 +1,33 @@
 import asyncio
 import logging
 import socket
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
-from rgb_effects.daemon import RetryPolicy, Sleep
+from rgb_effects.retry import RetryPolicy, Sleep
 
 logger = logging.getLogger(__name__)
 
 PULSE_CODE = 0xFFFF
-PACKET_SIZE = 2
+PACKET_SIZE = 3
+
+
+@dataclass(frozen=True, slots=True)
+class KeyEvent:
+    code: int | None
+    pressed: bool
 
 
 class KeyListener(Protocol):
-    def key_pressed(self, code: int | None) -> None: ...
+    def key_event(self, event: KeyEvent) -> None: ...
 
 
-def decode(packet: bytes) -> int | None:
-    if len(packet) != PACKET_SIZE:
-        raise ValueError(f"key packet of {len(packet)} bytes")
-    code = int.from_bytes(packet, "big")
-    return None if code == PULSE_CODE else code
+def decode(packet: bytes) -> KeyEvent:
+    if len(packet) != PACKET_SIZE or packet[2] not in (0, 1):
+        raise ValueError(f"malformed key packet of {len(packet)} bytes")
+    code = int.from_bytes(packet[:2], "big")
+    return KeyEvent(None if code == PULSE_CODE else code, packet[2] == 1)
 
 
 class KeySource:
@@ -53,8 +60,8 @@ class KeySource:
 
     def _dispatch(self, packet: bytes) -> None:
         try:
-            code = decode(packet)
+            event = decode(packet)
         except ValueError:
             logger.warning("ignored a malformed key packet")
             return
-        self._listener.key_pressed(code)
+        self._listener.key_event(event)

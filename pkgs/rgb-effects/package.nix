@@ -11,6 +11,7 @@ python3Packages.buildPythonApplication {
     python3Packages.openrgb-python
     python3Packages.dbus-fast
     python3Packages.evdev
+    python3Packages.numpy
   ];
 
   nativeCheckInputs = [

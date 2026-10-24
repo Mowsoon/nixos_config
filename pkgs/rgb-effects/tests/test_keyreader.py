@@ -5,12 +5,20 @@ from rgb_effects.keyreader import PULSE_PACKET, ActivationError, Mode, encode, i
 
 
 def test_encode_sends_code_of_key_press() -> None:
-    assert encode(ecodes.EV_KEY, ecodes.KEY_Q, 1, Mode.POSITION) == b"\x00\x10"
+    assert encode(ecodes.EV_KEY, ecodes.KEY_Q, 1, Mode.POSITION) == b"\x00\x10\x01"
 
 
 @pytest.mark.parametrize("value", [0, 2])
-def test_encode_drops_release_and_repeat(value: int) -> None:
+def test_encode_drops_release_and_repeat_of_ordinary_keys(value: int) -> None:
     assert encode(ecodes.EV_KEY, ecodes.KEY_Q, value, Mode.POSITION) is None
+
+
+def test_encode_sends_release_of_modifiers() -> None:
+    assert encode(ecodes.EV_KEY, ecodes.KEY_LEFTCTRL, 0, Mode.POSITION) == b"\x00\x1d\x00"
+
+
+def test_encode_drops_modifier_release_in_pulse_mode() -> None:
+    assert encode(ecodes.EV_KEY, ecodes.KEY_LEFTCTRL, 0, Mode.PULSE) is None
 
 
 def test_encode_drops_non_key_events() -> None:

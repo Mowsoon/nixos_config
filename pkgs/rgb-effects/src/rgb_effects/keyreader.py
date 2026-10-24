@@ -13,9 +13,20 @@ from evdev import ecodes
 logger = logging.getLogger("rgb_keyreader")
 
 SD_LISTEN_FDS_START = 3
+KEY_UP = 0
 KEY_DOWN = 1
 MAX_CODE = 0xFFFE
-PULSE_PACKET = b"\xff\xff"
+PULSE_PACKET = b"\xff\xff\x01"
+MODIFIERS = frozenset(
+    {
+        ecodes.KEY_LEFTCTRL,
+        ecodes.KEY_RIGHTCTRL,
+        ecodes.KEY_LEFTALT,
+        ecodes.KEY_RIGHTALT,
+        ecodes.KEY_LEFTMETA,
+        ecodes.KEY_RIGHTMETA,
+    }
+)
 DEVICE_RETRY_SECONDS = 2.0
 
 
@@ -28,14 +39,20 @@ class ActivationError(Exception):
     pass
 
 
+def _forwarded(code: int, value: int, mode: Mode) -> bool:
+    if value == KEY_DOWN:
+        return True
+    return value == KEY_UP and mode is Mode.POSITION and code in MODIFIERS
+
+
 def encode(event_type: int, code: int, value: int, mode: Mode) -> bytes | None:
-    if event_type != ecodes.EV_KEY or value != KEY_DOWN:
+    if event_type != ecodes.EV_KEY or not _forwarded(code, value, mode):
         return None
     if mode is Mode.PULSE:
         return PULSE_PACKET
     if not 0 <= code <= MAX_CODE:
         return None
-    return code.to_bytes(2, "big")
+    return code.to_bytes(2, "big") + bytes([value])
 
 
 def inherited_listener(environ: dict[str, str], pid: int) -> socket.socket:

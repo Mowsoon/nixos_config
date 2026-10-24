@@ -191,38 +191,70 @@ queued.
 
 The effects themselves are a Python daemon of this repository, `pkgs/rgb-effects`, run as a user
 service of the graphical session and configured only through Nix options; no profile saved from
-the OpenRGB interface is a source of truth. It is an SDK client of the local server. Its
-background follows a time-of-day schedule of colour and brightness keyframes, interpolated in
-between and recomputed every minute; a frame is sent only when it differs from the previous one.
-On every connection it sends a frame that differs from the target on every LED, then the target,
+the OpenRGB interface is a source of truth. It is an SDK client of the local server. On every
+connection it sends a frame that differs from the target on every LED, then the target,
 so the server rewrites the whole keyboard buffer. It retries with an exponential delay while the
 server or the keyboard is missing. Its sandbox cannot filter IP addresses, which a user manager
 cannot do; OpenSnitch denies any destination other than the loopback.
+
+Every frame goes through one pipeline over the 6 by 21 key matrix, held in float32 arrays.
+
+1. The palette is synthesised from the inputs: the master hues are the colour of the focused
+   application and the Plasma accent colour; the time-of-day schedule sets the brightness ceiling
+   and warms every colour towards its own hue, amber at night.
+2. The background is a gradient noise field flowing through the master hues; it flows faster
+   while keys are pressed. After the idle delay without a key press it fades into the Brian's
+   Brain cellular automaton, stepped three times per second, and fades back on the next press.
+3. The physical layer adds what typing produces, as fields over the same matrix. Every press
+   raises a slow heat map, which diffuses to the neighbouring keys and decays over minutes. The
+   pressed key glows from white to dark red; it cools in 0.8 s on a cold key and up to 2.5 s on
+   the hottest, where a faint halo stays. Every press also starts a damped 2D wave, which travels
+   further where the heat map is hot. Below the sand typing speed, the press also drops a grain
+   that falls one row at a time and piles up on the bottom row; Enter clears the pile and sweeps
+   a wave along that row. This layer has its own brightness ceiling, so presses stay visible when
+   the time-of-day ceiling is low.
+4. The HUD overrides the keys it uses. While Ctrl, Alt or Super is held, every other key is
+   dimmed and the keys bound to that combination light in the colour of their category. A focus
+   timer started with `rgb-focus` turns F1 to F12 into a progress bar and blinks it when the time
+   is up. Holding Right Ctrl alone shows a binary clock: hours on F1 to F5, minutes on the number
+   row from `&` to `-`, most significant bit first.
+5. The frame is quantised, in the OKLab colour space, to a table of six to eight colours, with a
+   hysteresis so a key changes colour only when the new colour is clearly closer.
+6. A budget pass compares the colours with those sent in the previous frame, computes the exact
+   packet cost of the differences with the grouping rules of OpenRGB, and keeps those that fit the
+   per-frame share of the packet ceiling, by priority (HUD keys, then pressed keys) and by error;
+   the other keys keep the colour already sent and wait for the next frame.
+
+The LEDs outside the matrix follow it: the G keys take the left column, the media keys the top
+right cell, and the logo the primary hue. The daemon animates at the configured frame rate while
+keys have been pressed within the sleep delay, or a modifier is held, or a focus timer runs, and
+recomputes once per refresh interval otherwise. While awake it hands every frame to OpenRGB even
+when nothing changed: OpenRGB resends the keys whose packets the keyboard did not acknowledge only
+when it receives a frame, and sends nothing over the radio when every key is committed.
 
 The hue of the background follows the focused application without any screen capture. At start
 the daemon owns the session bus name `org.hephaestus.RgbEffects` and loads a KWin script through
 `org.kde.kwin.Scripting`, without writing to the Plasma configuration; the script calls the daemon
 on every window activation with the application identifier only, never the window title, which
-can hold personal data. An application listed in the colour table gives its hue, painted at the
-brightness of the schedule; any other application gives back the schedule colour. The script is
+can hold personal data. An application listed in the colour table gives the primary hue; any
+other application gives back the schedule colour. The script is
 unloaded when the daemon stops, and lost if KWin restarts, until the daemon restarts too.
 
 Key-reactive effects read the keyboard through a separate system service, `rgb-keyreader`, so the
-daemon never holds the input device. The reader starts only when the daemon connects to its
-socket, reads the evdev node of the G915 X, a link `/dev/input/g915x-keyboard` that a udev rule
-gives to the `rgb-keys` group in read-only mode, and forwards one packet per key press: the key
-code, or in pulse mode only the fact that a key was pressed. It ignores releases, repeats and
-every other event, keeps no history, logs no key and has no network. It does not grab the device,
-so Plasma receives every key as before. The daemon maps a key code to the LED at the same physical
-position and lets it cool along the ember palette, at the configured frame rate while a key
-glows and not at all once every key has cooled.
+daemon never holds the input device. The reader starts only when the daemon connects to its socket,
+reads the evdev node of the G915 X, a link `/dev/input/g915x-keyboard` that a udev rule gives to the
+`rgb-keys` group in read-only mode, and forwards one packet per key press: the key code, or in pulse
+mode only the fact that a key was pressed. It also forwards the release of the six modifier keys
+(Ctrl, Alt and Super on both sides), and ignores every other release, the repeats and every other
+event; it keeps no history, logs no key and has no network. It does not grab the device, so Plasma
+receives every key as before. The daemon maps a key code to the LED at the same physical position,
+where the physical layer makes it glow.
 
 The daemon degrades on its own. It follows the `OnBattery` property of UPower on the system bus:
 on battery, animations run at the battery frame rate. It reads the keyboard battery from the
 `power_supply` entry that the HID++ driver publishes, every refresh interval and on every power
-change: at or below the threshold, every colour is capped to the low-battery brightness. While
-the keyboard sleeps, nothing animates, so the daemon only recomputes the background once per
-refresh interval.
+change: at or below the threshold, every colour is capped to the low-battery brightness. The
+per-frame packet share follows the frame rate, so the packet ceiling holds at both rates.
 
 ### Wi-Fi
 
@@ -257,6 +289,22 @@ an attribute crosses its failure threshold.
    EnableS0ixPowerManagement: 1
    UseKernelSuspendNotifiers: 0
    DynamicPowerManagement: 0
+   ```
+
+## How to run a focus timer on the keyboard
+
+1. Start a timer; the function row fills from F1 to F12 as time passes.
+
+   ```bash
+   rgb-focus 25m
+   ```
+
+   The duration takes `s`, `m` or `h`, minutes when no unit is given, up to 24 hours.
+
+2. Stop it before the end if needed.
+
+   ```bash
+   rgb-focus stop
    ```
 
 ## How to test a driver or kernel option
@@ -522,18 +570,27 @@ Measured through the OpenRGB SDK server, counting the HID++ writes on the receiv
 | `custom.rgb.effects.enable` | `false` | Effects daemon `rgb-effects` in the graphical session |
 | `custom.rgb.effects.user` | `"mowsoon"` | Only user whose session starts the daemon |
 | `custom.rgb.effects.device` | `"G915 X LS"` | OpenRGB device the effects are painted on |
-| `custom.rgb.effects.refreshSeconds` | `60` | Interval at which the time-of-day background is recomputed |
-| `custom.rgb.effects.fps` | `30` | Frame rate while an animation runs |
-| `custom.rgb.effects.batteryFps` | `15` | Frame rate of animations while the laptop runs on battery |
+| `custom.rgb.effects.refreshSeconds` | `60` | Interval of recomputation while nothing animates |
+| `custom.rgb.effects.fps` | `20` | Frame rate while keys have been pressed within the sleep delay |
+| `custom.rgb.effects.batteryFps` | `10` | Frame rate of animations while the laptop runs on battery |
 | `custom.rgb.effects.lowBattery.threshold` | `20` | Keyboard battery percentage at or below which brightness is capped |
 | `custom.rgb.effects.lowBattery.brightness` | `0.4` | Brightness ceiling while the keyboard battery is low |
 | `custom.rgb.effects.keys.enable` | `false` | Socket-activated key reader `rgb-keyreader` for key-reactive effects |
 | `custom.rgb.effects.keys.mode` | `"position"` | `position` forwards the key code, `pulse` only the fact of a key press |
-| `custom.rgb.effects.ember.colors` | Six colours, white to dark red | Ember palette from hottest to coldest |
-| `custom.rgb.effects.ember.durationMs` | `900` | Time a pressed key takes to cool down |
-| `custom.rgb.effects.ember.brightness` | `0.8` | Scale of the ember palette, independent of the schedule |
-| `custom.rgb.effects.windowColors` | Six applications | Background hue per KWin resource class, at the schedule brightness |
-| `custom.rgb.effects.schedule` | Five keyframes from night to evening | Background keyframes `{ time; color; brightness; }`, sorted by time |
+| `custom.rgb.effects.hud.bindings` | Edit, file, navigation, window, desktop and system keys | Combination of `ctrl`, `alt`, `super` to category to key labels |
+| `custom.rgb.effects.hud.colors` | One colour per category, `focus` and `clock` | Colour of each HUD category |
+| `custom.rgb.effects.hud.dim` | `0.25` | Brightness left to the lower layers while a modifier is held |
+| `custom.rgb.effects.hud.clockHoldMs` | `500` | Hold time of Right Ctrl before the binary clock shows |
+| `custom.rgb.effects.physics.minimumBrightness` | `0.6` | Brightness ceiling of the key-reactive layer when the schedule is darker |
+| `custom.rgb.effects.physics.emberColdMs` | `800` | Cooling time of a pressed key on a cold key |
+| `custom.rgb.effects.physics.emberHotMs` | `2500` | Cooling time of a pressed key on the hottest key |
+| `custom.rgb.effects.physics.sandWordsPerMinute` | `15` | Typing speed below which presses drop falling grains |
+| `custom.rgb.effects.palette.size` | `8` | Number of colours of the quantised frame, from 6 to 8 |
+| `custom.rgb.effects.budget.packetsPerSecond` | `180` | Ceiling of HID++ packets per second |
+| `custom.rgb.effects.background.idleSeconds` | `30` | Delay without key press before the cellular automaton |
+| `custom.rgb.effects.sleepSeconds` | `300` | Delay without key press after which nothing animates |
+| `custom.rgb.effects.windowColors` | Six applications | Primary hue per KWin resource class |
+| `custom.rgb.effects.schedule` | Five keyframes from night to evening | Hue and brightness ceiling keyframes `{ time; color; brightness; }`, sorted by time |
 | `custom.power.enable` | `false` | Power profiles without CPU driver, `powersave` governor, delayed hibernation, hibernation on critical battery |
 | `custom.power.disarmInputWakeupForHibernation` | `false` | `system-sleep` hook that disables the wakeup of USB HID devices during hibernation |
 | `custom.diskHealth.enable` | `false` | smartd with desktop notifications |

@@ -34,9 +34,11 @@ class Schedule:
             raise ConfigError("schedule keyframes must be sorted with distinct times")
 
     def color_at(self, minute_of_day: float) -> Color:
+        return self.hue_at(minute_of_day).scaled(self.brightness_at(minute_of_day))
+
+    def hue_at(self, minute_of_day: float) -> Color:
         previous, following, weight = self._position(minute_of_day)
-        color = previous.color.mixed(following.color, weight)
-        return color.scaled(self.brightness_at(minute_of_day))
+        return previous.color.mixed(following.color, weight)
 
     def brightness_at(self, minute_of_day: float) -> float:
         previous, following, weight = self._position(minute_of_day)

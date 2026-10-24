@@ -38,8 +38,27 @@ let
         inherit (effects.lowBattery) threshold brightness;
         model = effects.device;
       };
-      ember = {
-        inherit (effects.ember) colors durationMs brightness;
+      engine = {
+        paletteSize = effects.palette.size;
+        inherit (effects.budget) packetsPerSecond;
+        inherit (effects.background) idleSeconds;
+        inherit (effects) sleepSeconds;
+      };
+      hud = {
+        inherit (effects.hud)
+          bindings
+          colors
+          dim
+          clockHoldMs
+          ;
+      };
+      physics = {
+        inherit (effects.physics)
+          minimumBrightness
+          emberColdMs
+          emberHotMs
+          sandWordsPerMinute
+          ;
       };
       keySocket = if effects.keys.enable then keySocket else null;
     }
@@ -88,13 +107,13 @@ in
 
       fps = lib.mkOption {
         type = lib.types.ints.between 1 60;
-        default = 30;
+        default = 20;
         description = "Frame rate while an animation runs; the daemon sends nothing while the keyboard is still.";
       };
 
       batteryFps = lib.mkOption {
         type = lib.types.ints.between 1 60;
-        default = 15;
+        default = 10;
         description = "Frame rate of animations while the laptop runs on battery, reported by UPower.";
       };
 
@@ -125,31 +144,128 @@ in
         };
       };
 
-      ember = {
+      hud = {
+        bindings = lib.mkOption {
+          type = lib.types.attrsOf (lib.types.attrsOf (lib.types.listOf lib.types.str));
+          default = {
+            ctrl = {
+              edit = [
+                "C"
+                "V"
+                "X"
+                "Z"
+                "Y"
+                "A"
+              ];
+              file = [
+                "S"
+                "O"
+                "N"
+                "P"
+              ];
+              nav = [
+                "F"
+                "T"
+                "W"
+                "R"
+                "Tab"
+              ];
+            };
+            alt.window = [
+              "Tab"
+              "F4"
+            ];
+            super.desktop = [
+              "E"
+              "L"
+              "D"
+              "V"
+              "Tab"
+            ];
+            "ctrl+alt".system = [
+              "T"
+              "Delete"
+            ];
+          };
+          description = "Keys lit while a modifier combination is held: combination (ctrl, alt, super joined by +) to category to key labels as printed on the keyboard.";
+        };
+
         colors = lib.mkOption {
-          type = lib.types.nonEmptyListOf (lib.types.strMatching "#[0-9a-fA-F]{6}");
-          default = [
-            "#ffffff"
-            "#fff1a8"
-            "#ffb347"
-            "#ff6a00"
-            "#c42000"
-            "#5a0a00"
-          ];
-          description = "Ember palette from hottest to coldest; a pressed key walks through it, then returns to the background.";
+          type = lib.types.attrsOf (lib.types.strMatching "#[0-9a-fA-F]{6}");
+          default = {
+            edit = "#00e5ff";
+            file = "#ffd400";
+            nav = "#7cff00";
+            window = "#ff3df2";
+            desktop = "#ff8c00";
+            system = "#ff2a2a";
+            focus = "#00ff9c";
+            clock = "#ffffff";
+          };
+          description = "Colour per HUD category; focus colours the rgb-focus bar and clock the binary clock.";
         };
 
-        durationMs = lib.mkOption {
-          type = lib.types.ints.between 50 10000;
-          default = 900;
-          description = "Time a pressed key takes to cool down to the background.";
-        };
-
-        brightness = lib.mkOption {
+        dim = lib.mkOption {
           type = lib.types.numbers.between 0 1;
-          default = 0.8;
-          description = "Scale applied to the ember palette, independent of the time-of-day brightness.";
+          default = 0.25;
+          description = "Brightness left to the lower layers while a modifier is held.";
         };
+
+        clockHoldMs = lib.mkOption {
+          type = lib.types.ints.between 100 5000;
+          default = 500;
+          description = "Time Right Ctrl must be held alone before the binary clock shows.";
+        };
+      };
+
+      physics = {
+        minimumBrightness = lib.mkOption {
+          type = lib.types.numbers.between 0 1;
+          default = 0.6;
+          description = "Brightness ceiling of the key-reactive layer when the time-of-day ceiling is lower, so presses stay visible at night.";
+        };
+
+        emberColdMs = lib.mkOption {
+          type = lib.types.ints.between 50 10000;
+          default = 800;
+          description = "Time a pressed key takes to cool down where the heat map is cold.";
+        };
+
+        emberHotMs = lib.mkOption {
+          type = lib.types.ints.between 50 10000;
+          default = 2500;
+          description = "Time a pressed key takes to cool down where the heat map is at its hottest.";
+        };
+
+        sandWordsPerMinute = lib.mkOption {
+          type = lib.types.ints.between 0 200;
+          default = 15;
+          description = "Typing speed below which a pressed key also drops a grain that falls to the bottom row.";
+        };
+      };
+
+      palette.size = lib.mkOption {
+        type = lib.types.ints.between 6 8;
+        default = 8;
+        description = "Number of colours the final frame is quantised to, so OpenRGB groups keys into few packets.";
+      };
+
+      budget.packetsPerSecond = lib.mkOption {
+        type = lib.types.ints.between 30 320;
+        default = 180;
+        description = "Ceiling of HID++ packets per second; changes beyond the per-frame share wait for the next frame.";
+      };
+
+      background.idleSeconds = lib.mkOption {
+        type = lib.types.ints.between 5 600;
+        default = 30;
+        description = "Seconds without key press after which the flowing background gives way to the cellular automaton.";
+      };
+
+      sleepSeconds = lib.mkOption {
+        type = lib.types.ints.between 30 3600;
+        default = 300;
+        description = "Seconds without key press after which the daemon stops animating, matching the keyboard sleep delay.";
       };
 
       windowColors = lib.mkOption {
@@ -222,9 +338,15 @@ in
       '';
     };
 
-    users.groups = {
-      ${receiverGroup} = { };
-      ${keysGroup} = lib.mkIf (effects.enable && effects.keys.enable) { };
+    users = {
+      users = lib.mkIf effects.enable {
+        ${effects.user}.packages = [ rgbEffects ];
+      };
+
+      groups = {
+        ${receiverGroup} = { };
+        ${keysGroup} = lib.mkIf (effects.enable && effects.keys.enable) { };
+      };
     };
 
     systemd = {

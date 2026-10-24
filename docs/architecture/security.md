@@ -69,8 +69,8 @@ process of its own. `rgb-keyreader` runs under a dynamic user whose only extra r
 `rgb-keys` group, read-only on the G915 X evdev node; its cgroup may open input devices in
 read-only mode and nothing else, it has a private network namespace with every IP address denied
 and Unix sockets as the only family, it writes nowhere and logs only warnings. It forwards key
-presses without history to the one user who owns its socket, and in pulse mode not even which key
-was pressed.
+presses, and the release of the six modifier keys, without history to the one user who owns its
+socket; in pulse mode it forwards neither which key was pressed nor any release.
 
 ### Software supply
 

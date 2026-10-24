@@ -8,6 +8,7 @@ from openrgb.utils import OpenRGBDisconnected, RGBColor, SDKVersionError
 
 from rgb_effects.color import Color
 from rgb_effects.config import ServerConfig
+from rgb_effects.engine.geometry import KeyboardLayout
 from rgb_effects.errors import KeyboardUnavailableError
 
 SDK_ERRORS = (OSError, OpenRGBDisconnected, SDKVersionError)
@@ -15,6 +16,20 @@ CALL_TIMEOUT_SECONDS = 15.0
 DIRECT_MODE = "Direct"
 
 Result = TypeVar("Result")
+
+
+def layout_of(device: Device) -> KeyboardLayout:
+    offset = 0
+    matrix: tuple[tuple[int | None, ...], ...] = ()
+    for zone in device.zones:
+        if zone.matrix_map:
+            matrix = tuple(
+                tuple(None if cell is None else cell + offset for cell in row)
+                for row in zone.matrix_map
+            )
+            break
+        offset += len(zone.leds)
+    return KeyboardLayout(tuple(led.name for led in device.leds), matrix)
 
 
 class OpenRgbKeyboard:
@@ -25,10 +40,10 @@ class OpenRgbKeyboard:
         self._client: OpenRGBClient | None = None
         self._device: Device | None = None
 
-    async def connect(self) -> tuple[str, ...]:
+    async def connect(self) -> KeyboardLayout:
         await self.close()
         self._client, self._device = await self._call(self._open)
-        return tuple(led.name for led in self._device.leds)
+        return layout_of(self._device)
 
     async def show(self, colors: Sequence[Color]) -> None:
         device = self._device
