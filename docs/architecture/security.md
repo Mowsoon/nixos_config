@@ -64,6 +64,14 @@ Hardware access granted through udev stays per device. Packages that ship broad 
 OpenRGB, which tags I2C buses and `/dev/port` for the session user, are installed without them,
 and their service receives only the device it drives ([Hardware](hardware.md#lighting)).
 
+Reading the keyboard is the access a keylogger needs, so the lighting effects keep it in a
+process of its own. `rgb-keyreader` runs under a dynamic user whose only extra right is the
+`rgb-keys` group, read-only on the G915 X evdev node; its cgroup may open input devices in
+read-only mode and nothing else, it has a private network namespace with every IP address denied
+and Unix sockets as the only family, it writes nowhere and logs only warnings. It forwards key
+presses without history to the one user who owns its socket, and in pulse mode not even which key
+was pressed.
+
 ### Software supply
 
 Unfree packages are allowed one by one: each module that needs one adds its name to

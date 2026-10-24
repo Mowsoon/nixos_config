@@ -189,6 +189,41 @@ groups keys by colour and sends only what changed, so the frame rate depends on 
 change per frame, not on the rate the client asks for; frames above the ceiling are dropped, not
 queued.
 
+The effects themselves are a Python daemon of this repository, `pkgs/rgb-effects`, run as a user
+service of the graphical session and configured only through Nix options; no profile saved from
+the OpenRGB interface is a source of truth. It is an SDK client of the local server. Its
+background follows a time-of-day schedule of colour and brightness keyframes, interpolated in
+between and recomputed every minute; a frame is sent only when it differs from the previous one.
+On every connection it sends a frame that differs from the target on every LED, then the target,
+so the server rewrites the whole keyboard buffer. It retries with an exponential delay while the
+server or the keyboard is missing. Its sandbox cannot filter IP addresses, which a user manager
+cannot do; OpenSnitch denies any destination other than the loopback.
+
+The hue of the background follows the focused application without any screen capture. At start
+the daemon owns the session bus name `org.hephaestus.RgbEffects` and loads a KWin script through
+`org.kde.kwin.Scripting`, without writing to the Plasma configuration; the script calls the daemon
+on every window activation with the application identifier only, never the window title, which
+can hold personal data. An application listed in the colour table gives its hue, painted at the
+brightness of the schedule; any other application gives back the schedule colour. The script is
+unloaded when the daemon stops, and lost if KWin restarts, until the daemon restarts too.
+
+Key-reactive effects read the keyboard through a separate system service, `rgb-keyreader`, so the
+daemon never holds the input device. The reader starts only when the daemon connects to its
+socket, reads the evdev node of the G915 X, a link `/dev/input/g915x-keyboard` that a udev rule
+gives to the `rgb-keys` group in read-only mode, and forwards one packet per key press: the key
+code, or in pulse mode only the fact that a key was pressed. It ignores releases, repeats and
+every other event, keeps no history, logs no key and has no network. It does not grab the device,
+so Plasma receives every key as before. The daemon maps a key code to the LED at the same physical
+position and lets it cool along the ember palette, at the configured frame rate while a key
+glows and not at all once every key has cooled.
+
+The daemon degrades on its own. It follows the `OnBattery` property of UPower on the system bus:
+on battery, animations run at the battery frame rate. It reads the keyboard battery from the
+`power_supply` entry that the HID++ driver publishes, every refresh interval and on every power
+change: at or below the threshold, every colour is capped to the low-battery brightness. While
+the keyboard sleeps, nothing animates, so the daemon only recomputes the background once per
+refresh interval.
+
 ### Wi-Fi
 
 The MediaTek MT7922 card runs the `mt7921e` driver of the mt76 family. The in-tree driver resumes
@@ -484,6 +519,21 @@ Measured through the OpenRGB SDK server, counting the HID++ writes on the receiv
 | `custom.audio.serializeAmdAcpResume` | `false` | `power/async` disabled on the revision `0x62` ACP and the AMD HD Audio controller |
 | `custom.peripherals.enable` | `false` | Bluetooth, Logitech receivers, input-remapper |
 | `custom.rgb.enable` | `false` | OpenRGB SDK server on `127.0.0.1:6742`, confined to the Logitech LIGHTSPEED receiver |
+| `custom.rgb.effects.enable` | `false` | Effects daemon `rgb-effects` in the graphical session |
+| `custom.rgb.effects.user` | `"mowsoon"` | Only user whose session starts the daemon |
+| `custom.rgb.effects.device` | `"G915 X LS"` | OpenRGB device the effects are painted on |
+| `custom.rgb.effects.refreshSeconds` | `60` | Interval at which the time-of-day background is recomputed |
+| `custom.rgb.effects.fps` | `30` | Frame rate while an animation runs |
+| `custom.rgb.effects.batteryFps` | `15` | Frame rate of animations while the laptop runs on battery |
+| `custom.rgb.effects.lowBattery.threshold` | `20` | Keyboard battery percentage at or below which brightness is capped |
+| `custom.rgb.effects.lowBattery.brightness` | `0.4` | Brightness ceiling while the keyboard battery is low |
+| `custom.rgb.effects.keys.enable` | `false` | Socket-activated key reader `rgb-keyreader` for key-reactive effects |
+| `custom.rgb.effects.keys.mode` | `"position"` | `position` forwards the key code, `pulse` only the fact of a key press |
+| `custom.rgb.effects.ember.colors` | Six colours, white to dark red | Ember palette from hottest to coldest |
+| `custom.rgb.effects.ember.durationMs` | `900` | Time a pressed key takes to cool down |
+| `custom.rgb.effects.ember.brightness` | `0.8` | Scale of the ember palette, independent of the schedule |
+| `custom.rgb.effects.windowColors` | Six applications | Background hue per KWin resource class, at the schedule brightness |
+| `custom.rgb.effects.schedule` | Five keyframes from night to evening | Background keyframes `{ time; color; brightness; }`, sorted by time |
 | `custom.power.enable` | `false` | Power profiles without CPU driver, `powersave` governor, delayed hibernation, hibernation on critical battery |
 | `custom.power.disarmInputWakeupForHibernation` | `false` | `system-sleep` hook that disables the wakeup of USB HID devices during hibernation |
 | `custom.diskHealth.enable` | `false` | smartd with desktop notifications |

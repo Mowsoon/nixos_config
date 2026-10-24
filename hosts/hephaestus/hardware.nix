@@ -38,7 +38,13 @@
       serializeAmdAcpResume = true;
     };
     peripherals.enable = true;
-    rgb.enable = true;
+    rgb = {
+      enable = true;
+      effects = {
+        enable = true;
+        keys.enable = true;
+      };
+    };
     power = {
       enable = true;
       disarmInputWakeupForHibernation = true;
