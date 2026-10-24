@@ -200,6 +200,7 @@ second off (`makestep 1 -1`), and a timer resets the resolver's servers after ev
 | `match-dockerd` | `dockerd` and `docker-proxy` of any moby version | `virtualisation/docker.nix` |
 | `allow-firefox` | Firefox binary | `desktop/firefox.nix` |
 | `allow-kioworker` | KDE I/O workers | `desktop/plasma.nix` |
+| `allow-krunner` | KRunner launcher plugins (web search, definitions, currency) | `desktop/plasma.nix` |
 | `allow-plasmashell` | Plasma shell | `desktop/plasma.nix` |
 | `allow-fwupdmgr` | Only when fwupd is enabled | `desktop/plasma.nix` |
 | `match-discover` | Discover and its notifier | `desktop/plasma.nix` |

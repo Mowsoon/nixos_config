@@ -18,6 +18,11 @@ through `plasma-fallback-session-restore` for the others. Both read `loginMode` 
 group of `ksmserverrc`; the Plasma module sets it to `emptySession` in `/etc/xdg/ksmserverrc` and
 marks it immutable with `[$i]`, so neither the user file nor the Plasma settings can change it.
 
+The accent colour follows the wallpaper. Plasma computes it from the wallpaper and writes it to
+`AccentColor` in the user `kdeglobals`; the switch that enables it, `accentColorFromWallpaper` in
+the `General` group, is declared in `/etc/xdg/kdeglobals` and marked immutable the same way. The
+keyboard lighting effects read the resulting accent as one of their master hues.
+
 After every resume from hibernation, a service kills the lock screen greeter, which the screen
 locker restarts at once: the greeter carried through hibernation makes the next sleep hang
 ([incident](../incidents/sleep-after-hibernation-deadlock.md)).
@@ -44,7 +49,7 @@ the display (palette, wallpaper, fonts applied everywhere).
 
 | Area | Where it lives |
 | --- | --- |
-| Display manager, session type, session restore, keyboard layout, fonts installed | `modules/desktop/plasma.nix` |
+| Display manager, session type, session restore, accent from wallpaper, keyboard layout, fonts installed | `modules/desktop/plasma.nix` |
 | Applications installed | `home/mowsoon/desktop.nix`, Firefox in `firefox.nix` |
 | Firefox settings, extensions, search engine | `modules/desktop/firefox.nix` |
 | Default applications per file type | `home/mowsoon/mime.nix` |

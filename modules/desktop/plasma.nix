@@ -53,10 +53,16 @@ in
 
     environment = {
       sessionVariables.NIXOS_OZONE_WL = "1";
-      etc."xdg/ksmserverrc".text = ''
-        [General]
-        loginMode[$i]=emptySession
-      '';
+      etc = {
+        "xdg/ksmserverrc".text = ''
+          [General]
+          loginMode[$i]=emptySession
+        '';
+        "xdg/kdeglobals".text = ''
+          [General]
+          accentColorFromWallpaper[$i]=true
+        '';
+      };
     };
 
     fonts.packages = with pkgs; [
@@ -68,6 +74,7 @@ in
     custom.network.opensnitch = {
       allowedExecutables = {
         kioworker = "${pkgs.kdePackages.kio}/libexec/kf6/.kioworker-wrapped";
+        krunner = "${pkgs.kdePackages.plasma-workspace}/bin/.krunner-wrapped";
         plasmashell = "${pkgs.kdePackages.plasma-workspace}/bin/.plasmashell-wrapped";
       }
       // lib.optionalAttrs config.services.fwupd.enable {
