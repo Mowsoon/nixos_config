@@ -52,7 +52,10 @@ in
     ];
 
     environment = {
-      sessionVariables.NIXOS_OZONE_WL = "1";
+      sessionVariables = {
+        NIXOS_OZONE_WL = "1";
+        GTK_MODULES = "colorreload-gtk-module:window-decorations-gtk-module";
+      };
       etc = {
         "xdg/ksmserverrc".text = ''
           [General]

@@ -31,6 +31,13 @@ locker restarts at once: the greeter carried through hibernation makes the next 
 nixpkgs read it and start with their native Wayland backend instead of XWayland, which gives sharp
 rendering under fractional scaling.
 
+`GTK_MODULES` names the two GTK 3 modules of the Plasma GTK integration,
+`colorreload-gtk-module` and `window-decorations-gtk-module`, which the user `settings.ini` of
+GTK 3 already loads in every GTK 3 application. Loaded from the environment, they stay in memory
+in Electron applications whose Electron empties the `gtk-modules` setting at start: unloaded, they
+make the application crash at the next colour change, such as a new wallpaper accent
+([incident](../incidents/electron-gtk-module-unload.md)).
+
 The XDG desktop portals come from the Plasma module: file pickers, screen sharing and other
 sandboxed requests go through the KDE portal implementation.
 
@@ -408,6 +415,7 @@ not advertising or tracking are the hosts to allow.
 | `services.xserver.xkb.layout` | `fr` |
 | `console.keyMap` | `fr` |
 | `environment.sessionVariables.NIXOS_OZONE_WL` | `1` |
+| `environment.sessionVariables.GTK_MODULES` | `colorreload-gtk-module:window-decorations-gtk-module` |
 | `loginMode` in `/etc/xdg/ksmserverrc` | `emptySession`, immutable |
 | `system.replaceDependencies.replacements` | `kdePackages.kwin` with the patches of `pkgs/kwin/` |
 
