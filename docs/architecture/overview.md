@@ -245,6 +245,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `nixos-hardware` | Common AMD, NVIDIA and laptop profiles |
 | `home-manager` | User environment as a NixOS module |
 | `nixvim` | Editor configuration as Home Manager options |
+| `plasma-manager` | Plasma settings as Home Manager options, used for global shortcuts only |
 | `nixos-private` | Private repository over SSH, `flake = false`: personal data imported by modules |
 
 ### Private input layout

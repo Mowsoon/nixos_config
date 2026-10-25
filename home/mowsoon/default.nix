@@ -6,6 +6,7 @@
     ./audio.nix
     ./desktop.nix
     ./mime.nix
+    ./shortcuts.nix
     ./editor/nixvim.nix
   ];
 

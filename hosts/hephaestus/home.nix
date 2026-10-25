@@ -22,7 +22,10 @@
   home-manager = {
     useGlobalPkgs = true;
     useUserPackages = true;
-    sharedModules = [ inputs.nixvim.homeModules.nixvim ];
+    sharedModules = [
+      inputs.nixvim.homeModules.nixvim
+      inputs.plasma-manager.homeModules.plasma-manager
+    ];
     users.mowsoon.imports = [ ../../home/mowsoon ];
   };
 }

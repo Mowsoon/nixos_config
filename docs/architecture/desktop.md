@@ -61,7 +61,8 @@ the display (palette, wallpaper, fonts applied everywhere).
 | Firefox settings, extensions, search engine | `modules/desktop/firefox.nix` |
 | Default applications per file type | `home/mowsoon/mime.nix` |
 | Outbound rules of desktop components | `plasma.nix` and `hosts/hephaestus/opensnitch.nix` |
-| Theme, wallpaper, panels, shortcuts, scaling | Plasma settings, `~/.config` |
+| KRunner shortcuts, commands of the G keys | `home/mowsoon/shortcuts.nix`, through plasma-manager |
+| Theme, wallpaper, panels, other shortcuts, scaling | Plasma settings, `~/.config` |
 | Lid switch, power key, sleep mode | Plasma energy settings (PowerDevil), `~/.config/powerdevilrc` |
 | Region and format overrides for the session | Plasma region settings, `~/.config/plasma-localerc` |
 | Settings of the applications not yet declared | Each application, under `~/.config` or `~/.local/share` |
@@ -69,6 +70,19 @@ the display (palette, wallpaper, fonts applied everywhere).
 The home directory is persistent and snapshotted, so these settings survive reboots and can be
 restored from a snapshot. The display part of the theme, applied to the desktop, the terminal, the
 editor and the boot menu, is a Phase 7 subject of the migration roadmap.
+
+### Global shortcuts
+
+plasma-manager writes the declared shortcuts into `~/.config/kglobalshortcutsrc` and leaves every
+other entry of the file untouched (`overrideConfig` stays off), so the shortcuts set in the Plasma
+settings coexist with the declared ones. A declared entry overwrites a change made to it in the
+settings at the next activation. KRunner keeps its default shortcuts and gains Meta+Space.
+
+Each G key of the G915 X reaches Plasma as a dedicated key symbol, set in
+[Hardware](hardware.md). A command is bound to that symbol through
+`programs.plasma.hotkeys.commands`, which generates one hidden desktop entry whose actions are the
+commands; kglobalaccel starts the action, and its output goes to the journal. A new or changed
+binding is read by kglobalaccel at the next login.
 
 ### Firefox
 
@@ -469,6 +483,12 @@ not advertising or tracking are the hosts to allow.
 | `LC_TIME`, `LC_PAPER`, `LC_MEASUREMENT` | `en_IE.UTF-8`: 24-hour clock, A4, metric units |
 | `time.timeZone` | `Europe/Dublin` |
 
+### G key commands
+
+| Key | Shortcut | Command |
+| --- | --- | --- |
+| G3 | `Launch (7)` | `~/.config/nixos` opened in Neovim in Konsole |
+
 ### Options
 
 | Option | Default | Description |
@@ -522,6 +542,8 @@ not advertising or tracking are the hosts to allow.
 | uBlock Origin managed settings | <https://github.com/gorhill/uBlock/wiki/Deploying-uBlock-Origin:-configuration> |
 | uBlock Origin medium mode | <https://github.com/gorhill/uBlock/wiki/Blocking-mode:-medium-mode> |
 | `programs.firefox` | <https://search.nixos.org/options?channel=unstable&query=programs.firefox> |
+| plasma-manager | <https://github.com/nix-community/plasma-manager> |
+| plasma-manager options | <https://nix-community.github.io/plasma-manager/options.html> |
 | `services.desktopManager.plasma6` | <https://search.nixos.org/options?channel=unstable&query=services.desktopManager.plasma6> |
 | `services.displayManager.sddm` | <https://search.nixos.org/options?channel=unstable&query=services.displayManager.sddm> |
 | `fonts.packages` | <https://search.nixos.org/options?channel=unstable&query=fonts.packages> |

@@ -39,6 +39,7 @@ Neovim is configured with NixVim under `home/mowsoon/editor/`: core options, key
 commands in `cores/`, plugins grouped by role in `plugins/dev`, `plugins/ui` and
 `plugins/utils`. Plugins and language servers come from the Nix store; nothing is downloaded at
 editor start. Neovim is the default editor through `EDITOR`.
+The key mappings are listed in [Editor key mappings](editor-keymaps.md).
 
 ### Command-line tools and toolchains
 
@@ -165,6 +166,7 @@ directories.
 | `audio/microphone.json` | EasyEffects input preset for the built-in microphone |
 | `desktop.nix` | Desktop applications, OpenSnitch UI |
 | `mime.nix` | Default applications, zathura, mpv |
+| `shortcuts.nix` | Plasma global shortcuts: KRunner and the G keys of the G915 X |
 | `editor/nixvim.nix` | NixVim entry point |
 | `editor/cores/` | Options, key mappings, commands, colour scheme |
 | `editor/plugins/` | Plugins grouped in `dev`, `ui` and `utils` |

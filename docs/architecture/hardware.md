@@ -164,6 +164,13 @@ to Plasma. Pairing keys are persisted. The udev rules for Logitech wireless rece
 configure the devices without root. input-remapper is available for remapping external keyboards;
 its presets live in the persistent home.
 
+The G keys of the G915 X send F13 to F21 from the onboard profile of the keyboard; the Fn key never
+leaves the keyboard. XKB turns those keys into symbols Plasma already uses: F13 opens the system
+settings, F20 mutes the microphone, F21 toggles the touchpad, and F19 has no symbol at all. The
+laptop sends the same F21 for its own touchpad key, and its ROG and function keys use `PROG1` to
+`PROG4`. A udev hwdb entry, matched on the G915 X only, rewrites the nine scan codes into keys whose
+symbols are free on this desktop, so the laptop keys and the Windows profile stay as they are.
+
 ### Lighting
 
 The OpenRGB SDK server drives the lighting of the Logitech G915 X through its LIGHTSPEED receiver
@@ -304,6 +311,26 @@ an attribute crosses its failure threshold.
 
    The `Percentage Used` and `Media and Data Integrity Errors` attributes show the wear and the
    uncorrected errors. The device name of each disk is listed by `lsblk`.
+
+## How to read the code sent by a key
+
+1. Print the raw events of the keyboard.
+
+   ```bash
+   sudo nix run nixpkgs#evtest -- /dev/input/<event>
+   ```
+
+   `<event>` is the event node of the keyboard, such as `event10`, listed by
+   `sudo nix run nixpkgs#libinput -- list-devices`.
+
+2. Press the key. The `MSC_SCAN` value is the scan code matched by hwdb, and the `EV_KEY` line
+   shows the kernel key it is translated into.
+
+3. After a hwdb change, apply it to the connected keyboard without a reboot.
+
+   ```bash
+   sudo udevadm trigger --subsystem-match=input --action=change
+   ```
 
 ## Reference
 
@@ -475,6 +502,22 @@ Measured through the OpenRGB SDK server, counting the HID++ writes on the receiv
 | Idle and sleep timers | 1 minute (dim), 5 minutes (sleep), read from the keyboard |
 | Rated battery life | 36 h at full brightness, 90 h at half, 800 h with lighting off |
 
+### G915 X G keys
+
+The hwdb entry matches the LIGHTSPEED product `40B5` and the wired product `C356`.
+
+| Key | Scan code | Kernel key | XKB symbol | Plasma shortcut name |
+| --- | --- | --- | --- | --- |
+| G1 | `70068` | `KEY_F14` | `XF86Launch5` | `Launch (5)` |
+| G2 | `70069` | `KEY_F15` | `XF86Launch6` | `Launch (6)` |
+| G3 | `7006a` | `KEY_F16` | `XF86Launch7` | `Launch (7)` |
+| G4 | `7006b` | `KEY_F17` | `XF86Launch8` | `Launch (8)` |
+| G5 | `7006c` | `KEY_F18` | `XF86Launch9` | `Launch (9)` |
+| G6 | `7006d` | `KEY_SCALE` | `XF86LaunchA` | `Launch (A)` |
+| G7 | `7006e` | `KEY_DASHBOARD` | `XF86LaunchB` | `Launch (B)` |
+| G8 | `7006f` | `KEY_FINANCE` | `XF86Finance` | `Finance` |
+| G9 | `70070` | `KEY_SHOP` | `XF86Shop` | `Shop` |
+
 ### Options
 
 | Option | Default | Description |
@@ -510,5 +553,7 @@ Measured through the OpenRGB SDK server, counting the HID++ writes on the receiv
 | DeepFilterNet | <https://github.com/Rikorose/DeepFilterNet> |
 | `services.pipewire` | <https://search.nixos.org/options?channel=unstable&query=services.pipewire> |
 | `hardware.bluetooth` | <https://search.nixos.org/options?channel=unstable&query=hardware.bluetooth> |
+| hwdb | <https://www.freedesktop.org/software/systemd/man/latest/hwdb.html> |
+| `services.udev.extraHwdb` | <https://search.nixos.org/options?channel=unstable&query=services.udev.extraHwdb> |
 | `services.smartd` | <https://search.nixos.org/options?channel=unstable&query=services.smartd> |
 | `services.upower` | <https://search.nixos.org/options?channel=unstable&query=services.upower> |
