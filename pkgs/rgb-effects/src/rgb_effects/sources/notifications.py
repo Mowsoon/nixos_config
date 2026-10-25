@@ -86,7 +86,7 @@ async def watch() -> None:
         if reply is None or reply.message_type == MessageType.ERROR:
             raise DBusError("org.freedesktop.DBus.Error.AccessDenied", "BecomeMonitor refused")
         logger.info("watching notifications")
-        await monitor.wait_for_disconnect()
+        await monitor.wait_for_disconnect()  # type: ignore[no-untyped-call]
     finally:
         monitor.disconnect()
         sender.disconnect()

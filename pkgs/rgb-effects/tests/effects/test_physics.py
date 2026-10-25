@@ -19,7 +19,8 @@ def test_press_heats_and_lights_the_key() -> None:
     physics = _physics()
     physics.press(2, 5, 0.0, falling=False)
     fields = physics.fields
-    assert (float(fields.heat[2, 5]), float(fields.ember[2, 5])) == (pytest.approx(0.15), 1.0)
+    heat, ember = float(fields.heat[2, 5]), float(fields.ember[2, 5])
+    assert (heat, ember) == pytest.approx((0.15, 1.0))
 
 
 def test_press_outside_grid_is_ignored() -> None:

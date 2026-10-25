@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from rgb_effects.sources.accent import AccentWatcher, parse_accent
 from rgb_effects.color import Color
+from rgb_effects.sources.accent import AccentWatcher, parse_accent
 
 KDEGLOBALS = """[ColorEffects:Disabled]
 AccentColor=1,2,3

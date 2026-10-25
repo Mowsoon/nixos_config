@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from rgb_effects.sources.screen.portal import Capture, PortalCancelled, TokenStore
 from rgb_effects.sources.screen.capture import ScreenCapture
+from rgb_effects.sources.screen.portal import Capture, PortalCancelled, TokenStore
 
 
 class FakeFeed:
@@ -47,17 +47,17 @@ async def _settle(capture: ScreenCapture) -> None:
 
 
 def _capture(
-    tmp_path: Path, portal: FakePortal, token: str | None = "saved", feed: FakeFeed | None = None
+    tmp_path: Path, portal: FakePortal, saved: str | None = "saved", feed: FakeFeed | None = None
 ) -> ScreenCapture:
     store = TokenStore(tmp_path / "token")
-    if token is not None:
-        store.write(token)
+    if saved is not None:
+        store.write(saved)
     return ScreenCapture(portal, feed or FakeFeed(), store, False, start_delay=0.0)
 
 
 async def test_full_screen_without_grant_starts_nothing(tmp_path: Path) -> None:
     portal = FakePortal()
-    capture = _capture(tmp_path, portal, token=None)
+    capture = _capture(tmp_path, portal, saved=None)
     capture.fullscreen_changed(True)
     await _settle(capture)
     assert portal.starts == []
@@ -74,7 +74,7 @@ async def test_full_screen_starts_a_quiet_session_and_keeps_the_new_token(tmp_pa
 
 async def test_grant_closes_the_session_descriptor(tmp_path: Path) -> None:
     portal = FakePortal()
-    capture = _capture(tmp_path, portal, token=None)
+    capture = _capture(tmp_path, portal, saved=None)
     capture.grant()
     await _settle(capture)
     with pytest.raises(OSError):
@@ -115,7 +115,7 @@ async def test_refused_quiet_start_forgets_the_token(tmp_path: Path) -> None:
 
 async def test_grant_asks_interactively_and_stores_the_token(tmp_path: Path) -> None:
     portal = FakePortal()
-    capture = _capture(tmp_path, portal, token=None)
+    capture = _capture(tmp_path, portal, saved=None)
     capture.grant()
     await _settle(capture)
     assert portal.starts == [(None, True)] and portal.closed == ["/session/1"]

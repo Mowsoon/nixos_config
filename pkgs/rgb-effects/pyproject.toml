@@ -13,10 +13,8 @@ evdev = "^1.9"
 numpy = "^2.0"
 
 [tool.poetry.group.dev.dependencies]
-black = "^24.0"
-flake8 = "^7.0"
-flake8-bugbear = "^24.0"
-bandit = { extras = ["toml"], version = "^1.7" }
+ruff = "^0.16"
+mypy = "^2.1"
 pytest = "^8.0"
 pytest-asyncio = "^1.0"
 
@@ -27,12 +25,28 @@ rgb-focus = "rgb_effects.dbus.focus:main"
 rgb-notifywatch = "rgb_effects.sources.notifications:main"
 rgb-screen = "rgb_effects.dbus.screen:main"
 
-[tool.black]
+[tool.ruff]
 line-length = 100
-target-version = ["py311"]
+target-version = "py311"
+src = ["src", "tests"]
 
-[tool.bandit]
-exclude_dirs = ["tests", ".venv"]
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "C4", "C90", "ANN", "G", "S", "UP", "ERA"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+
+[tool.mypy]
+strict = true
+files = ["src", "tests"]
+mypy_path = "src"
+
+[[tool.mypy.overrides]]
+module = ["openrgb", "openrgb.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 addopts = "-q --strict-markers --strict-config"

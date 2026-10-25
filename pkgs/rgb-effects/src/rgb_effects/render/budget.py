@@ -1,5 +1,7 @@
 import math
 from collections import Counter
+from collections.abc import Hashable
+from typing import TypeVar
 
 import numpy as np
 from numpy.typing import NDArray
@@ -11,8 +13,10 @@ FRAME_END_PACKETS = 1
 SINGLE_VALUE_ZONES = 13
 INDIVIDUAL_ZONES = 4
 
+K = TypeVar("K", bound=Hashable)
 
-def packet_cost(counts: Counter[int]) -> int:
+
+def packet_cost(counts: Counter[K]) -> int:
     present = [count for count in counts.values() if count > 0]
     if not present:
         return 0

@@ -51,7 +51,8 @@ def build_geometry(layout: KeyboardLayout) -> Geometry:
         for col, led in enumerate(cells):
             if led is not None and 0 <= led < count:
                 sample_rows[led], sample_cols[led], placed[led] = row, col, True
-    for led in np.flatnonzero(~placed):
-        sample_rows[led], sample_cols[led] = _extra_position(layout.led_names[led], rows, cols)
+    for extra in np.flatnonzero(~placed):
+        name = layout.led_names[int(extra)]
+        sample_rows[extra], sample_cols[extra] = _extra_position(name, rows, cols)
     logo = np.array([name == "Logo" for name in layout.led_names], dtype=np.bool_)
     return Geometry((rows, cols), count, sample_rows, sample_cols, logo, layout.led_names)

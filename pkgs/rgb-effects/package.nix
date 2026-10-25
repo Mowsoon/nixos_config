@@ -1,4 +1,29 @@
-{ python3Packages }:
+{
+  python3Packages,
+  runCommand,
+  ruff,
+}:
+let
+  dependencies = [
+    python3Packages.openrgb-python
+    python3Packages.dbus-fast
+    python3Packages.evdev
+    python3Packages.numpy
+  ];
+  testDependencies = [
+    python3Packages.pytest
+    python3Packages.pytest-asyncio
+  ];
+  lint =
+    name: tools: command:
+    runCommand "rgb-effects-${name}" { nativeBuildInputs = tools; } ''
+      cp -r ${./.} source
+      chmod -R u+w source
+      cd source
+      ${command}
+      touch $out
+    '';
+in
 python3Packages.buildPythonApplication {
   pname = "rgb-effects";
   version = "0.1.0";
@@ -7,27 +32,21 @@ python3Packages.buildPythonApplication {
 
   build-system = [ python3Packages.poetry-core ];
 
-  dependencies = [
-    python3Packages.openrgb-python
-    python3Packages.dbus-fast
-    python3Packages.evdev
-    python3Packages.numpy
-  ];
+  inherit dependencies;
 
-  nativeCheckInputs = [
-    python3Packages.pytestCheckHook
-    python3Packages.pytest-asyncio
-    python3Packages.black
-    python3Packages.flake8
-    python3Packages.flake8-bugbear
-    python3Packages.bandit
-  ];
+  nativeCheckInputs = [ python3Packages.pytestCheckHook ] ++ testDependencies;
 
-  preCheck = ''
-    black --check src tests
-    flake8 src tests
-    bandit -q -c pyproject.toml -r src
-  '';
+  passthru.lints = {
+    ruff = lint "ruff" [ ruff ] ''
+      ruff format --no-cache --check src tests
+      ruff check --no-cache src tests
+    '';
+    mypy = lint "mypy" [
+      (python3Packages.python.withPackages (
+        _: [ python3Packages.mypy ] ++ dependencies ++ testDependencies
+      ))
+    ] "mypy --cache-dir=/dev/null";
+  };
 
   meta.mainProgram = "rgb-effects";
 }

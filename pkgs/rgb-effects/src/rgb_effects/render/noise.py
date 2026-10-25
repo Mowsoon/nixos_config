@@ -51,4 +51,5 @@ class GradientNoise:
     def _dot(self, corner: NDArray[np.intp], delta: NDArray[np.float64]) -> NDArray[np.float64]:
         perm = self._perm
         hashed = perm[perm[perm[corner[..., 0]] + corner[..., 1]] + corner[..., 2]]
-        return np.einsum("...k,...k->...", GRADIENTS[hashed % len(GRADIENTS)], delta)
+        products = np.einsum("...k,...k->...", GRADIENTS[hashed % len(GRADIENTS)], delta)
+        return np.asarray(products, dtype=np.float64)

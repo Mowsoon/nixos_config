@@ -101,7 +101,10 @@ class Analyzer:
 
     def _bands(self, power: Floats) -> Floats:
         energy = np.array(
-            [power[low:high].mean() for low, high in zip(self._edges[:-1], self._edges[1:])],
+            [
+                power[low:high].mean()
+                for low, high in zip(self._edges[:-1], self._edges[1:], strict=True)
+            ],
             dtype=np.float32,
         )
         decibels = 10.0 * np.log10(energy + EPSILON)

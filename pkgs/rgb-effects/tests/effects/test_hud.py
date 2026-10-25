@@ -49,7 +49,8 @@ def _hud() -> Hud:
 
 
 def _unit(color: Color) -> list[float]:
-    return (np.array([color.red, color.green, color.blue], dtype=np.float32) / 255).tolist()
+    channels = np.array([color.red, color.green, color.blue], dtype=np.float32) / np.float32(255)
+    return [float(channel) for channel in channels]
 
 
 def test_no_overlay_without_modifier_or_focus() -> None:

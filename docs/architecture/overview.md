@@ -83,7 +83,7 @@ A change moves through increasingly realistic machines before it reaches the har
 
 | Stage | What it proves |
 | --- | --- |
-| `nix flake check` | Formatting (`nixfmt`), lints (`statix`, `deadnix`) and the evaluation of every system |
+| `nix flake check` | Formatting (`nixfmt`), lints (`statix`, `deadnix`), the tests, lint (`ruff`) and typing (`mypy`) of the Python packages, and the evaluation of every system |
 | `vm-test` | The base user, sudo and Nix settings boot in QEMU |
 | `nix run .#hephaestus-vm` | The real `hephaestus` modules boot from the disko layout, with OVMF Secure Boot, an emulated TPM and throwaway keys |
 | `nix run .#rehearsal` | The installer image installs `hephaestus` onto a blank virtual NVMe disk |
@@ -229,7 +229,8 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `nixosConfigurations.installer` | Live image used to install the workstation |
 | `apps.x86_64-linux.hephaestus-vm` | Boots the workstation VM from a blank firmware and TPM |
 | `apps.x86_64-linux.rehearsal` | Boots the installer image against a blank disk |
-| `checks.x86_64-linux` | `nixfmt`, `statix`, `deadnix` |
+| `packages.x86_64-linux.rgb-effects` | Keyboard lighting effects daemon, built with its tests |
+| `checks.x86_64-linux` | `nixfmt`, `statix`, `deadnix`, `rgb-effects`, `rgb-effects-ruff`, `rgb-effects-mypy` |
 | `formatter.x86_64-linux` | `nixfmt-tree` |
 | `devShells.x86_64-linux.default` | `nixfmt-tree`, `statix`, `deadnix`, `mkpasswd` |
 

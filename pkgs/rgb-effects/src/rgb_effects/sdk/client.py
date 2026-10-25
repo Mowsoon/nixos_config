@@ -8,8 +8,8 @@ from openrgb.utils import OpenRGBDisconnected, RGBColor, SDKVersionError
 
 from rgb_effects.color import Color
 from rgb_effects.config import ServerConfig
-from rgb_effects.render.geometry import KeyboardLayout
 from rgb_effects.errors import KeyboardUnavailableError
+from rgb_effects.render.geometry import KeyboardLayout
 
 SDK_ERRORS = (OSError, OpenRGBDisconnected, SDKVersionError)
 CALL_TIMEOUT_SECONDS = 15.0

@@ -59,8 +59,9 @@ The machine reaches a login prompt in the terminal. Press `Ctrl+A` then `X` to s
 | Command | Effect |
 | --- | --- |
 | `nix fmt` | Formats every Nix file with `nixfmt` |
-| `nix flake check` | Runs `nixfmt --check`, `statix`, `deadnix` and evaluates every host |
+| `nix flake check` | Runs `nixfmt --check`, `statix`, `deadnix`, the tests, `ruff` and `mypy` of `rgb-effects`, and evaluates every host |
 | `nix develop` | Opens a shell with `nixfmt-tree`, `statix`, `deadnix` and `mkpasswd` |
+| `nix build .#rgb-effects` | Builds the lighting effects daemon and runs its tests |
 | `nix run .#hephaestus-vm` | Builds the `hephaestus` disko VM and boots it from a blank firmware and TPM |
 | `nix run .#rehearsal` | Boots the installer image against a blank disk to rehearse the installation |
 | `nix build .#nixosConfigurations.installer.config.system.build.isoImage` | Builds the installer image |

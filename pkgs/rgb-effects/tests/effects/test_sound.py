@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
-from rgb_effects.sources.audio.analysis import Features
 from rgb_effects.effects.sound import SoundField, SoundSettings
+from rgb_effects.sources.audio.analysis import Features
 
 SETTINGS = SoundSettings(spectrum_gain=0.7, silence_seconds=5.0)
 

@@ -3,9 +3,9 @@ from pathlib import Path
 
 import pytest
 
+from rgb_effects.retry import RetryPolicy
 from rgb_effects.sources.audio.analysis import Analyzer, Features
 from rgb_effects.sources.audio.capture import BLOCK_BYTES, AudioCapture, recorder_command
-from rgb_effects.retry import RetryPolicy
 
 
 class StopCapture(Exception):

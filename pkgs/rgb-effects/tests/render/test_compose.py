@@ -2,18 +2,18 @@ from collections import Counter
 
 import numpy as np
 
-from rgb_effects.sources.audio.analysis import Features
 from rgb_effects.color import Color
-from rgb_effects.render.activity import Activity
 from rgb_effects.effects.background import Background, BackgroundSettings
-from rgb_effects.render.budget import packet_cost
-from rgb_effects.render.compose import Engine, EngineSettings, FrameRequest, capped, hud_table
-from rgb_effects.render.geometry import KeyboardLayout, build_geometry
 from rgb_effects.effects.hud import LEFT_ALT, LEFT_CTRL, Hud, HudSettings, Overlay
-from rgb_effects.render.palette import PaletteInputs
 from rgb_effects.effects.physics import Physics, PhysicsSettings
 from rgb_effects.effects.scene import SceneField
 from rgb_effects.effects.sound import SoundField, SoundSettings
+from rgb_effects.render.activity import Activity
+from rgb_effects.render.budget import packet_cost
+from rgb_effects.render.compose import Engine, EngineSettings, FrameRequest, capped, hud_table
+from rgb_effects.render.geometry import KeyboardLayout, build_geometry
+from rgb_effects.render.palette import PaletteInputs
+from rgb_effects.sources.audio.analysis import Features
 
 NAMES = tuple(f"Key: {index}" for index in range(126))
 LAYOUT = KeyboardLayout(NAMES, tuple(tuple(r * 21 + c for c in range(21)) for r in range(6)))

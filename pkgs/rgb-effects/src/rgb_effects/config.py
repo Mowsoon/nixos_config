@@ -2,11 +2,13 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 from rgb_effects.color import Color, parse_hex
 from rgb_effects.errors import ConfigError
 from rgb_effects.render.schedule import Keyframe, Schedule
+
+T = TypeVar("T")
 
 CLOCK_TIME = re.compile(r"([01][0-9]|2[0-3]):([0-5][0-9])")
 
@@ -85,15 +87,25 @@ class EffectsConfig:
     low_battery: LowBatteryConfig
 
 
-def _field(data: dict[str, Any], name: str, kind: type) -> Any:
+def _raw(data: dict[str, Any], name: str) -> object:
     if name not in data:
         raise ConfigError(f"missing field {name!r}")
-    value = data[name]
-    if kind is float and isinstance(value, int) and not isinstance(value, bool):
-        return float(value)
+    value: object = data[name]
+    return value
+
+
+def _field(data: dict[str, Any], name: str, kind: type[T]) -> T:
+    value = _raw(data, name)
     if not isinstance(value, kind) or isinstance(value, bool):
         raise ConfigError(f"field {name!r} must be of type {kind.__name__}")
     return value
+
+
+def _number(data: dict[str, Any], name: str) -> float:
+    value = _raw(data, name)
+    if not isinstance(value, int | float) or isinstance(value, bool):
+        raise ConfigError(f"field {name!r} must be of type float")
+    return float(value)
 
 
 def _non_empty(text: str, name: str) -> str:
@@ -109,13 +121,13 @@ def _minute_of_day(text: str) -> int:
     return int(match.group(1)) * 60 + int(match.group(2))
 
 
-def _keyframe(data: Any) -> Keyframe:
+def _keyframe(data: object) -> Keyframe:
     if not isinstance(data, dict):
         raise ConfigError("schedule entries must be objects")
     return Keyframe(
         minute=_minute_of_day(_field(data, "time", str)),
         color=parse_hex(_field(data, "color", str)),
-        brightness=_field(data, "brightness", float),
+        brightness=_number(data, "brightness"),
     )
 
 
@@ -145,7 +157,7 @@ def _engine(data: dict[str, Any]) -> EngineConfig:
 
 
 def _physics(data: dict[str, Any]) -> PhysicsConfig:
-    brightness = _field(data, "minimumBrightness", float)
+    brightness = _number(data, "minimumBrightness")
     if not 0.0 <= brightness <= 1.0:
         raise ConfigError(f"minimumBrightness {brightness} is outside 0..1")
     cold = _bounded(data, "emberColdMs", 50, 10000)
@@ -167,7 +179,7 @@ def _low_battery(data: dict[str, Any]) -> LowBatteryConfig:
     threshold = _field(data, "threshold", int)
     if not 1 <= threshold <= 100:
         raise ConfigError(f"lowBattery threshold {threshold} is outside 1..100")
-    ceiling = _field(data, "brightness", float)
+    ceiling = _number(data, "brightness")
     if not 0.0 < ceiling <= 1.0:
         raise ConfigError(f"lowBattery brightness {ceiling} is outside 0..1")
     model = _non_empty(_field(data, "model", str), "model")
@@ -184,7 +196,7 @@ def _combo(name: str) -> str:
     return "+".join(part for part in MODIFIER_ORDER if part in parts)
 
 
-def _labels(value: Any, where: str) -> tuple[str, ...]:
+def _labels(value: object, where: str) -> tuple[str, ...]:
     if not isinstance(value, list) or not all(isinstance(label, str) for label in value):
         raise ConfigError(f"hud keys of {where} must be a list of strings")
     return tuple(value)
@@ -202,7 +214,7 @@ def _bindings(data: dict[str, Any]) -> dict[str, dict[str, tuple[str, ...]]]:
 
 
 def _hud(data: dict[str, Any]) -> HudConfig:
-    dim = _field(data, "dim", float)
+    dim = _number(data, "dim")
     if not 0.0 <= dim <= 1.0:
         raise ConfigError(f"hud dim {dim} is outside 0..1")
     return HudConfig(
@@ -222,7 +234,7 @@ def _audio(data: dict[str, Any]) -> AudioConfig | None:
     recorder = _non_empty(_field(section, "recorder", str), "recorder")
     if not recorder.startswith("/"):
         raise ConfigError("audio recorder must be an absolute path")
-    gain = _field(section, "spectrumGain", float)
+    gain = _number(section, "spectrumGain")
     if not 0.0 <= gain <= 1.0:
         raise ConfigError(f"spectrumGain {gain} is outside 0..1")
     silence = float(_bounded(section, "silenceSeconds", 1, 120))
@@ -277,10 +289,10 @@ def _server(data: dict[str, Any]) -> ServerConfig:
     return ServerConfig(host=_non_empty(_field(data, "host", str), "host"), port=port)
 
 
-def parse_config(data: Any) -> EffectsConfig:
+def parse_config(data: object) -> EffectsConfig:
     if not isinstance(data, dict):
         raise ConfigError("configuration root must be an object")
-    refresh = _field(data, "refreshSeconds", float)
+    refresh = _number(data, "refreshSeconds")
     if not 1.0 <= refresh <= 3600.0:
         raise ConfigError(f"refreshSeconds {refresh} is outside 1..3600")
     return EffectsConfig(

@@ -4,18 +4,18 @@ import numpy as np
 from numpy.typing import NDArray
 
 from rgb_effects.color import Color
-from rgb_effects.sources.audio.analysis import Features
-from rgb_effects.render.activity import Activity
 from rgb_effects.effects.background import Background
-from rgb_effects.render.budget import select_changes
-from rgb_effects.render.geometry import Geometry
 from rgb_effects.effects.hud import Hud, Overlay
-from rgb_effects.render.oklab import Floats, to_oklab
-from rgb_effects.render.palette import Palette, PaletteInputs, build_palette
 from rgb_effects.effects.physics import Physics
-from rgb_effects.render.quantize import UNKNOWN, Indices, nearest
 from rgb_effects.effects.scene import SceneField, ring_mask
 from rgb_effects.effects.sound import SoundField
+from rgb_effects.render.activity import Activity
+from rgb_effects.render.budget import select_changes
+from rgb_effects.render.geometry import Geometry
+from rgb_effects.render.oklab import Floats, to_oklab
+from rgb_effects.render.palette import Palette, PaletteInputs, build_palette
+from rgb_effects.render.quantize import UNKNOWN, Indices, nearest
+from rgb_effects.sources.audio.analysis import Features
 
 PRIORITY_BACKGROUND = 0
 PRIORITY_PHYSICS = 1
@@ -214,7 +214,7 @@ class Engine:
             return wanted.copy()
         changed = np.flatnonzero((wanted != self._sent).any(axis=1))
         _, colors = np.unique(wanted, axis=0, return_inverse=True)
-        sent_lab = to_oklab(self._sent.astype(np.float32) / 255)
+        sent_lab = to_oklab(self._sent.astype(np.float32) / np.float32(255))
         error = np.linalg.norm(lab - sent_lab, axis=1).astype(np.float32)
         chosen = select_changes(changed, colors.ravel(), priority, error, request.max_packets)
         self._sent[chosen] = wanted[chosen]

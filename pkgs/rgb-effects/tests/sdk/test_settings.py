@@ -50,9 +50,11 @@ class FakeServer:
             status = self.settings_status
         return extra + packet(10, struct.pack("<II", packet_id, status))
 
-    def settings(self) -> dict[str, object]:
+    def settings(self) -> dict[str, dict[str, dict[str, object]]]:
         bodies = [body for packet_id, body in self.received if packet_id == 253]
-        return json.loads(bodies[-1].rstrip(b"\0"))
+        parsed = json.loads(bodies[-1].rstrip(b"\0"))
+        assert isinstance(parsed, dict)
+        return parsed
 
 
 @asynccontextmanager

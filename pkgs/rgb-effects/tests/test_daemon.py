@@ -1,25 +1,28 @@
 from collections.abc import Callable, Sequence
 
+import numpy as np
 import pytest
 from evdev import ecodes
+from numpy.typing import NDArray
 
 from rgb_effects.color import Color
 from rgb_effects.daemon import (
     Daemon,
     EventWaiter,
     Pacing,
-    PowerState,
-    RetryPolicy,
     Runtime,
     Scene,
     primed,
 )
+from rgb_effects.errors import KeyboardUnavailableError
 from rgb_effects.render.compose import FrameRequest
 from rgb_effects.render.geometry import KeyboardLayout
-from rgb_effects.errors import KeyboardUnavailableError
-from rgb_effects.sources.keys.listener import KeyEvent
 from rgb_effects.render.schedule import Keyframe, Schedule
 from rgb_effects.render.windows import WindowColors
+from rgb_effects.retry import RetryPolicy
+from rgb_effects.sources.audio.analysis import Features
+from rgb_effects.sources.keys.listener import KeyEvent
+from rgb_effects.sources.power import PowerState
 
 LAYOUT = KeyboardLayout(("Key: Escape", "Key: A", "Logo"), ((0, 1),))
 DAY = Schedule((Keyframe(minute=0, color=Color(0, 0, 100), brightness=0.5),))
@@ -62,7 +65,8 @@ class FakeEngine:
         self.constant = False
         self.playing = False
         self.notices: list[Color | None] = []
-        self.audio: list[object] = []
+        self.audio: list[Features] = []
+        self.screens: list[NDArray[np.uint8]] = []
 
     def frame(self, request: FrameRequest) -> tuple[Color, ...]:
         self.requests.append(request)
@@ -78,8 +82,11 @@ class FakeEngine:
     def enter(self) -> None:
         self.enters += 1
 
-    def audio_features(self, features: object, now: float) -> None:
+    def audio_features(self, features: Features, now: float) -> None:
         self.audio.append(features)
+
+    def screen_frame(self, frame: NDArray[np.uint8], now: float) -> None:
+        self.screens.append(frame)
 
     def awake(self, now: float) -> bool:
         return self.is_awake
@@ -312,9 +319,19 @@ async def test_pulse_reaches_the_engine() -> None:
 async def test_audio_features_reach_the_engine() -> None:
     waiter, engine = ScriptedWaiter(2), FakeEngine()
     daemon = _daemon(FakeKeyboard(), waiter, engine, CountingSleep(9))
-    waiter.on_first = lambda: daemon.audio_features("features")
+    features = Features(-10.0, -10.0, np.zeros(21, dtype=np.float32), True)
+    waiter.on_first = lambda: daemon.audio_features(features)
     await _run(daemon)
-    assert engine.audio == ["features"]
+    assert engine.audio == [features]
+
+
+async def test_screen_frame_reaches_the_engine() -> None:
+    waiter, engine = ScriptedWaiter(2), FakeEngine()
+    daemon = _daemon(FakeKeyboard(), waiter, engine, CountingSleep(9))
+    frame = np.zeros((36, 64, 3), dtype=np.uint8)
+    waiter.on_first = lambda: daemon.screen_frame(frame)
+    await _run(daemon)
+    assert len(engine.screens) == 1 and engine.screens[0] is frame
 
 
 async def test_playing_sound_suspends_keyboard_sleep() -> None:
@@ -388,7 +405,9 @@ async def test_run_retries_with_growing_delay_until_connected() -> None:
     sleep = CountingSleep(3)
     await _run(_daemon(FakeKeyboard(failures=3), ScriptedWaiter(5), FakeEngine(), sleep))
     bounds = [(0.5, 1.5), (1.0, 3.0), (2.0, 6.0)]
-    assert all(low <= delay <= high for delay, (low, high) in zip(sleep.delays, bounds))
+    assert all(
+        low <= delay <= high for delay, (low, high) in zip(sleep.delays, bounds, strict=True)
+    )
 
 
 async def test_run_closes_keyboard_when_stopped() -> None:

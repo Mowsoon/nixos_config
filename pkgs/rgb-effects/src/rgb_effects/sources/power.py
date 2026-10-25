@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
@@ -7,7 +8,6 @@ from dbus_fast import BusType, Message, MessageType, Variant
 from dbus_fast.aio import MessageBus
 from dbus_fast.errors import DBusError
 
-from rgb_effects.daemon import PowerState
 from rgb_effects.retry import RetryPolicy, Sleep
 
 logger = logging.getLogger(__name__)
@@ -17,6 +17,12 @@ UPOWER_PATH = "/org/freedesktop/UPower"
 PROPERTIES = "org.freedesktop.DBus.Properties"
 CALL_TIMEOUT_SECONDS = 5.0
 BUS_ERRORS = (OSError, DBusError, EOFError, TimeoutError)
+
+
+@dataclass(frozen=True, slots=True)
+class PowerState:
+    on_battery: bool
+    keyboard_low: bool
 
 
 class PowerListener(Protocol):

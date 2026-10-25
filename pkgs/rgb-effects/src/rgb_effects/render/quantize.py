@@ -8,7 +8,9 @@ UNKNOWN = -1
 
 
 def distances(desired: Floats, table: Floats) -> Floats:
-    return np.linalg.norm(desired[:, None, :] - table[None, :, :], axis=2).astype(np.float32)
+    return np.asarray(
+        np.linalg.norm(desired[:, None, :] - table[None, :, :], axis=2), dtype=np.float32
+    )
 
 
 def nearest(desired: Floats, table: Floats, previous: Indices, hysteresis: float) -> Indices:

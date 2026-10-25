@@ -11,30 +11,30 @@ from pathlib import Path
 import numpy as np
 from numpy.typing import NDArray
 
+from rgb_effects.config import EffectsConfig, load_config
+from rgb_effects.daemon import Daemon, EventWaiter, Pacing, Runtime, Scene
+from rgb_effects.dbus.service import Session
+from rgb_effects.effects.background import Background, BackgroundSettings
+from rgb_effects.effects.hud import Hud, HudSettings
+from rgb_effects.effects.physics import Physics, PhysicsSettings
+from rgb_effects.effects.scene import SceneField
+from rgb_effects.effects.sound import SoundField, SoundSettings
+from rgb_effects.errors import ConfigError, SessionError
+from rgb_effects.render.activity import Activity
+from rgb_effects.render.compose import Engine, EngineSettings
+from rgb_effects.render.geometry import KeyboardLayout, build_geometry
+from rgb_effects.render.windows import WindowColors
+from rgb_effects.retry import RetryPolicy
+from rgb_effects.sdk.client import OpenRgbKeyboard
+from rgb_effects.sdk.settings import SleepController
 from rgb_effects.sources.accent import AccentWatcher
 from rgb_effects.sources.audio.analysis import Analyzer
 from rgb_effects.sources.audio.capture import AudioCapture
-from rgb_effects.config import EffectsConfig, load_config
-from rgb_effects.daemon import Daemon, EventWaiter, Pacing, Runtime, Scene
-from rgb_effects.render.activity import Activity
-from rgb_effects.effects.background import Background, BackgroundSettings
-from rgb_effects.render.compose import Engine, EngineSettings
-from rgb_effects.render.geometry import KeyboardLayout, build_geometry
-from rgb_effects.effects.hud import Hud, HudSettings
-from rgb_effects.effects.physics import Physics, PhysicsSettings
-from rgb_effects.effects.sound import SoundField, SoundSettings
-from rgb_effects.errors import ConfigError, SessionError
-from rgb_effects.sdk.client import OpenRgbKeyboard
 from rgb_effects.sources.keys.listener import KeySource
-from rgb_effects.retry import RetryPolicy
 from rgb_effects.sources.power import PowerMonitor
-from rgb_effects.sources.screen.portal import ScreenCastPortal, TokenStore
 from rgb_effects.sources.screen.capture import ScreenCapture
 from rgb_effects.sources.screen.feed import FeedSettings, ScreenFeed
-from rgb_effects.effects.scene import SceneField
-from rgb_effects.dbus.service import Session
-from rgb_effects.sdk.settings import SleepController
-from rgb_effects.render.windows import WindowColors
+from rgb_effects.sources.screen.portal import ScreenCastPortal, TokenStore
 
 logger = logging.getLogger("rgb_effects")
 

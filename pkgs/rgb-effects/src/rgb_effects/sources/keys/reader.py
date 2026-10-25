@@ -63,7 +63,7 @@ def inherited_listener(environ: dict[str, str], pid: int) -> socket.socket:
     return listener
 
 
-async def _open_device(path: Path) -> evdev.InputDevice:
+async def _open_device(path: Path) -> evdev.InputDevice[str]:
     while True:
         try:
             return evdev.InputDevice(str(path))

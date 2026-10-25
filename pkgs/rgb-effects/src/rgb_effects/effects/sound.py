@@ -2,8 +2,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from rgb_effects.sources.audio.analysis import Features
 from rgb_effects.render.oklab import Floats
+from rgb_effects.sources.audio.analysis import Features
 
 ATTACK = 0.6
 RELEASE = 0.15

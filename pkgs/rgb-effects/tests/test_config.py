@@ -58,7 +58,7 @@ VALID: dict[str, Any] = {
 }
 
 
-def _with(path: list[str], value: Any) -> dict[str, Any]:
+def _with(path: list[str], value: object) -> dict[str, Any]:
     data = copy.deepcopy(VALID)
     target = data
     for key in path[:-1]:
@@ -176,7 +176,7 @@ def test_parse_config_accepts_integer_refresh() -> None:
         (["hud", "clockHoldMs"], 10),
     ],
 )
-def test_parse_config_rejects_invalid_field(path: list[str], value: Any) -> None:
+def test_parse_config_rejects_invalid_field(path: list[str], value: object) -> None:
     with pytest.raises(ConfigError):
         parse_config(_with(path, value))
 

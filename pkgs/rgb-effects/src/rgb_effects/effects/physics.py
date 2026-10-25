@@ -171,7 +171,7 @@ class Physics:
         for particle in fields.particles:
             grains[particle.row, particle.col] = 1.0
         light = np.maximum(light, warm * grains[..., None])
-        return light.astype(np.float32)
+        return np.asarray(light, dtype=np.float32)
 
 
 def _mix(low: Floats, high: Floats, weight: Floats) -> Floats:

@@ -52,9 +52,24 @@ def _token() -> str:
     return "rgb_" + secrets.token_hex(8)
 
 
-def _value(results: dict[str, Any], key: str) -> Any:
+def _value(results: dict[str, Any], key: str) -> object:
     entry = results.get(key)
     return entry.value if isinstance(entry, Variant) else None
+
+
+def _stream_node(results: dict[str, Any]) -> int:
+    streams = _value(results, "streams")
+    if not isinstance(streams, list) or not streams:
+        raise PortalError("the portal granted no stream")
+    first = streams[0]
+    if not isinstance(first, list | tuple) or not first or not isinstance(first[0], int):
+        raise PortalError("the portal returned a malformed stream")
+    return first[0]
+
+
+def _restore_token(results: dict[str, Any]) -> str | None:
+    token = _value(results, "restore_token")
+    return token if isinstance(token, str) else None
 
 
 class TokenStore:
@@ -116,11 +131,9 @@ class ScreenCastPortal:
         await self._request(bus, "SelectSources", "oa{sv}", [session, _sources(token)], 0)
         timeout = DIALOG_TIMEOUT_SECONDS if interactive else QUIET_TIMEOUT_SECONDS
         results = await self._request(bus, "Start", "osa{sv}", [session, "", {}], timeout)
-        streams = _value(results, "streams")
-        if not streams:
-            raise PortalError("the portal granted no stream")
+        node = _stream_node(results)
         descriptor = await self._open_remote(bus, session)
-        return Capture(session, int(streams[0][0]), descriptor, _value(results, "restore_token"))
+        return Capture(session, node, descriptor, _restore_token(results))
 
     async def _create_session(self, bus: MessageBus) -> str:
         options = {"session_handle_token": Variant("s", _token())}

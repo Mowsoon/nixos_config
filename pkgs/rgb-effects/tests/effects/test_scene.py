@@ -17,7 +17,7 @@ def test_ring_mask_covers_only_the_outer_keys() -> None:
 
 
 def test_edge_ring_takes_the_top_edge_for_the_first_row() -> None:
-    ring = edge_ring(_frame((255, 0, 0), (0, 0, 255)).astype(np.float32) / 255, (6, 21))
+    ring = edge_ring(_frame((255, 0, 0), (0, 0, 255)).astype(np.float32) / np.float32(255), (6, 21))
     assert ring[0, 10].tolist() == pytest.approx([1.0, 0.0, 0.0])
     assert ring[-1, 10].tolist() == pytest.approx([0.0, 0.0, 1.0])
 

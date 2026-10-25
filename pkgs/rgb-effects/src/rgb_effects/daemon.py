@@ -7,24 +7,60 @@ from typing import Protocol
 import numpy as np
 from numpy.typing import NDArray
 
-from rgb_effects.sources.audio.analysis import Features
 from rgb_effects.color import Color
-from rgb_effects.render.compose import Engine, FrameRequest
+from rgb_effects.errors import KeyboardUnavailableError
+from rgb_effects.render.compose import FrameRequest
 from rgb_effects.render.geometry import KeyboardLayout
 from rgb_effects.render.palette import PaletteInputs
-from rgb_effects.errors import KeyboardUnavailableError
-from rgb_effects.sdk.keymap import led_index_by_code
-from rgb_effects.sources.keys.listener import KeyEvent
-from rgb_effects.retry import RetryPolicy, Sleep
 from rgb_effects.render.schedule import Schedule
 from rgb_effects.render.windows import WindowColors
+from rgb_effects.retry import RetryPolicy, Sleep
+from rgb_effects.sdk.keymap import led_index_by_code
+from rgb_effects.sources.audio.analysis import Features
+from rgb_effects.sources.keys.listener import KeyEvent
+from rgb_effects.sources.power import PowerState
 
 logger = logging.getLogger(__name__)
 
 Frame = tuple[Color, ...]
-EngineFactory = Callable[[KeyboardLayout], Engine]
 MIN_PACKETS_PER_FRAME = 2
 ENTER_CODES = frozenset({28, 96})
+
+
+class HudControl(Protocol):
+    def key_down(self, code: int, now: float) -> None: ...
+
+    def key_up(self, code: int) -> None: ...
+
+    def start_focus(self, seconds: float, now: float) -> None: ...
+
+    def stop_focus(self) -> None: ...
+
+
+class Renderer(Protocol):
+    @property
+    def hud(self) -> HudControl: ...
+
+    def frame(self, request: FrameRequest) -> Frame: ...
+
+    def key_pressed(self, led: int | None, now: float) -> None: ...
+
+    def pulse(self, now: float) -> None: ...
+
+    def enter(self) -> None: ...
+
+    def audio_features(self, features: Features, now: float) -> None: ...
+
+    def screen_frame(self, frame: NDArray[np.uint8], now: float) -> None: ...
+
+    def notification(self, color: Color | None, now: float) -> None: ...
+
+    def sound_active(self, now: float) -> bool: ...
+
+    def awake(self, now: float) -> bool: ...
+
+
+EngineFactory = Callable[[KeyboardLayout], Renderer]
 
 
 class Keyboard(Protocol):
@@ -49,11 +85,6 @@ class Screen(Protocol):
     @property
     def active(self) -> bool: ...
 
-    def screen_frame(self, frame: NDArray[np.uint8]) -> None:
-        engine = self._engine
-        if engine is not None:
-            engine.screen_frame(frame, self._runtime.clock.monotonic())
-
     def fullscreen_changed(self, fullscreen: bool) -> None: ...
 
     def power_changed(self, on_battery: bool) -> None: ...
@@ -76,12 +107,6 @@ class Pacing:
     battery_frame_seconds: float
     low_battery_ceiling: float
     packets_per_second: int
-
-
-@dataclass(frozen=True, slots=True)
-class PowerState:
-    on_battery: bool
-    keyboard_low: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -129,7 +154,7 @@ class Daemon:
     def __init__(self, scene: Scene, runtime: Runtime) -> None:
         self._scene = scene
         self._runtime = runtime
-        self._engine: Engine | None = None
+        self._engine: Renderer | None = None
         self._led_index: Mapping[int, int] = {}
         self._power = PowerState(on_battery=False, keyboard_low=False)
         self._accent: Color | None = None
@@ -178,6 +203,11 @@ class Daemon:
         if engine is not None:
             engine.audio_features(features, self._runtime.clock.monotonic())
 
+    def screen_frame(self, frame: NDArray[np.uint8]) -> None:
+        engine = self._engine
+        if engine is not None:
+            engine.screen_frame(frame, self._runtime.clock.monotonic())
+
     def notification_shown(self, app_name: str) -> None:
         engine = self._engine
         if engine is not None:
@@ -197,7 +227,7 @@ class Daemon:
             engine.hud.stop_focus()
             self._runtime.waiter.wake()
 
-    def _press(self, engine: Engine, code: int, now: float) -> None:
+    def _press(self, engine: Renderer, code: int, now: float) -> None:
         engine.hud.key_down(code, now)
         engine.key_pressed(self._led_index.get(code), now)
         if code in ENTER_CODES:
@@ -210,7 +240,7 @@ class Daemon:
         self._apply_sleep_policy(engine)
         return engine.frame(self._request())
 
-    def _apply_sleep_policy(self, engine: Engine) -> None:
+    def _apply_sleep_policy(self, engine: Renderer) -> None:
         policy = self._runtime.sleep_policy
         if policy is None:
             return

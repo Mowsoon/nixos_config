@@ -1,6 +1,5 @@
-from dataclasses import dataclass
-
 import colorsys
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -46,7 +45,7 @@ class Palette:
         position = np.clip(values, 0.0, 1.0) * (len(stops) - 1)
         lower = np.minimum(position.astype(np.intp), len(stops) - 2)
         weight = (position - lower)[..., None]
-        return (stops[lower] * (1 - weight) + stops[lower + 1] * weight).astype(np.float32)
+        return np.asarray(stops[lower] * (1 - weight) + stops[lower + 1] * weight, dtype=np.float32)
 
 
 def _unit(color: Color) -> Floats:

@@ -5,8 +5,8 @@ from typing import Protocol
 
 import numpy as np
 
-from rgb_effects.sources.audio.analysis import Analyzer, Features
 from rgb_effects.retry import RetryPolicy, Sleep
+from rgb_effects.sources.audio.analysis import Analyzer, Features
 
 logger = logging.getLogger(__name__)
 

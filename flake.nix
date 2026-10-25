@@ -52,6 +52,7 @@
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
+      rgbEffects = pkgs.callPackage ./pkgs/rgb-effects/package.nix { };
       hephaestusModules = [
         disko.nixosModules.disko
         impermanence.nixosModules.impermanence
@@ -113,12 +114,17 @@
         };
       };
 
+      packages.${system}.rgb-effects = rgbEffects;
+
       formatter.${system} = pkgs.nixfmt-tree;
 
       checks.${system} = {
         nixfmt = runLint "nixfmt" pkgs.nixfmt "find ${self} -name '*.nix' -exec nixfmt --check {} +";
         statix = runLint "statix" pkgs.statix "statix check ${self}";
         deadnix = runLint "deadnix" pkgs.deadnix "deadnix --fail ${self}";
+        rgb-effects = rgbEffects;
+        rgb-effects-ruff = rgbEffects.lints.ruff;
+        rgb-effects-mypy = rgbEffects.lints.mypy;
       };
 
       devShells.${system}.default = pkgs.mkShell {
