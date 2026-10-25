@@ -18,6 +18,11 @@ in
       daemonCPUSchedPolicy = "batch";
       daemonIOSchedClass = "idle";
       optimise.automatic = true;
+      settings = {
+        auto-optimise-store = true;
+        min-free = 50 * 1024 * 1024 * 1024;
+        max-free = 150 * 1024 * 1024 * 1024;
+      };
     };
 
     programs.nh = {

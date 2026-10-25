@@ -69,8 +69,19 @@ before the whole session freezes.
 | snapper cleanup | Daily | `/home` and `/persist` |
 | Docker prune | Weekly | Unused images, containers and networks |
 | Nix garbage collection | Weekly, through `nh clean` | Generations beyond the last 10 and older than 14 days |
-| Nix store deduplication | Daily | Identical store files replaced by hard links |
+| Nix store deduplication | At each store write, and daily | Identical store files replaced by hard links |
+| Nix free-space guard | During builds | Collects garbage when free space drops below 50 GiB, up to 150 GiB free |
 | SMART checks | Continuous, through smartd | Both NVMe disks |
+
+The free-space guard is the Nix daemon's `min-free` and `max-free`: it frees space while a build
+runs, so a burst of builds cannot fill the disk between two weekly collections. It only deletes
+unrooted paths; generations and `result` links stay.
+
+The KWin graft of the desktop (`system.replaceDependencies`) rewrites a copy of every system path
+that depends on KWin: 43 paths, about 200 MiB, Plasma itself for most of it. Rewritten copies
+are derivations, so an unchanged input reuses its copy. No `cutoffPackages` entry beyond the
+default initrd pays off: the only large path not needed by the Wayland session, `kwin-x11`
+(34 MiB), would keep the unpatched KWin (42 MiB) in the closure if exempted.
 
 ### Windows volume
 
