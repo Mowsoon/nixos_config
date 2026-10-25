@@ -24,6 +24,7 @@ PLUGIN_NAME = "rgb-effects-active-window"
 CALL_TIMEOUT_SECONDS = 5.0
 BUS_ERRORS = (OSError, DBusError, EOFError)
 MAX_FOCUS_SECONDS = 86400
+MAX_APP_NAME = 64
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,8 @@ class WindowListener(Protocol):
     def focus_started(self, seconds: float) -> None: ...
 
     def focus_stopped(self) -> None: ...
+
+    def notification_shown(self, app_name: str) -> None: ...
 
 
 class EffectsInterface(ServiceInterface):
@@ -50,6 +53,12 @@ class EffectsInterface(ServiceInterface):
         if not 1 <= seconds <= MAX_FOCUS_SECONDS:
             raise DBusError("org.freedesktop.DBus.Error.InvalidArgs", "focus seconds out of range")
         self._listener.focus_started(float(seconds))
+
+    @method(name="NotificationShown")
+    def notification_shown(self, app_name: DBusStr) -> None:
+        if len(app_name) > MAX_APP_NAME or not app_name.isprintable():
+            raise DBusError("org.freedesktop.DBus.Error.InvalidArgs", "invalid application name")
+        self._listener.notification_shown(app_name)
 
     @method(name="StopFocus")
     def stop_focus(self) -> None:

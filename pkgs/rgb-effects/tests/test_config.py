@@ -30,6 +30,14 @@ VALID: dict[str, Any] = {
         "emberHotMs": 2500,
         "sandWordsPerMinute": 15,
     },
+    "audio": {
+        "recorder": "/bin/pw-record",
+        "color": "#7dff8a",
+        "spectrumGain": 0.7,
+        "silenceSeconds": 5,
+        "hueRange": 60,
+    },
+    "sleepPolicy": {"sleepSeconds": 300},
     "hud": {
         "bindings": {"ctrl": {"edit": ["C", "V"]}, "alt+ctrl": {"window": ["Tab"]}},
         "colors": {"edit": "#00e5ff"},
@@ -86,6 +94,18 @@ def test_parse_config_normalises_hud_combinations() -> None:
     assert set(parse_config(VALID).hud.bindings) == {"ctrl", "ctrl+alt"}
 
 
+def test_parse_config_reads_sleep_policy() -> None:
+    assert parse_config(VALID).sleep_seconds == 300
+
+
+def test_parse_config_accepts_disabled_sleep_policy() -> None:
+    assert parse_config(_with(["sleepPolicy"], None)).sleep_seconds is None
+
+
+def test_parse_config_accepts_disabled_audio() -> None:
+    assert parse_config(_with(["audio"], None)).audio is None
+
+
 def test_parse_config_accepts_integer_refresh() -> None:
     assert parse_config(VALID).refresh_seconds == 60.0
 
@@ -123,6 +143,14 @@ def test_parse_config_accepts_integer_refresh() -> None:
         (["hud", "bindings"], {"shift": {"edit": ["C"]}}),
         (["hud", "bindings"], {"ctrl": {"edit": "C"}}),
         (["hud", "colors"], {"edit": "cyan"}),
+        (["audio", "recorder"], "pw-record"),
+        (["audio", "color"], "green"),
+        (["audio", "spectrumGain"], 2),
+        (["audio", "hueRange"], 360),
+        (["audio", "silenceSeconds"], 0),
+        (["audio"], "on"),
+        (["sleepPolicy", "sleepSeconds"], 5),
+        (["sleepPolicy"], 300),
         (["hud", "dim"], 2),
         (["hud", "clockHoldMs"], 10),
     ],

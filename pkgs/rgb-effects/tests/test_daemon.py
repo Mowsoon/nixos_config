@@ -60,6 +60,9 @@ class FakeEngine:
         self.enters = 0
         self.is_awake = True
         self.constant = False
+        self.playing = False
+        self.notices: list[Color | None] = []
+        self.audio: list[object] = []
 
     def frame(self, request: FrameRequest) -> tuple[Color, ...]:
         self.requests.append(request)
@@ -75,8 +78,17 @@ class FakeEngine:
     def enter(self) -> None:
         self.enters += 1
 
+    def audio_features(self, features: object, now: float) -> None:
+        self.audio.append(features)
+
     def awake(self, now: float) -> bool:
         return self.is_awake
+
+    def sound_active(self, now: float) -> bool:
+        return self.playing
+
+    def notification(self, color: Color | None, now: float) -> None:
+        self.notices.append(color)
 
 
 class FakeKeyboard:
@@ -135,11 +147,23 @@ class ScriptedWaiter:
         self.woken += 1
 
 
+class FakePolicy:
+    def __init__(self) -> None:
+        self.wanted: list[bool] = []
+
+    def want(self, allow_sleep: bool) -> None:
+        self.wanted.append(allow_sleep)
+
+
 def _daemon(
-    keyboard: FakeKeyboard, waiter: ScriptedWaiter, engine: FakeEngine, sleep: CountingSleep
+    keyboard: FakeKeyboard,
+    waiter: ScriptedWaiter,
+    engine: FakeEngine,
+    sleep: CountingSleep,
+    policy: FakePolicy | None = None,
 ) -> Daemon:
     scene = Scene(DAY, WindowColors({"firefox": FIREFOX}), lambda layout: engine, PACING, 0.6)
-    return Daemon(scene, Runtime(keyboard, FakeClock(), waiter, sleep, RETRY))
+    return Daemon(scene, Runtime(keyboard, FakeClock(), waiter, sleep, RETRY, policy))
 
 
 async def _run(daemon: Daemon) -> None:
@@ -264,6 +288,52 @@ async def test_pulse_reaches_the_engine() -> None:
     waiter.on_first = lambda: daemon.key_event(KeyEvent(None, True))
     await _run(daemon)
     assert engine.pulses == 1
+
+
+async def test_audio_features_reach_the_engine() -> None:
+    waiter, engine = ScriptedWaiter(2), FakeEngine()
+    daemon = _daemon(FakeKeyboard(), waiter, engine, CountingSleep(9))
+    waiter.on_first = lambda: daemon.audio_features("features")
+    await _run(daemon)
+    assert engine.audio == ["features"]
+
+
+async def test_playing_sound_suspends_keyboard_sleep() -> None:
+    engine, policy = FakeEngine(), FakePolicy()
+    engine.playing = True
+    await _run(_daemon(FakeKeyboard(), ScriptedWaiter(1), engine, CountingSleep(9), policy))
+    assert set(policy.wanted) == {False}
+
+
+async def test_silence_allows_keyboard_sleep() -> None:
+    engine, policy = FakeEngine(), FakePolicy()
+    await _run(_daemon(FakeKeyboard(), ScriptedWaiter(1), engine, CountingSleep(9), policy))
+    assert set(policy.wanted) == {True}
+
+
+@pytest.mark.parametrize(
+    "state", [PowerState(on_battery=True, keyboard_low=False), PowerState(False, True)]
+)
+async def test_battery_forces_keyboard_sleep_even_with_sound(state: PowerState) -> None:
+    engine, policy = FakeEngine(), FakePolicy()
+    engine.playing = True
+    daemon = _daemon(FakeKeyboard(), ScriptedWaiter(1), engine, CountingSleep(9), policy)
+    daemon.power_changed(state)
+    await _run(daemon)
+    assert set(policy.wanted) == {True}
+
+
+async def test_notification_reaches_the_engine_with_its_color() -> None:
+    waiter, engine = ScriptedWaiter(2), FakeEngine()
+    daemon = _daemon(FakeKeyboard(), waiter, engine, CountingSleep(9))
+
+    def notify() -> None:
+        daemon.notification_shown("Firefox")
+        daemon.notification_shown("notify-send")
+
+    waiter.on_first = notify
+    await _run(daemon)
+    assert engine.notices == [FIREFOX, None]
 
 
 def test_key_press_before_connection_is_ignored() -> None:

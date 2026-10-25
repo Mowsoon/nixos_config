@@ -19,6 +19,8 @@ class PhysicsSettings:
     wave_speed: float = 4.0
     wave_damping: float = 2.5
     wave_hot_reduction: float = 0.7
+    wave_rest_seconds: float = 0.6
+    wave_threshold: float = 0.35
     particle_fall_seconds: float = 0.15
     sand_per_grain: float = 0.34
     sweep_columns_per_second: float = 42.0
@@ -79,6 +81,14 @@ class Physics:
         if falling and row < self._shape[0] - 1:
             fields.particles.append(Particle(row, col, now + self._settings.particle_fall_seconds))
 
+    def impulse(self, row: int, col: int, strength: float) -> None:
+        if 0 <= row < self._shape[0] and 0 <= col < self._shape[1]:
+            self._fields.wave[row, col] += strength
+
+    def plane(self, strength: float) -> None:
+        self._fields.wave[:, 0] += strength
+        self._fields.wave[:, -1] += strength
+
     def pulse(self, level: float) -> None:
         np.maximum(self._fields.ember, level, out=self._fields.ember)
 
@@ -118,7 +128,8 @@ class Physics:
         damping = settings.wave_damping * (1 - settings.wave_hot_reduction * fields.heat) * dt
         velocity = fields.wave - fields.previous_wave
         following = fields.wave + velocity * (1 - damping) + courant * laplacian(fields.wave)
-        fields.previous_wave = fields.wave
+        following *= math.exp(-dt / settings.wave_rest_seconds)
+        fields.previous_wave = fields.wave * math.exp(-dt / settings.wave_rest_seconds)
         fields.wave = np.clip(following, -2.0, 2.0).astype(np.float32)
 
     def _sweep(self, dt: float) -> None:
@@ -153,7 +164,8 @@ class Physics:
             ember > 0.5, _mix(warm, hot, (ember - 0.5) * 2), _mix(cold, warm, ember * 2)
         )
         light = embers * np.minimum(1.0, ember * 3)
-        light = np.maximum(light, glow * np.clip(np.abs(fields.wave), 0.0, 1.0)[..., None])
+        crest = (np.abs(fields.wave) >= self._settings.wave_threshold).astype(np.float32)
+        light = np.maximum(light, glow * crest[..., None])
         grains = np.zeros(self._shape, dtype=np.float32)
         grains[-1, :] = fields.sand
         for particle in fields.particles:

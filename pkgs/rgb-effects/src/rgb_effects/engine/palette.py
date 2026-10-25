@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+import colorsys
+
 import numpy as np
 
 from rgb_effects.color import Color
@@ -22,6 +24,8 @@ class PaletteInputs:
     physics_ceiling: float
     window: Color | None
     accent: Color | None
+    sound: Color | None = None
+    hue_shift: float = 0.0
 
 
 @dataclass(frozen=True, slots=True, eq=False)
@@ -48,6 +52,14 @@ def _unit(color: Color) -> Floats:
     return np.array([color.red, color.green, color.blue], dtype=np.float32) / 255.0
 
 
+def rotate_hue(color: Floats, degrees: float) -> Floats:
+    if degrees == 0:
+        return color
+    hue, saturation, value = colorsys.rgb_to_hsv(*(float(channel) for channel in color))
+    turned = colorsys.hsv_to_rgb((hue + degrees / 360.0) % 1.0, saturation, value)
+    return np.array(turned, dtype=np.float32)
+
+
 def _rotated(color: Floats) -> Floats:
     return np.roll(color, 1).astype(np.float32)
 
@@ -70,6 +82,8 @@ def build_palette(inputs: PaletteInputs, size: int) -> Palette:
         raise ValueError(f"palette size {size} is outside 6..8")
     primary = _unit(inputs.window) if inputs.window is not None else _unit(inputs.hue)
     secondary = _unit(inputs.accent) if inputs.accent is not None else _rotated(primary)
+    primary = rotate_hue(primary, inputs.hue_shift)
+    secondary = rotate_hue(secondary, inputs.hue_shift)
     raw = {
         "black": np.zeros(3, dtype=np.float32),
         "dark": primary * DARK_SCALE,
@@ -86,6 +100,8 @@ def build_palette(inputs: PaletteInputs, size: int) -> Palette:
         name: _envelope(color, inputs.hue, physics if name in PHYSICS else inputs.ceiling)
         for name, color in raw.items()
     }
+    if inputs.sound is not None:
+        named["glow"] = (_unit(inputs.sound) * physics).astype(np.float32)
     return Palette(
         dark=named["dark"],
         primary=named["primary"],

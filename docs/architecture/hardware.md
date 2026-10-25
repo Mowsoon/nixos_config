@@ -205,14 +205,15 @@ Every frame goes through one pipeline over the 6 by 21 key matrix, held in float
 2. The background is a gradient noise field flowing through the master hues; it flows faster
    while keys are pressed. After the idle delay without a key press it fades into the Brian's
    Brain cellular automaton, stepped three times per second, and fades back on the next press.
-3. The physical layer adds what typing produces, as fields over the same matrix. Every press
-   raises a slow heat map, which diffuses to the neighbouring keys and decays over minutes. The
-   pressed key glows from white to dark red; it cools in 0.8 s on a cold key and up to 2.5 s on
-   the hottest, where a faint halo stays. Every press also starts a damped 2D wave, which travels
-   further where the heat map is hot. Below the sand typing speed, the press also drops a grain
-   that falls one row at a time and piles up on the bottom row; Enter clears the pile and sweeps
-   a wave along that row. This layer has its own brightness ceiling, so presses stay visible when
-   the time-of-day ceiling is low.
+3. The physical layer adds what typing produces, as fields over the same matrix. Every press raises
+   a slow heat map, which diffuses to the neighbouring keys and decays over minutes. The pressed key
+   glows from white to dark red; it cools in 0.8 s on a cold key and up to 2.5 s on the hottest,
+   where a faint halo stays. Every press also starts a damped 2D wave, which travels further where
+   the heat map is hot and always settles back to rest; a key lights only where the crest of the
+   wave passes. Below the sand typing speed, the press also drops a grain that falls one row at a
+   time and piles up on the bottom row; Enter clears the pile and sweeps a wave along that row. This
+   layer has its own brightness ceiling, so presses stay visible when the time-of-day ceiling is
+   low.
 4. The HUD overrides the keys it uses. While Ctrl, Alt or Super is held, every other key is
    dimmed and the keys bound to that combination light in the colour of their category. A focus
    timer started with `rgb-focus` turns F1 to F12 into a progress bar and blinks it when the time
@@ -249,6 +250,38 @@ mode only the fact that a key was pressed. It also forwards the release of the s
 event; it keeps no history, logs no key and has no network. It does not grab the device, so Plasma
 receives every key as before. The daemon maps a key code to the LED at the same physical position,
 where the physical layer makes it glow.
+
+Sound-reactive effects read what the computer plays. The daemon runs `pw-record` on the monitor of
+the default PipeWire sink (`stream.capture.sink`) with `node.dont-move` set, so neither WirePlumber
+nor EasyEffects, which moves recording streams to its microphone source, can reroute it to a
+microphone; the stream is named `rgb-effects-monitor`. Each block of 1024 samples gives the level of
+both channels and 21 logarithmic bands from 40 Hz to 16 kHz, one per matrix column, measured against
+a slowly decaying peak over 50 dB. Nothing else is kept. Each band lights its column from the bottom
+row in the sound colour, at the brightness ceiling of the key-reactive layer so it stays visible at
+night; a key is either lit or left to the background, which keeps the quantised table stable. The
+stereo balance tilts the columns sideways, and the level speeds up the flow. A sharp attack, found
+by spectral flux above an adaptive threshold, starts a circular wave from the centre of the keyboard
+in the solver of the physical layer. A 12-note chromagram, smoothed over a few seconds and read on
+the circle of fifths, slowly turns the master hues within the hue range, so the background follows
+the harmony of the piece. While sound plays the daemon stays awake and the automaton stays away;
+after the silence delay the audio gains fade back to nothing over two seconds.
+
+Desktop notifications send a plane wave from both side edges towards the centre, in the colour of
+the sending application from the window colour table, or of the accent for an unknown one. Plasma
+offers no interface to observe notifications, so a separate user service, `rgb-notifywatch`, becomes
+a monitor of the session bus restricted to the `Notify` calls. It keeps only the application name,
+which it passes to the daemon through `NotificationShown`; the title and the text it receives are
+dropped at once and never logged. It runs in a private network namespace with Unix sockets only,
+sees no home directory and, of the runtime directory, only the session bus socket, and writes
+nowhere.
+
+The keyboard sleep follows what happens on the computer. OpenRGB puts the keyboard to sleep after
+the sleep delay without a key press, whatever plays. With the sleep policy, the daemon suspends that
+sleep while sound plays, and forces it again as soon as the laptop runs on battery or the keyboard
+battery is low. It sets the `LogitechHIDPP20IdleSettings` of the server through the SDK, as a local
+client of protocol version 6 granted only to a loopback connection; the server applies them within
+half a second. The settings are not saved: a restart of the server starts from its defaults, and the
+daemon sets them again on its next change.
 
 The daemon degrades on its own. It follows the `OnBattery` property of UPower on the system bus:
 on battery, animations run at the battery frame rate. It reads the keyboard battery from the
@@ -306,6 +339,18 @@ an attribute crosses its failure threshold.
    ```bash
    rgb-focus stop
    ```
+
+## How to check what the lighting daemon records
+
+1. Show the links of the capture stream of the daemon.
+
+   ```bash
+   pw-link --links | grep -A2 rgb-effects-monitor
+   ```
+
+   Nothing printed means no capture runs. Otherwise the only inputs must be `monitor_FL` and
+   `monitor_FR` of the output sink, never a source such as the microphone or
+   `Easy Effects Source`.
 
 ## How to test a driver or kernel option
 
@@ -577,6 +622,13 @@ Measured through the OpenRGB SDK server, counting the HID++ writes on the receiv
 | `custom.rgb.effects.lowBattery.brightness` | `0.4` | Brightness ceiling while the keyboard battery is low |
 | `custom.rgb.effects.keys.enable` | `false` | Socket-activated key reader `rgb-keyreader` for key-reactive effects |
 | `custom.rgb.effects.keys.mode` | `"position"` | `position` forwards the key code, `pulse` only the fact of a key press |
+| `custom.rgb.effects.notifications.enable` | `false` | Notification waves through the `rgb-notifywatch` bus monitor |
+| `custom.rgb.effects.sleepPolicy.enable` | `false` | Keyboard sleep suspended while sound plays, forced on battery |
+| `custom.rgb.effects.audio.enable` | `false` | Effects driven by the sound played, from the default sink monitor |
+| `custom.rgb.effects.audio.color` | `"#7dff8a"` | Colour of the spectrum and of the waves while sound plays |
+| `custom.rgb.effects.audio.spectrumGain` | `0.7` | Weight of the spectrum mask over the background |
+| `custom.rgb.effects.audio.hueRange` | `60` | Largest hue rotation, in degrees, driven by the harmony |
+| `custom.rgb.effects.audio.silenceSeconds` | `5` | Silence after which the audio gains fade out |
 | `custom.rgb.effects.hud.bindings` | Edit, file, navigation, window, desktop and system keys | Combination of `ctrl`, `alt`, `super` to category to key labels |
 | `custom.rgb.effects.hud.colors` | One colour per category, `focus` and `clock` | Colour of each HUD category |
 | `custom.rgb.effects.hud.dim` | `0.25` | Brightness left to the lower layers while a modifier is held |

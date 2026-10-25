@@ -44,3 +44,8 @@ def test_activate_ignores_malformed_class(resource_class: str) -> None:
     windows = _colors()
     windows.activate(resource_class)
     assert windows.current is None
+
+
+def test_color_for_finds_a_notifying_application() -> None:
+    windows = _colors()
+    assert (windows.color_for("FIREFOX"), windows.current) == (FIREFOX, None)

@@ -49,6 +49,15 @@ class HudConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class AudioConfig:
+    recorder: str
+    color: Color
+    spectrum_gain: float
+    silence_seconds: float
+    hue_range: float
+
+
+@dataclass(frozen=True, slots=True)
 class EffectsConfig:
     server: ServerConfig
     device: str
@@ -57,6 +66,8 @@ class EffectsConfig:
     engine: EngineConfig
     physics: PhysicsConfig
     hud: HudConfig
+    audio: AudioConfig | None
+    sleep_seconds: int | None
     key_socket: Path | None
     refresh_seconds: float
     fps: int
@@ -192,6 +203,33 @@ def _hud(data: dict[str, Any]) -> HudConfig:
     )
 
 
+def _audio(data: dict[str, Any]) -> AudioConfig | None:
+    section = data.get("audio")
+    if section is None:
+        return None
+    if not isinstance(section, dict):
+        raise ConfigError("audio must be an object or null")
+    recorder = _non_empty(_field(section, "recorder", str), "recorder")
+    if not recorder.startswith("/"):
+        raise ConfigError("audio recorder must be an absolute path")
+    gain = _field(section, "spectrumGain", float)
+    if not 0.0 <= gain <= 1.0:
+        raise ConfigError(f"spectrumGain {gain} is outside 0..1")
+    silence = float(_bounded(section, "silenceSeconds", 1, 120))
+    color = parse_hex(_field(section, "color", str))
+    hue_range = float(_bounded(section, "hueRange", 0, 180))
+    return AudioConfig(recorder, color, gain, silence, hue_range)
+
+
+def _sleep_policy(data: dict[str, Any]) -> int | None:
+    section = data.get("sleepPolicy")
+    if section is None:
+        return None
+    if not isinstance(section, dict):
+        raise ConfigError("sleepPolicy must be an object or null")
+    return _bounded(section, "sleepSeconds", 30, 3600)
+
+
 def _key_socket(data: dict[str, Any]) -> Path | None:
     value = data.get("keySocket")
     if value is None:
@@ -222,6 +260,8 @@ def parse_config(data: Any) -> EffectsConfig:
         engine=_engine(_field(data, "engine", dict)),
         physics=_physics(_field(data, "physics", dict)),
         hud=_hud(_field(data, "hud", dict)),
+        audio=_audio(data),
+        sleep_seconds=_sleep_policy(data),
         key_socket=_key_socket(data),
         refresh_seconds=refresh,
         fps=_fps(data, "fps"),

@@ -43,6 +43,9 @@
       effects = {
         enable = true;
         keys.enable = true;
+        audio.enable = true;
+        sleepPolicy.enable = true;
+        notifications.enable = true;
       };
     };
     power = {

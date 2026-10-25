@@ -61,6 +61,20 @@ let
           ;
       };
       keySocket = if effects.keys.enable then keySocket else null;
+      sleepPolicy = if effects.sleepPolicy.enable then { inherit (effects) sleepSeconds; } else null;
+      audio =
+        if effects.audio.enable then
+          {
+            recorder = lib.getExe' pkgs.pipewire "pw-record";
+            inherit (effects.audio)
+              color
+              spectrumGain
+              silenceSeconds
+              hueRange
+              ;
+          }
+        else
+          null;
     }
   );
   keyframe = lib.types.submodule {
@@ -141,6 +155,38 @@ in
           ];
           default = "position";
           description = "position sends which key was pressed; pulse sends only that a key was pressed.";
+        };
+      };
+
+      notifications.enable = lib.mkEnableOption "the notification waves, read by a separate watcher that monitors the session bus and forwards only the application name";
+
+      sleepPolicy.enable = lib.mkEnableOption "the dynamic keyboard sleep: sleep is suspended while sound plays, and forced while the laptop or the keyboard runs low";
+
+      audio = {
+        enable = lib.mkEnableOption "the effects driven by the sound played by the computer, read from the monitor of the default PipeWire sink";
+
+        color = lib.mkOption {
+          type = lib.types.strMatching "#[0-9a-fA-F]{6}";
+          default = "#7dff8a";
+          description = "Colour of the spectrum columns and of the waves while sound plays, at the key-reactive brightness ceiling and without the night warming.";
+        };
+
+        spectrumGain = lib.mkOption {
+          type = lib.types.numbers.between 0 1;
+          default = 0.7;
+          description = "Weight of the spectrum mask over the background, from 0 to 1.";
+        };
+
+        hueRange = lib.mkOption {
+          type = lib.types.ints.between 0 180;
+          default = 60;
+          description = "Largest rotation, in degrees, that the harmony of the music applies to the master hues.";
+        };
+
+        silenceSeconds = lib.mkOption {
+          type = lib.types.ints.between 1 120;
+          default = 5;
+          description = "Seconds of silence after which the audio gains fall back and sound stops counting as activity.";
         };
       };
 
@@ -455,41 +501,83 @@ in
         };
       };
 
-      user.services.rgb-effects = lib.mkIf effects.enable {
-        description = "Keyboard lighting effects";
-        wantedBy = [ "graphical-session.target" ];
-        partOf = [ "graphical-session.target" ];
-        after = [ "graphical-session.target" ];
-        unitConfig.ConditionUser = effects.user;
-        serviceConfig = {
-          ExecStart = "${lib.getExe rgbEffects} --config ${effectsConfig}";
-          Restart = "on-failure";
-          RestartSec = 5;
-          RestrictAddressFamilies = [
-            "AF_UNIX"
-            "AF_INET"
+      user.services = {
+        rgb-notifywatch = lib.mkIf (effects.enable && effects.notifications.enable) {
+          description = "Notification watcher of the keyboard lighting effects";
+          wantedBy = [ "graphical-session.target" ];
+          partOf = [ "graphical-session.target" ];
+          after = [
+            "graphical-session.target"
+            "rgb-effects.service"
           ];
-          NoNewPrivileges = true;
-          CapabilityBoundingSet = [ "" ];
-          ProtectSystem = "strict";
-          ProtectHome = "read-only";
-          PrivateTmp = true;
-          PrivateDevices = true;
-          ProtectClock = true;
-          ProtectControlGroups = true;
-          ProtectHostname = true;
-          ProtectKernelLogs = true;
-          ProtectKernelModules = true;
-          ProtectKernelTunables = true;
-          ProtectProc = "invisible";
-          RestrictSUIDSGID = true;
-          MemoryDenyWriteExecute = true;
-          LockPersonality = true;
-          RestrictNamespaces = true;
-          RestrictRealtime = true;
-          SystemCallArchitectures = "native";
-          SystemCallFilter = [ "@system-service" ];
-          UMask = "0077";
+          unitConfig.ConditionUser = effects.user;
+          serviceConfig = {
+            ExecStart = lib.getExe' rgbEffects "rgb-notifywatch";
+            Restart = "on-failure";
+            RestartSec = 5;
+            RestrictAddressFamilies = [ "AF_UNIX" ];
+            PrivateNetwork = true;
+            NoNewPrivileges = true;
+            CapabilityBoundingSet = [ "" ];
+            ProtectSystem = "strict";
+            ProtectHome = "tmpfs";
+            BindPaths = [ "%t/bus" ];
+            PrivateTmp = true;
+            PrivateDevices = true;
+            ProtectClock = true;
+            ProtectControlGroups = true;
+            ProtectHostname = true;
+            ProtectKernelLogs = true;
+            ProtectKernelModules = true;
+            ProtectKernelTunables = true;
+            ProtectProc = "invisible";
+            RestrictSUIDSGID = true;
+            MemoryDenyWriteExecute = true;
+            LockPersonality = true;
+            RestrictNamespaces = true;
+            RestrictRealtime = true;
+            SystemCallArchitectures = "native";
+            SystemCallFilter = [ "@system-service" ];
+            UMask = "0077";
+          };
+        };
+
+        rgb-effects = lib.mkIf effects.enable {
+          description = "Keyboard lighting effects";
+          wantedBy = [ "graphical-session.target" ];
+          partOf = [ "graphical-session.target" ];
+          after = [ "graphical-session.target" ];
+          unitConfig.ConditionUser = effects.user;
+          serviceConfig = {
+            ExecStart = "${lib.getExe rgbEffects} --config ${effectsConfig}";
+            Restart = "on-failure";
+            RestartSec = 5;
+            RestrictAddressFamilies = [
+              "AF_UNIX"
+              "AF_INET"
+            ];
+            NoNewPrivileges = true;
+            CapabilityBoundingSet = [ "" ];
+            ProtectSystem = "strict";
+            ProtectHome = "read-only";
+            PrivateTmp = true;
+            PrivateDevices = true;
+            ProtectClock = true;
+            ProtectControlGroups = true;
+            ProtectHostname = true;
+            ProtectKernelLogs = true;
+            ProtectKernelModules = true;
+            ProtectKernelTunables = true;
+            ProtectProc = "invisible";
+            RestrictSUIDSGID = true;
+            MemoryDenyWriteExecute = true;
+            LockPersonality = true;
+            RestrictNamespaces = true;
+            RestrictRealtime = true;
+            SystemCallArchitectures = "native";
+            SystemCallFilter = [ "@system-service" ];
+            UMask = "0077";
+          };
         };
       };
     };

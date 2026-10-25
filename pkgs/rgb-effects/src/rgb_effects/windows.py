@@ -15,6 +15,9 @@ class WindowColors:
     def current(self) -> Color | None:
         return self._current
 
+    def color_for(self, name: str) -> Color | None:
+        return self._colors.get(_normalized(name))
+
     def activate(self, resource_class: str) -> bool:
         color = self._colors.get(_normalized(resource_class))
         changed = color != self._current

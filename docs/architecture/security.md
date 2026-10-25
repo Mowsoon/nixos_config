@@ -72,6 +72,12 @@ and Unix sockets as the only family, it writes nowhere and logs only warnings. I
 presses, and the release of the six modifier keys, without history to the one user who owns its
 socket; in pulse mode it forwards neither which key was pressed nor any release.
 
+The notification waves rely on a monitor of the session bus, which receives the full content of
+every notification: sender, title and text. That access is also kept in a process of its own,
+`rgb-notifywatch`, restricted to the `Notify` calls, which forwards only the application name to
+the effects daemon, logs nothing of the content, and runs without network or write access. The
+feature is off unless `custom.rgb.effects.notifications.enable` is set.
+
 ### Software supply
 
 Unfree packages are allowed one by one: each module that needs one adds its name to

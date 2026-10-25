@@ -103,3 +103,40 @@ def test_pulse_raises_every_ember() -> None:
     physics = _physics()
     physics.pulse(0.6)
     assert float(physics.fields.ember.min()) == pytest.approx(0.6)
+
+
+def test_impulse_adds_to_the_wave() -> None:
+    physics = _physics()
+    physics.impulse(2, 10, 0.8)
+    assert float(physics.fields.wave[2, 10]) == pytest.approx(0.8)
+
+
+def test_impulse_outside_grid_is_ignored() -> None:
+    physics = _physics()
+    physics.impulse(2, 40, 0.8)
+    assert not physics.fields.wave.any()
+
+
+def test_repeated_impulses_settle_back_to_rest() -> None:
+    physics = _physics()
+    for step in range(40):
+        physics.impulse(2, 10, 1.2)
+        physics.step(0.55, step * 0.55)
+    physics.step(5.0, 30.0)
+    assert float(np.abs(physics.fields.wave).max()) < 0.05
+
+
+def test_wave_lights_only_its_crest() -> None:
+    physics = _physics()
+    physics.impulse(2, 10, 1.0)
+    physics.step(0.3, 0.3)
+    light = physics.emission(WHITE, WHITE, WHITE, WHITE)
+    assert set(np.unique(light).tolist()) <= {0.0, 1.0}
+
+
+def test_plane_wave_starts_on_both_edges() -> None:
+    physics = _physics()
+    physics.plane(1.0)
+    wave = physics.fields.wave
+    assert float(wave[:, 0].min()) == 1.0 and float(wave[:, -1].min()) == 1.0
+    assert not wave[:, 1:-1].any()

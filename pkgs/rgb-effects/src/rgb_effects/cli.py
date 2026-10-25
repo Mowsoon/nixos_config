@@ -9,6 +9,8 @@ from collections.abc import Callable
 from pathlib import Path
 
 from rgb_effects.accent import AccentWatcher
+from rgb_effects.audio.analysis import Analyzer
+from rgb_effects.audio.capture import AudioCapture
 from rgb_effects.config import EffectsConfig, load_config
 from rgb_effects.daemon import Daemon, EventWaiter, Pacing, Runtime, Scene
 from rgb_effects.engine.activity import Activity
@@ -17,12 +19,14 @@ from rgb_effects.engine.compose import Engine, EngineSettings
 from rgb_effects.engine.geometry import KeyboardLayout, build_geometry
 from rgb_effects.engine.hud import Hud, HudSettings
 from rgb_effects.engine.physics import Physics, PhysicsSettings
+from rgb_effects.engine.sound import SoundField, SoundSettings
 from rgb_effects.errors import ConfigError, SessionError
 from rgb_effects.keyboard import OpenRgbKeyboard
 from rgb_effects.keys import KeySource
 from rgb_effects.retry import RetryPolicy
 from rgb_effects.power import PowerMonitor
 from rgb_effects.session import Session
+from rgb_effects.sleep_policy import SleepController
 from rgb_effects.windows import WindowColors
 
 logger = logging.getLogger("rgb_effects")
@@ -32,6 +36,7 @@ RETRY = RetryPolicy(initial_seconds=2.0, maximum_seconds=60.0)
 POWER_SUPPLIES = Path("/sys/class/power_supply")
 ACTIVITY_SECONDS = 3.0
 NOISE_SEED = 1915
+BANDS = 21
 
 
 class SystemClock:
@@ -56,10 +61,19 @@ def _engine_factory(config: EffectsConfig) -> Callable[[KeyboardLayout], Engine]
         ember_hot_seconds=physics.ember_hot_seconds,
     )
     settings = EngineSettings(
-        engine.palette_size, engine.sleep_seconds, physics.falling_keys_per_second
+        engine.palette_size,
+        engine.sleep_seconds,
+        physics.falling_keys_per_second,
+        config.audio.color if config.audio is not None else None,
     )
     hud = HudSettings(
         config.hud.bindings, config.hud.colors, config.hud.dim, config.hud.clock_hold_seconds
+    )
+    audio = config.audio
+    sound = SoundSettings(
+        spectrum_gain=audio.spectrum_gain if audio is not None else 0.0,
+        silence_seconds=audio.silence_seconds if audio is not None else 5.0,
+        hue_range=audio.hue_range if audio is not None else 0.0,
     )
 
     def build(layout: KeyboardLayout) -> Engine:
@@ -73,13 +87,20 @@ def _engine_factory(config: EffectsConfig) -> Callable[[KeyboardLayout], Engine]
             Physics(geometry.shape, physics_settings),
             Activity(ACTIVITY_SECONDS, time.monotonic()),
             Hud(hud, layout.led_names),
+            SoundField(geometry.shape[1], sound),
             settings,
         )
 
     return build
 
 
-def _daemon(config: EffectsConfig) -> Daemon:
+def _sleep_controller(config: EffectsConfig) -> SleepController | None:
+    if config.sleep_seconds is None:
+        return None
+    return SleepController(config.server, CLIENT_NAME, config.sleep_seconds, RETRY, asyncio.sleep)
+
+
+def _daemon(config: EffectsConfig, sleep_policy: SleepController | None) -> Daemon:
     scene = Scene(
         schedule=config.schedule,
         windows=WindowColors(config.window_colors),
@@ -99,6 +120,7 @@ def _daemon(config: EffectsConfig) -> Daemon:
         waiter=EventWaiter(),
         sleep=asyncio.sleep,
         retry=RETRY,
+        sleep_policy=sleep_policy,
     )
     return Daemon(scene, runtime)
 
@@ -114,19 +136,30 @@ def _accent_watcher(daemon: Daemon, config: EffectsConfig) -> AccentWatcher:
     return AccentWatcher(path, daemon, config.refresh_seconds, asyncio.sleep)
 
 
-async def _run_all(daemon: Daemon, config: EffectsConfig) -> None:
+async def _run_all(
+    daemon: Daemon, config: EffectsConfig, sleep_policy: SleepController | None
+) -> None:
     async with asyncio.TaskGroup() as group:
         group.create_task(daemon.run())
+        if sleep_policy is not None:
+            group.create_task(sleep_policy.run())
         group.create_task(_power_monitor(daemon, config).run())
         group.create_task(_accent_watcher(daemon, config).run())
+        if config.audio is not None:
+            capture = AudioCapture(
+                config.audio.recorder, Analyzer(BANDS), daemon, RETRY, asyncio.sleep
+            )
+            group.create_task(capture.run())
         if config.key_socket is not None:
             source = KeySource(config.key_socket, daemon, RETRY, asyncio.sleep)
             group.create_task(source.run())
 
 
-async def _run_until_stopped(daemon: Daemon, script: Path, config: EffectsConfig) -> None:
+async def _run_until_stopped(script: Path, config: EffectsConfig) -> None:
+    sleep_policy = _sleep_controller(config)
+    daemon = _daemon(config, sleep_policy)
     async with Session(daemon, script):
-        task = asyncio.create_task(_run_all(daemon, config))
+        task = asyncio.create_task(_run_all(daemon, config, sleep_policy))
         loop = asyncio.get_running_loop()
         for stop_signal in (signal.SIGTERM, signal.SIGINT):
             loop.add_signal_handler(stop_signal, task.cancel)
@@ -140,7 +173,7 @@ def _serve(config: EffectsConfig) -> int:
     script = importlib.resources.files("rgb_effects").joinpath("active_window.js")
     with importlib.resources.as_file(script) as path:
         try:
-            asyncio.run(_run_until_stopped(_daemon(config), path, config))
+            asyncio.run(_run_until_stopped(path, config))
         except SessionError:
             logger.exception("session bus link failed")
             return 1

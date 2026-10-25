@@ -2,6 +2,7 @@ from collections import Counter
 
 import numpy as np
 
+from rgb_effects.audio.analysis import Features
 from rgb_effects.color import Color
 from rgb_effects.engine.activity import Activity
 from rgb_effects.engine.background import Background, BackgroundSettings
@@ -11,6 +12,7 @@ from rgb_effects.engine.geometry import KeyboardLayout, build_geometry
 from rgb_effects.engine.hud import LEFT_ALT, LEFT_CTRL, Hud, HudSettings, Overlay
 from rgb_effects.engine.palette import PaletteInputs
 from rgb_effects.engine.physics import Physics, PhysicsSettings
+from rgb_effects.engine.sound import SoundField, SoundSettings
 
 NAMES = tuple(f"Key: {index}" for index in range(126))
 LAYOUT = KeyboardLayout(NAMES, tuple(tuple(r * 21 + c for c in range(21)) for r in range(6)))
@@ -31,7 +33,10 @@ def _engine() -> Engine:
         Physics(geometry.shape, PhysicsSettings()),
         Activity(3.0, 0.0),
         Hud(HUD, NAMES),
-        EngineSettings(palette_size=8, sleep_seconds=300.0, falling_rate=1.25),
+        SoundField(21, SoundSettings(0.7, 5.0)),
+        EngineSettings(
+            palette_size=8, sleep_seconds=300.0, falling_rate=1.25, sound_color=Color(0, 255, 0)
+        ),
     )
 
 
@@ -127,6 +132,43 @@ def test_hud_table_keeps_the_palette_size() -> None:
     table = np.ones((8, 3), dtype=np.float32)
     overlay = Overlay(0.25, {0: np.array([0.0, 1.0, 1.0], dtype=np.float32)})
     assert hud_table(table, overlay).shape == (8, 3)
+
+
+def test_loud_bass_lights_the_left_columns_at_night() -> None:
+    engine = _engine()
+    quiet = engine.frame(_request(0.0))
+    bands = np.zeros(21, dtype=np.float32)
+    bands[:4] = 1.0
+    for step in range(1, 40):
+        engine.audio_features(Features(-10.0, -10.0, bands, True), step * 0.05)
+        frame = engine.frame(_request(step * 0.05))
+    left = [_luma(frame[row * 21]) - _luma(quiet[row * 21]) for row in range(6)]
+    right = [_luma(frame[row * 21 + 20]) - _luma(quiet[row * 21 + 20]) for row in range(6)]
+    assert min(left) > 0 and sum(left) > sum(right)
+    assert frame[0].green > frame[0].red and frame[0].green > frame[0].blue
+
+
+def test_onset_starts_a_wave_from_the_centre() -> None:
+    engine = _engine()
+    engine.frame(_request(0.0))
+    bands = np.zeros(21, dtype=np.float32)
+    engine.audio_features(Features(-10.0, -10.0, bands, True, 0.5), 0.0)
+    assert float(engine._physics.fields.wave[2:4, 10].sum()) > 0
+
+
+def test_notification_tints_the_wave_with_the_application_color() -> None:
+    engine = _engine()
+    engine.frame(_request(0.0))
+    engine.notification(Color(255, 0, 255), 0.0)
+    frame = engine.frame(_request(0.05))
+    assert any(color.red > 100 and color.blue > 100 and color.green < 50 for color in frame)
+
+
+def test_notification_tint_ends_after_its_delay() -> None:
+    engine = _engine()
+    engine.notification(Color(255, 0, 255), 0.0)
+    engine.frame(_request(5.0))
+    assert engine._notice is not None and engine._now > engine._notice[1]
 
 
 def test_engine_stays_awake_while_a_modifier_is_held() -> None:

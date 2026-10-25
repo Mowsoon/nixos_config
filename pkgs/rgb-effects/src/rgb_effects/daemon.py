@@ -4,6 +4,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
+from rgb_effects.audio.analysis import Features
 from rgb_effects.color import Color
 from rgb_effects.engine.compose import Engine, FrameRequest
 from rgb_effects.engine.geometry import KeyboardLayout
@@ -35,6 +36,10 @@ class Clock(Protocol):
     def minute_of_day(self) -> float: ...
 
     def monotonic(self) -> float: ...
+
+
+class SleepPolicy(Protocol):
+    def want(self, allow_sleep: bool) -> None: ...
 
 
 class Waiter(Protocol):
@@ -74,6 +79,7 @@ class Runtime:
     waiter: Waiter
     sleep: Sleep
     retry: RetryPolicy
+    sleep_policy: SleepPolicy | None = None
 
 
 class EventWaiter:
@@ -131,6 +137,18 @@ class Daemon:
             engine.hud.key_up(event.code)
         self._runtime.waiter.wake()
 
+    def audio_features(self, features: Features) -> None:
+        engine = self._engine
+        if engine is not None:
+            engine.audio_features(features, self._runtime.clock.monotonic())
+
+    def notification_shown(self, app_name: str) -> None:
+        engine = self._engine
+        if engine is not None:
+            color = self._scene.windows.color_for(app_name)
+            engine.notification(color, self._runtime.clock.monotonic())
+            self._runtime.waiter.wake()
+
     def focus_started(self, seconds: float) -> None:
         engine = self._engine
         if engine is not None:
@@ -153,7 +171,16 @@ class Daemon:
         engine = self._engine
         if engine is None:
             return ()
+        self._apply_sleep_policy(engine)
         return engine.frame(self._request())
+
+    def _apply_sleep_policy(self, engine: Engine) -> None:
+        policy = self._runtime.sleep_policy
+        if policy is None:
+            return
+        strict = self._power.on_battery or self._power.keyboard_low
+        playing = engine.sound_active(self._runtime.clock.monotonic())
+        policy.want(strict or not playing)
 
     def _request(self) -> FrameRequest:
         clock, schedule, pacing = self._runtime.clock, self._scene.schedule, self._scene.pacing
