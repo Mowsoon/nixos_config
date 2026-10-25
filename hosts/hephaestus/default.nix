@@ -35,6 +35,7 @@ in
     ../../modules/desktop/claude-desktop.nix
     ../../modules/desktop/firefox.nix
     ../../modules/desktop/plasma.nix
+    ../../modules/desktop/rgb-effects.nix
     ../../modules/security/secure-boot.nix
     ../../modules/security/luks.nix
     ../../modules/security/hardening.nix
@@ -68,6 +69,15 @@ in
     plasma.enable = true;
 
     firefox.enable = true;
+
+    rgbEffects = {
+      enable = true;
+      keys.enable = true;
+      audio.enable = true;
+      sleepPolicy.enable = true;
+      notifications.enable = true;
+      screen.enable = true;
+    };
 
     nixMaintenance.enable = true;
 

@@ -290,7 +290,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `custom.asus` | `hardware/asus.nix` | asusd and battery charge limit |
 | `custom.audio` | `hardware/audio.nix` | PipeWire |
 | `custom.peripherals` | `hardware/peripherals.nix` | Bluetooth, Logitech receivers, input-remapper |
-| `custom.rgb` | `hardware/rgb.nix` | OpenRGB SDK server and lighting effects daemon for the Logitech keyboard |
+| `custom.rgb` | `hardware/rgb.nix` | OpenRGB SDK server for the Logitech keyboard |
 | `custom.power` | `hardware/power.nix` | Power profiles, delayed hibernation, critical battery |
 | `custom.diskHealth` | `hardware/disk-health.nix` | SMART monitoring |
 | `custom.mt7921` | `hardware/mt7921.nix` | Patched mt76 Wi-Fi modules |
@@ -303,6 +303,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `custom.plasma` | `desktop/plasma.nix` | Plasma 6 and SDDM |
 | `custom.firefox` | `desktop/firefox.nix` | Firefox policies, extensions and settings |
 | `custom.claudeDesktop` | `desktop/claude-desktop.nix` | Claude desktop application |
+| `custom.rgbEffects` | `desktop/rgb-effects.nix` | Lighting effects daemon of the Logitech keyboard, its key reader and notification watcher |
 | `custom.docker` | `virtualisation/docker.nix` | Docker daemon |
 
 ### Related documents
