@@ -65,6 +65,14 @@ def test_hue_shift_turns_the_master_hues() -> None:
     assert not np.allclose(build_palette(inputs, 8).primary, still)
 
 
+def test_scene_colors_replace_the_master_hues() -> None:
+    scene = (Color(0, 0, 0), Color(255, 0, 0), Color(0, 255, 0), Color(0, 0, 255))
+    inputs = PaletteInputs(AMBER, 0.2, 0.6, Color(9, 9, 9), None, None, 0.0, scene)
+    palette = build_palette(inputs, 8)
+    assert palette.primary.tolist() == pytest.approx([0.6, 0.0, 0.0])
+    assert any(np.allclose(entry, [0.0, 0.6, 0.0]) for entry in palette.table)
+
+
 def test_build_palette_rejects_size_out_of_range() -> None:
     with pytest.raises(ValueError):
         build_palette(_inputs(), 9)

@@ -26,6 +26,7 @@ class PaletteInputs:
     accent: Color | None
     sound: Color | None = None
     hue_shift: float = 0.0
+    scene: tuple[Color, ...] | None = None
 
 
 @dataclass(frozen=True, slots=True, eq=False)
@@ -72,9 +73,16 @@ def _envelope(colors: Floats, hue: Color, ceiling: float) -> Floats:
     return (warmed * ceiling).astype(np.float32)
 
 
-def _ordered(named: dict[str, Floats], size: int) -> Floats:
+def _ordered(named: dict[str, Floats], size: int, scene: bool) -> Floats:
     order = ["black", "primary", "secondary", "hot", "dark", "cold", "glow", "warm"]
+    if scene:
+        order[order.index("cold")] = "blend"
     return np.stack([named[name] for name in order[:size]]).astype(np.float32)
+
+
+def _scene_colors(named: dict[str, Floats], scene: tuple[Color, ...], ceiling: float) -> None:
+    for name, color in zip(("dark", "primary", "blend", "secondary"), scene, strict=False):
+        named[name] = (_unit(color) * ceiling).astype(np.float32)
 
 
 def build_palette(inputs: PaletteInputs, size: int) -> Palette:
@@ -102,6 +110,8 @@ def build_palette(inputs: PaletteInputs, size: int) -> Palette:
     }
     if inputs.sound is not None:
         named["glow"] = (_unit(inputs.sound) * physics).astype(np.float32)
+    if inputs.scene:
+        _scene_colors(named, inputs.scene, physics)
     return Palette(
         dark=named["dark"],
         primary=named["primary"],
@@ -111,5 +121,5 @@ def build_palette(inputs: PaletteInputs, size: int) -> Palette:
         warm=named["warm"],
         cold=named["cold"],
         glow=named["glow"],
-        table=_ordered(named, size),
+        table=_ordered(named, size, bool(inputs.scene)),
     )

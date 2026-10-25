@@ -14,6 +14,7 @@ from rgb_effects.engine.oklab import Floats, to_oklab
 from rgb_effects.engine.palette import Palette, PaletteInputs, build_palette
 from rgb_effects.engine.physics import Physics
 from rgb_effects.engine.quantize import UNKNOWN, Indices, nearest
+from rgb_effects.engine.scene import SceneField, ring_mask
 from rgb_effects.engine.sound import SoundField
 
 PRIORITY_BACKGROUND = 0
@@ -82,6 +83,7 @@ class Engine:
         activity: Activity,
         hud: Hud,
         sound: SoundField,
+        scene: SceneField,
         settings: EngineSettings,
     ) -> None:
         self._geometry = geometry
@@ -89,6 +91,9 @@ class Engine:
         self._physics = physics
         self._hud = hud
         self._sound = sound
+        self._scene = scene
+        self._ring_mask = ring_mask(geometry.shape)
+        self._ring_ceiling = 1.0
         self._activity = activity
         self._settings = settings
         self._shown = np.full(geometry.led_count, UNKNOWN, dtype=np.intp)
@@ -130,6 +135,9 @@ class Engine:
         if color is not None:
             self._notice = (color, now + NOTIFICATION_SECONDS)
 
+    def screen_frame(self, frame: NDArray[np.uint8], now: float) -> None:
+        self._scene.update(frame, now)
+
     def sound_active(self, now: float) -> bool:
         return self._sound.active(now)
 
@@ -155,6 +163,9 @@ class Engine:
             inputs = replace(inputs, sound=self._notice[0])
         elif self._sound.active(self._now):
             inputs = replace(inputs, sound=self._settings.sound_color)
+        self._ring_ceiling = max(inputs.ceiling, inputs.physics_ceiling)
+        if self._scene.active(self._now):
+            return replace(inputs, scene=self._scene.colors())
         return replace(inputs, hue_shift=self._sound.hue_shift(self._now))
 
     def _overlaid(
@@ -178,7 +189,11 @@ class Engine:
 
     def _desired(self, palette: Palette) -> tuple[Floats, Indices]:
         geometry = self._geometry
-        background = geometry.sample(self._background.field(palette), palette.primary)
+        field = self._background.field(palette)
+        ring = self._scene.ring() if self._scene.active(self._now) else None
+        if ring is not None:
+            field[self._ring_mask] = ring[self._ring_mask] * self._ring_ceiling
+        background = geometry.sample(field, palette.primary)
         lift, weight = self._sound.lift(geometry.shape[0], self._now)
         lit_cells = (lift * weight >= SOUND_THRESHOLD).astype(np.float32)[..., None]
         sound = (palette.glow * lit_cells)[geometry.sample_rows, geometry.sample_cols]

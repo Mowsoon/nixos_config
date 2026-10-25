@@ -6,7 +6,7 @@ from typing import Protocol
 
 from dbus_fast import BusType, Message, MessageType, RequestNameReply
 from dbus_fast.aio import MessageBus
-from dbus_fast.annotations import DBusStr, DBusUInt32
+from dbus_fast.annotations import DBusBool, DBusStr, DBusUInt32
 from dbus_fast.constants import NameFlag
 from dbus_fast.errors import DBusError
 from dbus_fast.service import ServiceInterface, method
@@ -38,6 +38,12 @@ class WindowListener(Protocol):
 
     def notification_shown(self, app_name: str) -> None: ...
 
+    def fullscreen_changed(self, fullscreen: bool) -> None: ...
+
+    def screen_grant(self) -> None: ...
+
+    def screen_revoke(self) -> None: ...
+
 
 class EffectsInterface(ServiceInterface):
     def __init__(self, listener: WindowListener) -> None:
@@ -59,6 +65,18 @@ class EffectsInterface(ServiceInterface):
         if len(app_name) > MAX_APP_NAME or not app_name.isprintable():
             raise DBusError("org.freedesktop.DBus.Error.InvalidArgs", "invalid application name")
         self._listener.notification_shown(app_name)
+
+    @method(name="FullscreenChanged")
+    def fullscreen_changed(self, fullscreen: DBusBool) -> None:
+        self._listener.fullscreen_changed(bool(fullscreen))
+
+    @method(name="GrantScreen")
+    def grant_screen(self) -> None:
+        self._listener.screen_grant()
+
+    @method(name="RevokeScreen")
+    def revoke_screen(self) -> None:
+        self._listener.screen_revoke()
 
     @method(name="StopFocus")
     def stop_focus(self) -> None:

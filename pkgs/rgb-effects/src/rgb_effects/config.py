@@ -58,6 +58,15 @@ class AudioConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class ScreenConfig:
+    on_battery: bool
+    launcher: str
+    plugin_path: str
+    fps: int
+    palette_seconds: float
+
+
+@dataclass(frozen=True, slots=True)
 class EffectsConfig:
     server: ServerConfig
     device: str
@@ -68,6 +77,7 @@ class EffectsConfig:
     hud: HudConfig
     audio: AudioConfig | None
     sleep_seconds: int | None
+    screen: ScreenConfig | None
     key_socket: Path | None
     refresh_seconds: float
     fps: int
@@ -221,6 +231,27 @@ def _audio(data: dict[str, Any]) -> AudioConfig | None:
     return AudioConfig(recorder, color, gain, silence, hue_range)
 
 
+def _screen(data: dict[str, Any]) -> ScreenConfig | None:
+    section = data.get("screen")
+    if section is None:
+        return None
+    if not isinstance(section, dict):
+        raise ConfigError("screen must be an object or null")
+    on_battery = section.get("onBattery")
+    if not isinstance(on_battery, bool):
+        raise ConfigError("screen onBattery must be a boolean")
+    launcher = _non_empty(_field(section, "launcher", str), "launcher")
+    if not launcher.startswith("/"):
+        raise ConfigError("screen launcher must be an absolute path")
+    return ScreenConfig(
+        on_battery=on_battery,
+        launcher=launcher,
+        plugin_path=_non_empty(_field(section, "pluginPath", str), "pluginPath"),
+        fps=_bounded(section, "fps", 1, 30),
+        palette_seconds=_bounded(section, "paletteMs", 100, 10000) / 1000,
+    )
+
+
 def _sleep_policy(data: dict[str, Any]) -> int | None:
     section = data.get("sleepPolicy")
     if section is None:
@@ -262,6 +293,7 @@ def parse_config(data: Any) -> EffectsConfig:
         hud=_hud(_field(data, "hud", dict)),
         audio=_audio(data),
         sleep_seconds=_sleep_policy(data),
+        screen=_screen(data),
         key_socket=_key_socket(data),
         refresh_seconds=refresh,
         fps=_fps(data, "fps"),

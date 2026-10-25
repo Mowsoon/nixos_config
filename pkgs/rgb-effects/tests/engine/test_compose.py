@@ -12,6 +12,7 @@ from rgb_effects.engine.geometry import KeyboardLayout, build_geometry
 from rgb_effects.engine.hud import LEFT_ALT, LEFT_CTRL, Hud, HudSettings, Overlay
 from rgb_effects.engine.palette import PaletteInputs
 from rgb_effects.engine.physics import Physics, PhysicsSettings
+from rgb_effects.engine.scene import SceneField
 from rgb_effects.engine.sound import SoundField, SoundSettings
 
 NAMES = tuple(f"Key: {index}" for index in range(126))
@@ -34,6 +35,7 @@ def _engine() -> Engine:
         Activity(3.0, 0.0),
         Hud(HUD, NAMES),
         SoundField(21, SoundSettings(0.7, 5.0)),
+        SceneField((6, 21), 0.5),
         EngineSettings(
             palette_size=8, sleep_seconds=300.0, falling_rate=1.25, sound_color=Color(0, 255, 0)
         ),
@@ -169,6 +171,19 @@ def test_notification_tint_ends_after_its_delay() -> None:
     engine.notification(Color(255, 0, 255), 0.0)
     engine.frame(_request(5.0))
     assert engine._notice is not None and engine._now > engine._notice[1]
+
+
+def test_screen_paints_the_ring_from_the_frame_edges() -> None:
+    engine = _engine()
+    engine.frame(_request(0.0))
+    frame = np.zeros((36, 64, 3), dtype=np.uint8)
+    frame[:4] = (255, 0, 0)
+    frame[4:] = (0, 0, 255)
+    for step in range(1, 30):
+        engine.screen_frame(frame, step * 0.05)
+        colors = engine.frame(_request(step * 0.05))
+    top, middle = colors[10], colors[2 * 21 + 10]
+    assert top.red > top.blue and top != middle
 
 
 def test_engine_stays_awake_while_a_modifier_is_held() -> None:

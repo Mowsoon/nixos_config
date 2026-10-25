@@ -25,6 +25,7 @@ rgb-effects = "rgb_effects.cli:main"
 rgb-keyreader = "rgb_effects.keyreader:main"
 rgb-focus = "rgb_effects.focus:main"
 rgb-notifywatch = "rgb_effects.notifywatch:main"
+rgb-screen = "rgb_effects.screencli:main"
 
 [tool.black]
 line-length = 100

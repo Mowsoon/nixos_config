@@ -38,6 +38,13 @@ VALID: dict[str, Any] = {
         "hueRange": 60,
     },
     "sleepPolicy": {"sleepSeconds": 300},
+    "screen": {
+        "onBattery": False,
+        "launcher": "/bin/gst-launch-1.0",
+        "pluginPath": "/plugins",
+        "fps": 8,
+        "paletteMs": 500,
+    },
     "hud": {
         "bindings": {"ctrl": {"edit": ["C", "V"]}, "alt+ctrl": {"window": ["Tab"]}},
         "colors": {"edit": "#00e5ff"},
@@ -102,6 +109,15 @@ def test_parse_config_accepts_disabled_sleep_policy() -> None:
     assert parse_config(_with(["sleepPolicy"], None)).sleep_seconds is None
 
 
+def test_parse_config_reads_screen_battery_choice() -> None:
+    screen = parse_config(VALID).screen
+    assert screen is not None and screen.on_battery is False and screen.palette_seconds == 0.5
+
+
+def test_parse_config_accepts_disabled_screen() -> None:
+    assert parse_config(_with(["screen"], None)).screen is None
+
+
 def test_parse_config_accepts_disabled_audio() -> None:
     assert parse_config(_with(["audio"], None)).audio is None
 
@@ -151,6 +167,11 @@ def test_parse_config_accepts_integer_refresh() -> None:
         (["audio"], "on"),
         (["sleepPolicy", "sleepSeconds"], 5),
         (["sleepPolicy"], 300),
+        (["screen", "onBattery"], "no"),
+        (["screen", "launcher"], "gst-launch-1.0"),
+        (["screen", "fps"], 0),
+        (["screen", "paletteMs"], 10),
+        (["screen"], True),
         (["hud", "dim"], 2),
         (["hud", "clockHoldMs"], 10),
     ],

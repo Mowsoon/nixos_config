@@ -46,6 +46,7 @@
         audio.enable = true;
         sleepPolicy.enable = true;
         notifications.enable = true;
+        screen.enable = true;
       };
     };
     power = {

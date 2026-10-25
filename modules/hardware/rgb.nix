@@ -62,6 +62,19 @@ let
       };
       keySocket = if effects.keys.enable then keySocket else null;
       sleepPolicy = if effects.sleepPolicy.enable then { inherit (effects) sleepSeconds; } else null;
+      screen =
+        if effects.screen.enable then
+          {
+            inherit (effects.screen) onBattery fps paletteMs;
+            launcher = lib.getExe' pkgs.gst_all_1.gstreamer "gst-launch-1.0";
+            pluginPath = lib.makeSearchPathOutput "lib" "lib/gstreamer-1.0" [
+              pkgs.gst_all_1.gstreamer
+              pkgs.gst_all_1.gst-plugins-base
+              pkgs.pipewire
+            ];
+          }
+        else
+          null;
       audio =
         if effects.audio.enable then
           {
@@ -155,6 +168,28 @@ in
           ];
           default = "position";
           description = "position sends which key was pressed; pulse sends only that a key was pressed.";
+        };
+      };
+
+      screen = {
+        enable = lib.mkEnableOption "the screen-reactive effects of full screen windows, through the ScreenCast portal of the desktop";
+
+        onBattery = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Whether the screen is still captured while the laptop runs on battery.";
+        };
+
+        fps = lib.mkOption {
+          type = lib.types.ints.between 1 30;
+          default = 8;
+          description = "Largest number of screen frames per second the compositor sends for the thumbnail.";
+        };
+
+        paletteMs = lib.mkOption {
+          type = lib.types.ints.between 100 10000;
+          default = 500;
+          description = "Interval at which the four dominant colours of the screen are recomputed.";
         };
       };
 
@@ -550,6 +585,9 @@ in
           unitConfig.ConditionUser = effects.user;
           serviceConfig = {
             ExecStart = "${lib.getExe rgbEffects} --config ${effectsConfig}";
+            StateDirectory = "rgb-effects";
+            StateDirectoryMode = "0700";
+            ReadWritePaths = [ "%S/rgb-effects" ];
             Restart = "on-failure";
             RestartSec = 5;
             RestrictAddressFamilies = [

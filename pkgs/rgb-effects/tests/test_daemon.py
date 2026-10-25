@@ -147,6 +147,24 @@ class ScriptedWaiter:
         self.woken += 1
 
 
+class FakeScreen:
+    def __init__(self) -> None:
+        self.active = False
+        self.events: list[object] = []
+
+    def fullscreen_changed(self, fullscreen: bool) -> None:
+        self.events.append(("fullscreen", fullscreen))
+
+    def power_changed(self, on_battery: bool) -> None:
+        self.events.append(("battery", on_battery))
+
+    def grant(self) -> None:
+        self.events.append("grant")
+
+    def revoke(self) -> None:
+        self.events.append("revoke")
+
+
 class FakePolicy:
     def __init__(self) -> None:
         self.wanted: list[bool] = []
@@ -161,9 +179,10 @@ def _daemon(
     engine: FakeEngine,
     sleep: CountingSleep,
     policy: FakePolicy | None = None,
+    screen: FakeScreen | None = None,
 ) -> Daemon:
     scene = Scene(DAY, WindowColors({"firefox": FIREFOX}), lambda layout: engine, PACING, 0.6)
-    return Daemon(scene, Runtime(keyboard, FakeClock(), waiter, sleep, RETRY, policy))
+    return Daemon(scene, Runtime(keyboard, FakeClock(), waiter, sleep, RETRY, policy, screen))
 
 
 async def _run(daemon: Daemon) -> None:
@@ -334,6 +353,28 @@ async def test_notification_reaches_the_engine_with_its_color() -> None:
     waiter.on_first = notify
     await _run(daemon)
     assert engine.notices == [FIREFOX, None]
+
+
+def test_screen_events_reach_the_capture() -> None:
+    screen = FakeScreen()
+    daemon = _daemon(
+        FakeKeyboard(), ScriptedWaiter(1), FakeEngine(), CountingSleep(9), None, screen
+    )
+    daemon.fullscreen_changed(True)
+    daemon.power_changed(PowerState(on_battery=True, keyboard_low=False))
+    daemon.screen_grant()
+    daemon.screen_revoke()
+    assert screen.events == [("fullscreen", True), ("battery", True), "grant", "revoke"]
+
+
+async def test_screen_capture_suspends_keyboard_sleep() -> None:
+    screen, policy = FakeScreen(), FakePolicy()
+    screen.active = True
+    daemon = _daemon(
+        FakeKeyboard(), ScriptedWaiter(1), FakeEngine(), CountingSleep(9), policy, screen
+    )
+    await _run(daemon)
+    assert set(policy.wanted) == {False}
 
 
 def test_key_press_before_connection_is_ignored() -> None:

@@ -4,6 +4,9 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
+import numpy as np
+from numpy.typing import NDArray
+
 from rgb_effects.audio.analysis import Features
 from rgb_effects.color import Color
 from rgb_effects.engine.compose import Engine, FrameRequest
@@ -40,6 +43,24 @@ class Clock(Protocol):
 
 class SleepPolicy(Protocol):
     def want(self, allow_sleep: bool) -> None: ...
+
+
+class Screen(Protocol):
+    @property
+    def active(self) -> bool: ...
+
+    def screen_frame(self, frame: NDArray[np.uint8]) -> None:
+        engine = self._engine
+        if engine is not None:
+            engine.screen_frame(frame, self._runtime.clock.monotonic())
+
+    def fullscreen_changed(self, fullscreen: bool) -> None: ...
+
+    def power_changed(self, on_battery: bool) -> None: ...
+
+    def grant(self) -> None: ...
+
+    def revoke(self) -> None: ...
 
 
 class Waiter(Protocol):
@@ -80,6 +101,7 @@ class Runtime:
     sleep: Sleep
     retry: RetryPolicy
     sleep_policy: SleepPolicy | None = None
+    screen: Screen | None = None
 
 
 class EventWaiter:
@@ -122,7 +144,21 @@ class Daemon:
 
     def power_changed(self, state: PowerState) -> None:
         self._power = state
+        if self._runtime.screen is not None:
+            self._runtime.screen.power_changed(state.on_battery)
         self._runtime.waiter.wake()
+
+    def fullscreen_changed(self, fullscreen: bool) -> None:
+        if self._runtime.screen is not None:
+            self._runtime.screen.fullscreen_changed(fullscreen)
+
+    def screen_grant(self) -> None:
+        if self._runtime.screen is not None:
+            self._runtime.screen.grant()
+
+    def screen_revoke(self) -> None:
+        if self._runtime.screen is not None:
+            self._runtime.screen.revoke()
 
     def key_event(self, event: KeyEvent) -> None:
         engine = self._engine
@@ -180,7 +216,8 @@ class Daemon:
             return
         strict = self._power.on_battery or self._power.keyboard_low
         playing = engine.sound_active(self._runtime.clock.monotonic())
-        policy.want(strict or not playing)
+        watching = self._runtime.screen is not None and self._runtime.screen.active
+        policy.want(strict or not (playing or watching))
 
     def _request(self) -> FrameRequest:
         clock, schedule, pacing = self._runtime.clock, self._scene.schedule, self._scene.pacing

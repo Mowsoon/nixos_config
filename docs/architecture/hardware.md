@@ -275,6 +275,23 @@ dropped at once and never logged. It runs in a private network namespace with Un
 sees no home directory and, of the runtime directory, only the session bus socket, and writes
 nowhere.
 
+The screen is read only while a window is in full screen, the case of a film or a game. The KWin
+script also reports whether the focused window is in full screen; the daemon then opens a session of
+the ScreenCast portal of the desktop for one monitor, with `persist_mode` 2 so that the consent
+given once is restored without a dialog. The restore token is kept in
+`~/.local/state/rgb-effects/screencast-token`, readable by the user only, and replaced by the new
+token each session returns. Without a token, or on battery unless allowed, nothing is captured and
+the colour of the focused window applies. If the portal refuses a stored token and the user cancels
+the dialog it opens, the token is forgotten, so the dialog does not come back on the next full
+screen. Plasma shows its screen capture indicator for as long as the session is open. A session
+opens only after one second of full screen, so a quick toggle does not reach the portal. The daemon
+hands the PipeWire descriptor of the session to `gst-launch-1.0`, which asks the compositor for at
+most the configured frame rate, scales the image down to a 64 by 36 RGB thumbnail and writes it to a
+pipe; the daemon never receives the full image, and keeps no frame. The outer ring of the keyboard,
+function row, space row and both side columns, takes the colours of the matching screen edges, and
+the four dominant colours of the thumbnail, found by k-means, replace the master hues of the flowing
+core.
+
 The keyboard sleep follows what happens on the computer. OpenRGB puts the keyboard to sleep after
 the sleep delay without a key press, whatever plays. With the sleep policy, the daemon suspends that
 sleep while sound plays, and forces it again as soon as the laptop runs on battery or the keyboard
@@ -322,6 +339,23 @@ an attribute crosses its failure threshold.
    EnableS0ixPowerManagement: 1
    UseKernelSuspendNotifiers: 0
    DynamicPowerManagement: 0
+   ```
+
+## How to allow the keyboard to follow full screen windows
+
+1. Ask for the grant; Plasma opens its screen sharing dialog.
+
+   ```bash
+   rgb-screen grant
+   ```
+
+2. Choose the monitor and allow, ticking the option that keeps the permission. The next full
+   screen windows are then captured without a dialog.
+
+3. Withdraw the grant when it is no longer wanted.
+
+   ```bash
+   rgb-screen revoke
    ```
 
 ## How to run a focus timer on the keyboard
@@ -622,6 +656,10 @@ Measured through the OpenRGB SDK server, counting the HID++ writes on the receiv
 | `custom.rgb.effects.lowBattery.brightness` | `0.4` | Brightness ceiling while the keyboard battery is low |
 | `custom.rgb.effects.keys.enable` | `false` | Socket-activated key reader `rgb-keyreader` for key-reactive effects |
 | `custom.rgb.effects.keys.mode` | `"position"` | `position` forwards the key code, `pulse` only the fact of a key press |
+| `custom.rgb.effects.screen.enable` | `false` | Screen capture of full screen windows through the ScreenCast portal |
+| `custom.rgb.effects.screen.fps` | `8` | Largest frame rate of the screen thumbnail |
+| `custom.rgb.effects.screen.paletteMs` | `500` | Interval of the dominant colour computation |
+| `custom.rgb.effects.screen.onBattery` | `false` | Keep capturing while the laptop runs on battery |
 | `custom.rgb.effects.notifications.enable` | `false` | Notification waves through the `rgb-notifywatch` bus monitor |
 | `custom.rgb.effects.sleepPolicy.enable` | `false` | Keyboard sleep suspended while sound plays, forced on battery |
 | `custom.rgb.effects.audio.enable` | `false` | Effects driven by the sound played, from the default sink monitor |

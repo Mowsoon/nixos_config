@@ -8,6 +8,9 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
+import numpy as np
+from numpy.typing import NDArray
+
 from rgb_effects.accent import AccentWatcher
 from rgb_effects.audio.analysis import Analyzer
 from rgb_effects.audio.capture import AudioCapture
@@ -25,6 +28,10 @@ from rgb_effects.keyboard import OpenRgbKeyboard
 from rgb_effects.keys import KeySource
 from rgb_effects.retry import RetryPolicy
 from rgb_effects.power import PowerMonitor
+from rgb_effects.portal import ScreenCastPortal, TokenStore
+from rgb_effects.screen import ScreenCapture
+from rgb_effects.screenfeed import FeedSettings, ScreenFeed
+from rgb_effects.engine.scene import SceneField
 from rgb_effects.session import Session
 from rgb_effects.sleep_policy import SleepController
 from rgb_effects.windows import WindowColors
@@ -70,6 +77,7 @@ def _engine_factory(config: EffectsConfig) -> Callable[[KeyboardLayout], Engine]
         config.hud.bindings, config.hud.colors, config.hud.dim, config.hud.clock_hold_seconds
     )
     audio = config.audio
+    scene_seconds = config.screen.palette_seconds if config.screen is not None else 0.5
     sound = SoundSettings(
         spectrum_gain=audio.spectrum_gain if audio is not None else 0.0,
         silence_seconds=audio.silence_seconds if audio is not None else 5.0,
@@ -88,6 +96,7 @@ def _engine_factory(config: EffectsConfig) -> Callable[[KeyboardLayout], Engine]
             Activity(ACTIVITY_SECONDS, time.monotonic()),
             Hud(hud, layout.led_names),
             SoundField(geometry.shape[1], sound),
+            SceneField(geometry.shape, scene_seconds),
             settings,
         )
 
@@ -100,7 +109,32 @@ def _sleep_controller(config: EffectsConfig) -> SleepController | None:
     return SleepController(config.server, CLIENT_NAME, config.sleep_seconds, RETRY, asyncio.sleep)
 
 
-def _daemon(config: EffectsConfig, sleep_policy: SleepController | None) -> Daemon:
+class FrameRelay:
+    def __init__(self) -> None:
+        self._target: Daemon | None = None
+
+    def bind(self, target: Daemon) -> None:
+        self._target = target
+
+    def screen_frame(self, frame: NDArray[np.uint8]) -> None:
+        if self._target is not None:
+            self._target.screen_frame(frame)
+
+
+def _screen_capture(config: EffectsConfig, relay: FrameRelay) -> ScreenCapture | None:
+    screen = config.screen
+    if screen is None:
+        return None
+    state = os.environ.get("STATE_DIRECTORY")
+    folder = Path(state) if state else Path.home() / ".local" / "state" / "rgb-effects"
+    tokens = TokenStore(folder / "screencast-token")
+    feed = ScreenFeed(FeedSettings(screen.launcher, screen.plugin_path, screen.fps), relay)
+    return ScreenCapture(ScreenCastPortal(), feed, tokens, screen.on_battery)
+
+
+def _daemon(
+    config: EffectsConfig, sleep_policy: SleepController | None, screen: ScreenCapture | None
+) -> Daemon:
     scene = Scene(
         schedule=config.schedule,
         windows=WindowColors(config.window_colors),
@@ -121,6 +155,7 @@ def _daemon(config: EffectsConfig, sleep_policy: SleepController | None) -> Daem
         sleep=asyncio.sleep,
         retry=RETRY,
         sleep_policy=sleep_policy,
+        screen=screen,
     )
     return Daemon(scene, runtime)
 
@@ -137,10 +172,15 @@ def _accent_watcher(daemon: Daemon, config: EffectsConfig) -> AccentWatcher:
 
 
 async def _run_all(
-    daemon: Daemon, config: EffectsConfig, sleep_policy: SleepController | None
+    daemon: Daemon,
+    config: EffectsConfig,
+    helpers: tuple[SleepController | None, ScreenCapture | None],
 ) -> None:
+    sleep_policy, screen = helpers
     async with asyncio.TaskGroup() as group:
         group.create_task(daemon.run())
+        if screen is not None:
+            group.create_task(screen.run())
         if sleep_policy is not None:
             group.create_task(sleep_policy.run())
         group.create_task(_power_monitor(daemon, config).run())
@@ -156,10 +196,12 @@ async def _run_all(
 
 
 async def _run_until_stopped(script: Path, config: EffectsConfig) -> None:
-    sleep_policy = _sleep_controller(config)
-    daemon = _daemon(config, sleep_policy)
+    relay = FrameRelay()
+    sleep_policy, screen = _sleep_controller(config), _screen_capture(config, relay)
+    daemon = _daemon(config, sleep_policy, screen)
+    relay.bind(daemon)
     async with Session(daemon, script):
-        task = asyncio.create_task(_run_all(daemon, config, sleep_policy))
+        task = asyncio.create_task(_run_all(daemon, config, (sleep_policy, screen)))
         loop = asyncio.get_running_loop()
         for stop_signal in (signal.SIGTERM, signal.SIGINT):
             loop.add_signal_handler(stop_signal, task.cancel)
