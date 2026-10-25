@@ -14,12 +14,12 @@ from rgb_effects.daemon import (
     Scene,
     primed,
 )
-from rgb_effects.engine.compose import FrameRequest
-from rgb_effects.engine.geometry import KeyboardLayout
+from rgb_effects.render.compose import FrameRequest
+from rgb_effects.render.geometry import KeyboardLayout
 from rgb_effects.errors import KeyboardUnavailableError
-from rgb_effects.keys import KeyEvent
-from rgb_effects.schedule import Keyframe, Schedule
-from rgb_effects.windows import WindowColors
+from rgb_effects.sources.keys.listener import KeyEvent
+from rgb_effects.render.schedule import Keyframe, Schedule
+from rgb_effects.render.windows import WindowColors
 
 LAYOUT = KeyboardLayout(("Key: Escape", "Key: A", "Logo"), ((0, 1),))
 DAY = Schedule((Keyframe(minute=0, color=Color(0, 0, 100), brightness=0.5),))

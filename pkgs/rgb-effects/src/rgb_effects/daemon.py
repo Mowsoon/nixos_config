@@ -7,17 +7,17 @@ from typing import Protocol
 import numpy as np
 from numpy.typing import NDArray
 
-from rgb_effects.audio.analysis import Features
+from rgb_effects.sources.audio.analysis import Features
 from rgb_effects.color import Color
-from rgb_effects.engine.compose import Engine, FrameRequest
-from rgb_effects.engine.geometry import KeyboardLayout
-from rgb_effects.engine.palette import PaletteInputs
+from rgb_effects.render.compose import Engine, FrameRequest
+from rgb_effects.render.geometry import KeyboardLayout
+from rgb_effects.render.palette import PaletteInputs
 from rgb_effects.errors import KeyboardUnavailableError
-from rgb_effects.keymap import led_index_by_code
-from rgb_effects.keys import KeyEvent
+from rgb_effects.sdk.keymap import led_index_by_code
+from rgb_effects.sources.keys.listener import KeyEvent
 from rgb_effects.retry import RetryPolicy, Sleep
-from rgb_effects.schedule import Schedule
-from rgb_effects.windows import WindowColors
+from rgb_effects.render.schedule import Schedule
+from rgb_effects.render.windows import WindowColors
 
 logger = logging.getLogger(__name__)
 

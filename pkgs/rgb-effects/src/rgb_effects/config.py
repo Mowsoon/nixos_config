@@ -6,7 +6,7 @@ from typing import Any
 
 from rgb_effects.color import Color, parse_hex
 from rgb_effects.errors import ConfigError
-from rgb_effects.schedule import Keyframe, Schedule
+from rgb_effects.render.schedule import Keyframe, Schedule
 
 CLOCK_TIME = re.compile(r"([01][0-9]|2[0-3]):([0-5][0-9])")
 
