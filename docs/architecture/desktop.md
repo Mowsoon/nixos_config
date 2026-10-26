@@ -488,6 +488,7 @@ not advertising or tracking are the hosts to allow.
 | Key | Shortcut | Command |
 | --- | --- | --- |
 | G1 | `Launch (5)` | Shell aliases, generated from `programs.zsh.shellAliases`, opened in `less` |
+| G2 | `Launch (6)` | Working copy of `docs/architecture/editor-keymaps.md`, read-only in Neovim |
 | G3 | `Launch (7)` | `~/.config/nixos` opened in Neovim in Konsole |
 
 ### Options

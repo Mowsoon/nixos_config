@@ -8,6 +8,7 @@ let
   konsole = lib.getExe' pkgs.kdePackages.konsole "konsole";
   nvim = lib.getExe' config.programs.nixvim.build.package "nvim";
   less = lib.getExe pkgs.less;
+  repository = "${config.xdg.configHome}/nixos";
   aliases = config.programs.zsh.shellAliases;
   width = lib.foldl' (widest: name: lib.max widest (lib.stringLength name)) 0 (lib.attrNames aliases);
   pad = name: name + lib.strings.replicate (width - lib.stringLength name) " ";
@@ -31,10 +32,15 @@ in
         key = "Launch (5)";
         command = "${konsole} -e ${less} ${aliasSheet}";
       };
+      show-editor-keymaps = {
+        name = "Show the editor key mappings";
+        key = "Launch (6)";
+        command = "${konsole} -e ${nvim} -R ${repository}/docs/architecture/editor-keymaps.md";
+      };
       open-nixos-config = {
         name = "Open the NixOS configuration";
         key = "Launch (7)";
-        command = "${konsole} --workdir ${config.xdg.configHome}/nixos -e ${nvim} .";
+        command = "${konsole} --workdir ${repository} -e ${nvim} .";
       };
     };
   };
