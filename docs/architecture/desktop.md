@@ -492,6 +492,7 @@ not advertising or tracking are the hosts to allow.
 | G3 | `Launch (7)` | `~/.config/nixos` opened in Neovim in Konsole |
 | G4 | `Launch (8)` | `rgb-focus 25m`: 25-minute focus timer on the function row |
 | Alt+G4 | `Alt+Launch (8)` | `rgb-focus stop` |
+| G5 | `Launch (9)` | Notification: free space on `/nix`, reboot pending when the kernel, initrd or modules differ from the booted ones |
 
 ### Options
 
