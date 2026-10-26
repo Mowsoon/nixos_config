@@ -290,7 +290,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `custom.nvidia` | `hardware/nvidia.nix` | NVIDIA driver |
 | `custom.asus` | `hardware/asus.nix` | asusd and battery charge limit |
 | `custom.audio` | `hardware/audio.nix` | PipeWire |
-| `custom.peripherals` | `hardware/peripherals.nix` | Bluetooth, Logitech receivers, input-remapper |
+| `custom.peripherals` | `hardware/peripherals.nix` | Bluetooth, Logitech receivers, G915 X key remapping |
 | `custom.rgb` | `hardware/rgb.nix` | OpenRGB SDK server for the Logitech keyboard |
 | `custom.power` | `hardware/power.nix` | Power profiles, delayed hibernation, critical battery |
 | `custom.diskHealth` | `hardware/disk-health.nix` | SMART monitoring |

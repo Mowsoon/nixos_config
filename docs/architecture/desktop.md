@@ -82,7 +82,9 @@ Each G key of the G915 X reaches Plasma as a dedicated key symbol, set in
 [Hardware](hardware.md). A command is bound to that symbol through
 `programs.plasma.hotkeys.commands`, which generates one hidden desktop entry whose actions are the
 commands; kglobalaccel starts the action, and its output goes to the journal. A new or changed
-binding is read by kglobalaccel at the next login.
+binding is read by kglobalaccel at the next login. G6 to G9 and the Alt layer apart from Alt+G4
+stay unbound on purpose: applications are launched through KRunner, and a key is bound only once
+a recurring need appears.
 
 ### Firefox
 

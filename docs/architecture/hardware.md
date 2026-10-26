@@ -161,8 +161,7 @@ raw microphone, for a measurement, sets `node.dont-move` on its stream.
 
 BlueZ runs with its experimental features, which report the battery level of Bluetooth headsets
 to Plasma. Pairing keys are persisted. The udev rules for Logitech wireless receivers let Solaar
-configure the devices without root. input-remapper is available for remapping external keyboards;
-its presets live in the persistent home.
+configure the devices without root.
 
 The G keys of the G915 X send F13 to F21 from the onboard profile of the keyboard; the Fn key never
 leaves the keyboard. XKB turns those keys into symbols Plasma already uses: F13 opens the system
@@ -528,7 +527,7 @@ The hwdb entry matches the LIGHTSPEED product `40B5` and the wired product `C356
 | `custom.asus.performanceEpp` | `null` | EPP that asusd writes with the Performance profile, enforced in `asusd.ron` before asusd starts |
 | `custom.audio.enable` | `false` | PipeWire with ALSA, PulseAudio and JACK layers |
 | `custom.audio.serializeAmdAcpResume` | `false` | `power/async` disabled on the revision `0x62` ACP and the AMD HD Audio controller |
-| `custom.peripherals.enable` | `false` | Bluetooth, Logitech receivers, input-remapper |
+| `custom.peripherals.enable` | `false` | Bluetooth, Logitech receivers, G915 X key remapping |
 | `custom.rgb.enable` | `false` | OpenRGB SDK server on `127.0.0.1:6742`, confined to the Logitech LIGHTSPEED receiver |
 | `custom.power.enable` | `false` | Power profiles without CPU driver, `powersave` governor, delayed hibernation, hibernation on critical battery |
 | `custom.power.disarmInputWakeupForHibernation` | `false` | `system-sleep` hook that disables the wakeup of USB HID devices during hibernation |
