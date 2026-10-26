@@ -490,6 +490,8 @@ not advertising or tracking are the hosts to allow.
 | G1 | `Launch (5)` | Shell aliases, generated from `programs.zsh.shellAliases`, opened in `less` |
 | G2 | `Launch (6)` | Working copy of `docs/architecture/editor-keymaps.md`, read-only in Neovim |
 | G3 | `Launch (7)` | `~/.config/nixos` opened in Neovim in Konsole |
+| G4 | `Launch (8)` | `rgb-focus 25m`: 25-minute focus timer on the function row |
+| Alt+G4 | `Alt+Launch (8)` | `rgb-focus stop` |
 
 ### Options
 
