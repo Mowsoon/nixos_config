@@ -52,27 +52,12 @@ in
     ];
 
     environment = {
-      sessionVariables = {
-        NIXOS_OZONE_WL = "1";
-        GTK_MODULES = "colorreload-gtk-module:window-decorations-gtk-module";
-      };
-      etc = {
-        "xdg/ksmserverrc".text = ''
-          [General]
-          loginMode[$i]=emptySession
-        '';
-        "xdg/kdeglobals".text = ''
-          [General]
-          accentColorFromWallpaper[$i]=true
-        '';
-      };
+      sessionVariables.NIXOS_OZONE_WL = "1";
+      etc."xdg/ksmserverrc".text = ''
+        [General]
+        loginMode[$i]=emptySession
+      '';
     };
-
-    fonts.packages = with pkgs; [
-      nerd-fonts.jetbrains-mono
-      noto-fonts
-      noto-fonts-color-emoji
-    ];
 
     custom.network.opensnitch = {
       allowedExecutables = {

@@ -18,11 +18,6 @@ through `plasma-fallback-session-restore` for the others. Both read `loginMode` 
 group of `ksmserverrc`; the Plasma module sets it to `emptySession` in `/etc/xdg/ksmserverrc` and
 marks it immutable with `[$i]`, so neither the user file nor the Plasma settings can change it.
 
-The accent colour follows the wallpaper. Plasma computes it from the wallpaper and writes it to
-`AccentColor` in the user `kdeglobals`; the switch that enables it, `accentColorFromWallpaper` in
-the `General` group, is declared in `/etc/xdg/kdeglobals` and marked immutable the same way. The
-keyboard lighting effects read the resulting accent as one of their master hues.
-
 After every resume from hibernation, a service kills the lock screen greeter, which the screen
 locker restarts at once: the greeter carried through hibernation makes the next sleep hang
 ([incident](../incidents/sleep-after-hibernation-deadlock.md)).
@@ -30,13 +25,6 @@ locker restarts at once: the greeter carried through hibernation makes the next 
 `NIXOS_OZONE_WL=1` is set for every session. Electron and Chromium applications packaged by
 nixpkgs read it and start with their native Wayland backend instead of XWayland, which gives sharp
 rendering under fractional scaling.
-
-`GTK_MODULES` names the two GTK 3 modules of the Plasma GTK integration,
-`colorreload-gtk-module` and `window-decorations-gtk-module`, which the user `settings.ini` of
-GTK 3 already loads in every GTK 3 application. Loaded from the environment, they stay in memory
-in Electron applications whose Electron empties the `gtk-modules` setting at start: unloaded, they
-make the application crash at the next colour change, such as a new wallpaper accent
-([incident](../incidents/electron-gtk-module-unload.md)).
 
 The XDG desktop portals come from the Plasma module: file pickers, screen sharing and other
 sandboxed requests go through the KDE portal implementation.
@@ -47,29 +35,57 @@ session has lost the GPUs, which happens at every sleep, resume and shutdown bec
 `system.replaceDependencies`, so only KWin is compiled
 ([incident](../incidents/kwin-inactive-session-errors.md)).
 
+### Theme
+
+`modules/desktop/theme.nix` declares the palette and the fonts through Stylix, imported as a
+NixOS module that also loads its Home Manager module. Stylix themes nothing on its own
+(`autoEnable` is off): only the KDE and GTK targets are enabled, so the terminal, the editor, the
+console and the boot screens keep their own colours.
+
+The palette is a dark base16 scheme named Bordeaux, written in Nix. `base00` to `base07` run from
+the darkest background to the lightest text, `base0D` is the accent and the selection, the other
+slots carry the semantic colours (errors, warnings, success, links).
+
+- KDE target: a colour scheme `Bordeaux` and a look-and-feel package `stylix` that applies it. The
+  package is applied with `plasma-apply-lookandfeel` at every login and every Home Manager
+  activation. Its defaults also name the window decoration and the Plasma style, so they carry the
+  ones in use; the fonts, the look-and-feel and the module switches are set in a configuration
+  directory that Home Manager prepends to `XDG_CONFIG_DIRS`, marked immutable.
+- GTK target: the `adw-gtk3` theme for GTK 3 and GTK 4, recoloured by a generated `gtk.css`, and
+  the GTK font. Home Manager owns `settings.ini` and `gtk.css` of both versions.
+- The KDE target turns off the `gtkconfig` module of kded, which used to copy the Plasma
+  appearance into the GTK files. Without it, nothing rewrites the GTK colour files during a
+  session and no `gtk-modules` setting loads the two Plasma GTK modules, so the crash of Electron
+  applications on a colour change can no longer happen and `GTK_MODULES` is not set any more
+  ([incident](../incidents/electron-gtk-module-unload.md)).
+- The accent no longer follows the wallpaper: it is `base0D` of the palette. Plasma writes no
+  `AccentColor` to the user `kdeglobals`, so the keyboard lighting effects use their own secondary
+  hue in place of the accent.
+
 ### Declared and mutable settings
 
 The boundary between what is declared and what is left to Plasma follows one rule: the system
 layer is declared, the appearance and the interactive behaviour of the desktop are not, until the
 theme is declared. Theming is declared in two parts: the settings of each application first, then
-the display (palette, wallpaper, fonts applied everywhere).
+the display: palette and fonts, then the Plasma themes, the panel and the wallpaper.
 
 | Area | Where it lives |
 | --- | --- |
-| Display manager, session type, session restore, accent from wallpaper, keyboard layout, fonts installed | `modules/desktop/plasma.nix` |
+| Display manager, session type, session restore, keyboard layout | `modules/desktop/plasma.nix` |
+| Palette, fonts and their rendering, GTK theme | `modules/desktop/theme.nix`, through Stylix |
 | Applications installed | `home/mowsoon/desktop.nix`, Firefox in `firefox.nix` |
 | Firefox settings, extensions, search engine | `modules/desktop/firefox.nix` |
 | Default applications per file type | `home/mowsoon/mime.nix` |
 | Outbound rules of desktop components | `plasma.nix` and `hosts/hephaestus/opensnitch.nix` |
 | KRunner shortcuts, commands of the G keys | `home/mowsoon/shortcuts.nix`, through plasma-manager |
-| Theme, wallpaper, panels, other shortcuts, scaling | Plasma settings, `~/.config` |
+| Plasma style, decoration, icons, cursor, splash, wallpaper, panels, other shortcuts, scaling | Plasma settings, `~/.config` |
 | Lid switch, power key, sleep mode | Plasma energy settings (PowerDevil), `~/.config/powerdevilrc` |
 | Region and format overrides for the session | Plasma region settings, `~/.config/plasma-localerc` |
 | Settings of the applications not yet declared | Each application, under `~/.config` or `~/.local/share` |
 
 The home directory is persistent and snapshotted, so these settings survive reboots and can be
-restored from a snapshot. The display part of the theme, applied to the desktop, the terminal, the
-editor and the boot menu, is a Phase 7 subject of the migration roadmap.
+restored from a snapshot. The palette and the fonts are declared, as described in [Theme](#theme);
+the terminal, the editor and the boot menu keep their own colours.
 
 ### Global shortcuts
 
@@ -126,8 +142,13 @@ The Firefox theme belongs to the display part of theming and is not declared yet
 
 ### Fonts
 
-JetBrains Mono from the Nerd Fonts set covers the terminal and the editor, including the glyphs of
-the prompt. Noto covers text in most scripts, and Noto Color Emoji covers emoji.
+The fonts are Stylix roles, installed by the theme module. JetBrains Mono from the Nerd Fonts set
+is the monospace role, which covers the terminal and the editor, including the glyphs of the
+prompt. Noto Sans and Noto Serif cover text in most scripts, and Noto Color Emoji covers emoji.
+Plasma reads the fonts from the immutable `kdeglobals` of Stylix, so the font settings page can no
+longer change them. The rendering (antialiasing, slight hinting, vertical BGR subpixel order) is
+declared through the fontconfig options of Home Manager, since the font settings page of Plasma
+writes it into a file that Home Manager owns.
 
 ### Keyboard lighting effects
 
@@ -431,7 +452,6 @@ not advertising or tracking are the hosts to allow.
 | `services.xserver.xkb.layout` | `fr` |
 | `console.keyMap` | `fr` |
 | `environment.sessionVariables.NIXOS_OZONE_WL` | `1` |
-| `environment.sessionVariables.GTK_MODULES` | `colorreload-gtk-module:window-decorations-gtk-module` |
 | `loginMode` in `/etc/xdg/ksmserverrc` | `emptySession`, immutable |
 | `system.replaceDependencies.replacements` | `kdePackages.kwin` with the patches of `pkgs/kwin/` |
 
@@ -469,13 +489,50 @@ not advertising or tracking are the hosts to allow.
 | Stock defaults | `user-filters`, `ublock-filters`, `ublock-badware`, `ublock-privacy`, `ublock-unbreak`, `ublock-quick-fixes`, `easylist`, `easyprivacy`, `urlhaus-1`, `plowe-0` |
 | Added | `adguard-spyware-url` (tracking parameters), `block-lan` (public sites reaching the LAN), `curben-phishing` |
 
+### Theme
+
+| Setting | Value |
+| --- | --- |
+| `stylix.autoEnable` | `false` |
+| Stylix targets | `kde` and `gtk` (NixOS and Home Manager), Flatpak support off |
+| `stylix.polarity` | `dark` |
+| GTK theme | `adw-gtk3` with the generated `gtk.css` |
+| Look-and-feel package | `stylix`, immutable in `kdeglobals` |
+| kded `gtkconfig` module | Not loaded, immutable in `kded5rc` |
+
+| Slot | Colour | Role |
+| --- | --- | --- |
+| `base00` | `#1a0e11` | Default background |
+| `base01` | `#26151a` | Lighter background: alternate rows, headers |
+| `base02` | `#3a1f27` | Selection background in text views |
+| `base03` | `#6b4a52` | Comments, inactive window blend |
+| `base04` | `#a48a90` | Dark foreground |
+| `base05` | `#e3d3d6` | Default foreground |
+| `base06` | `#f0e4e6` | Light foreground |
+| `base07` | `#faf3f4` | Lightest foreground |
+| `base08` | `#e06c75` | Errors, negative text |
+| `base09` | `#d9895b` | Constants |
+| `base0A` | `#d8b46a` | Active window blend |
+| `base0B` | `#9cba7f` | Success, positive text |
+| `base0C` | `#7fb3ad` | Support, escape sequences |
+| `base0D` | `#c04a63` | Accent, selection, focus |
+| `base0E` | `#b07fc0` | Keywords, GTK warnings |
+| `base0F` | `#8c4a3a` | Deprecated, embedded |
+
 ### Fonts
 
-| Package | Coverage |
+| Role | Package | Family | Size |
+| --- | --- | --- | --- |
+| Sans serif | `noto-fonts` | Noto Sans | 10 for applications, desktop and popups |
+| Serif | `noto-fonts` | Noto Serif | 10 |
+| Monospace | `nerd-fonts.jetbrains-mono` | JetBrainsMono Nerd Font | 11 |
+| Emoji | `noto-fonts-color-emoji` | Noto Color Emoji | Not applicable |
+
+| Rendering | Value |
 | --- | --- |
-| `nerd-fonts.jetbrains-mono` | Monospace, prompt and editor glyphs |
-| `noto-fonts` | Text in most scripts |
-| `noto-fonts-color-emoji` | Colour emoji |
+| `fonts.fontconfig.antialiasing` | `true` |
+| `fonts.fontconfig.hinting` | `slight` |
+| `fonts.fontconfig.subpixelRendering` | `vertical-bgr` |
 
 ### Locale
 
@@ -500,7 +557,8 @@ not advertising or tracking are the hosts to allow.
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `custom.plasma.enable` | `false` | Plasma 6, SDDM on Wayland, keyboard layout, fonts, desktop OpenSnitch rules |
+| `custom.plasma.enable` | `false` | Plasma 6, SDDM on Wayland, keyboard layout, desktop OpenSnitch rules |
+| `custom.theme.enable` | `false` | Stylix palette and fonts for the KDE and GTK targets, font rendering |
 | `custom.firefox.enable` | `false` | Firefox with its policies, extensions and OpenSnitch rule |
 | `custom.rgbEffects.enable` | `false` | Effects daemon `rgb-effects` in the graphical session |
 | `custom.rgbEffects.user` | `"mowsoon"` | Only user whose session starts the daemon |
@@ -544,7 +602,8 @@ not advertising or tracking are the hosts to allow.
 | --- | --- |
 | KDE on NixOS | <https://wiki.nixos.org/wiki/KDE> |
 | XDG desktop portals | <https://flatpak.github.io/xdg-desktop-portal/> |
-| Stylix | <https://github.com/danth/stylix> |
+| Stylix | <https://github.com/nix-community/stylix> |
+| Stylix options | <https://nix-community.github.io/stylix/options/platforms/nixos.html> |
 | Firefox policies | <https://mozilla.github.io/enterprise-admin-reference/reference/policies/> |
 | uBlock Origin managed settings | <https://github.com/gorhill/uBlock/wiki/Deploying-uBlock-Origin:-configuration> |
 | uBlock Origin medium mode | <https://github.com/gorhill/uBlock/wiki/Blocking-mode:-medium-mode> |

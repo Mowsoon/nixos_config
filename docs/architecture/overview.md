@@ -246,6 +246,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `home-manager` | User environment as a NixOS module |
 | `nixvim` | Editor configuration as Home Manager options |
 | `plasma-manager` | Plasma settings as Home Manager options, used for global shortcuts only |
+| `stylix` | Palette and fonts applied to Plasma and GTK, NixOS module with its Home Manager module |
 | `nixos-private` | Private repository over SSH, `flake = false`: personal data imported by modules |
 
 ### Private input layout
@@ -302,6 +303,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `custom.network.opensnitch` | `network/opensnitch.nix` | Outbound firewall |
 | `custom.network.time` | `network/time.nix` | chrony with NTS |
 | `custom.plasma` | `desktop/plasma.nix` | Plasma 6 and SDDM |
+| `custom.theme` | `desktop/theme.nix` | Bordeaux palette and fonts through Stylix |
 | `custom.firefox` | `desktop/firefox.nix` | Firefox policies, extensions and settings |
 | `custom.claudeDesktop` | `desktop/claude-desktop.nix` | Claude desktop application |
 | `custom.rgbEffects` | `desktop/rgb-effects.nix` | Lighting effects daemon of the Logitech keyboard, its key reader and notification watcher |

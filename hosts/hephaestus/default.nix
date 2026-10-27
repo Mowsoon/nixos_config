@@ -36,6 +36,7 @@ in
     ../../modules/desktop/firefox.nix
     ../../modules/desktop/plasma.nix
     ../../modules/desktop/rgb-effects.nix
+    ../../modules/desktop/theme.nix
     ../../modules/security/secure-boot.nix
     ../../modules/security/luks.nix
     ../../modules/security/hardening.nix
@@ -67,6 +68,8 @@ in
     claudeDesktop.enable = true;
 
     plasma.enable = true;
+
+    theme.enable = true;
 
     firefox.enable = true;
 
