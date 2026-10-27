@@ -98,6 +98,9 @@ let
     target = "plasma/look-and-feel";
     roles = accentOnly;
   };
+  wallpaper = pkgs.runCommand "wallpaper.png" { } ''
+    cp ${inputs.nixos-private}/wallpapers/desktop.png $out
+  '';
 in
 {
   imports = [ inputs.stylix.nixosModules.stylix ];
@@ -177,7 +180,27 @@ in
                 library = "org.kde.kwin.aurorae.v2";
                 theme = "__aurorae__svg__AquarelleRed";
               };
+              inherit wallpaper;
             };
+            kscreenlocker.appearance = {
+              inherit wallpaper;
+            };
+            panels = [
+              {
+                location = "left";
+                floating = true;
+                height = 46;
+                widgets = [
+                  "org.kde.plasma.kickoff"
+                  "org.kde.plasma.pager"
+                  "org.kde.plasma.icontasks"
+                  "org.kde.plasma.marginsseparator"
+                  "org.kde.plasma.systemtray"
+                  "org.kde.plasma.digitalclock"
+                  "org.kde.plasma.showdesktop"
+                ];
+              }
+            ];
           };
 
           home.activation.stylixLookAndFeel = lib.mkForce (lib.hm.dag.entryAnywhere "");

@@ -65,6 +65,18 @@ slots carry the semantic colours (errors, warnings, success, links).
   `AccentColor` to the user `kdeglobals`, so the keyboard lighting effects use their own secondary
   hue in place of the accent.
 
+#### Panel and wallpaper
+
+One panel stands on the left edge, floating, with the launcher, the virtual desktop pager, the
+task manager, a separator, the system tray, the clock and the show-desktop button, in that order
+from the top. plasma-manager declares it through a desktop script that removes every panel and
+creates the declared one, run at the first login after the declaration changes; a panel changed
+in the Plasma settings comes back as declared at that point.
+
+The wallpaper is a personal image, so it lives in the private input under `wallpapers/`. The theme
+module copies it into a store path of its own, so the system closure holds the image and not the
+whole private input, and plasma-manager sets it on every desktop and on the lock screen.
+
 #### Plasma themes
 
 The Plasma style, the window decoration, the icons, the cursor and the splash screen are
@@ -97,6 +109,11 @@ the panel, the effects and the lock screen will follow it. GTK takes the same ic
 plasma-manager option. The icon theme inherits from `breeze-dark` instead of `gnome`, which is not
 installed, so an icon it lacks falls back to a Breeze icon drawn in the colours of the scheme.
 
+At every login Plasma notices that the look-and-feel package named in `kdeglobals` differs from
+the one recorded in `~/.config/kdedefaults/package` and writes the defaults of `stylix` there
+again. It does so in defaults mode, which leaves the user files alone, and the user files come
+first, so the values written by plasma-manager stay in effect.
+
 The recoloured themes reach Plasma through the Home Manager profile, in `XDG_DATA_DIRS`. A copy
 installed with "Get New..." under `~/.local/share` or `~/.icons` comes first in the search path
 and hides the store version, so it must not come back. KWin resolves the files of a decoration
@@ -115,12 +132,13 @@ the display: palette and fonts, then the Plasma themes, the panel and the wallpa
 | Display manager, session type, session restore, keyboard layout | `modules/desktop/plasma.nix` |
 | Palette, fonts and their rendering, GTK theme, cursor | `modules/desktop/theme.nix`, through Stylix |
 | Plasma style, decoration, icons, splash screen | `modules/desktop/theme.nix`, through plasma-manager, recoloured from `themes/` of the private input |
+| Panel, wallpaper of the desktop and of the lock screen | `modules/desktop/theme.nix`, through plasma-manager, image from `wallpapers/` of the private input |
 | Applications installed | `home/mowsoon/desktop.nix`, Firefox in `firefox.nix` |
 | Firefox settings, extensions, search engine | `modules/desktop/firefox.nix` |
 | Default applications per file type | `home/mowsoon/mime.nix` |
 | Outbound rules of desktop components | `plasma.nix` and `hosts/hephaestus/opensnitch.nix` |
 | KRunner shortcuts, commands of the G keys | `home/mowsoon/shortcuts.nix`, through plasma-manager |
-| Wallpaper, panels, other shortcuts, scaling | Plasma settings, `~/.config` |
+| Other shortcuts, scaling, desktop icons | Plasma settings, `~/.config` |
 | Lid switch, power key, sleep mode | Plasma energy settings (PowerDevil), `~/.config/powerdevilrc` |
 | Region and format overrides for the session | Plasma region settings, `~/.config/plasma-localerc` |
 | Settings of the applications not yet declared | Each application, under `~/.config` or `~/.local/share` |
@@ -541,6 +559,9 @@ not advertising or tracking are the hosts to allow.
 | GTK theme | `adw-gtk3` with the generated `gtk.css` |
 | Look-and-feel package | `stylix`, named immutable in `kdeglobals`, never applied |
 | Colour scheme | `Bordeaux`, applied by plasma-manager |
+| Panel | Left edge, floating, height 46 |
+| Panel widgets, top to bottom | `kickoff`, `pager`, `icontasks`, `marginsseparator`, `systemtray`, `digitalclock`, `showdesktop` |
+| Wallpaper | `wallpapers/desktop.png` of the private input, desktop and lock screen |
 | kded `gtkconfig` module | Not loaded, immutable in `kded5rc` |
 
 | Theme | Kind | Private source | Name | Role overrides |
