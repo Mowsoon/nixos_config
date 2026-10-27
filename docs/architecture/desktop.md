@@ -22,6 +22,10 @@ After every resume from hibernation, a service kills the lock screen greeter, wh
 locker restarts at once: the greeter carried through hibernation makes the next sleep hang
 ([incident](../incidents/sleep-after-hibernation-deadlock.md)).
 
+The DrKonqi crash handler is disabled: `drkonqi-coredump-processor@` is masked, so a crash leaves
+a core dump for `coredumpctl` and no dialog. The handler crashed in a loop at every logout
+([incident](../incidents/drkonqi-crash-loop-at-logout.md)).
+
 `NIXOS_OZONE_WL=1` is set for every session. Electron and Chromium applications packaged by
 nixpkgs read it and start with their native Wayland backend instead of XWayland, which gives sharp
 rendering under fractional scaling.
@@ -541,6 +545,7 @@ not advertising or tracking are the hosts to allow.
 | `environment.sessionVariables.NIXOS_OZONE_WL` | `1` |
 | `loginMode` in `/etc/xdg/ksmserverrc` | `emptySession`, immutable |
 | `system.replaceDependencies.replacements` | `kdePackages.kwin` with the patches of `pkgs/kwin/` |
+| `systemd.services."drkonqi-coredump-processor@".enable` | `false`, unit masked |
 
 ### Firefox
 

@@ -28,6 +28,8 @@ in
       xserver.xkb.layout = "fr";
     };
 
+    systemd.services."drkonqi-coredump-processor@".enable = false;
+
     systemd.services.restart-lock-screen-after-hibernation = {
       description = "Replace the lock screen that went through hibernation";
       after = [
