@@ -62,6 +62,43 @@ slots carry the semantic colours (errors, warnings, success, links).
   `AccentColor` to the user `kdeglobals`, so the keyboard lighting effects use their own secondary
   hue in place of the accent.
 
+#### Plasma themes
+
+The Plasma style, the window decoration, the icons, the cursor and the splash screen are
+third-party themes first installed with "Get New...". Their original files live in the private
+input under `themes/`, so their choice and their source stay out of this public repository. The
+theme module builds each of them into the store with `pkgs/theme-recolor`, a Python tool of this
+repository that rewrites their fixed colours towards the roles of the palette; the drawing is
+never changed.
+
+- Every colour keeps its OKLab lightness. A grey takes the tint of the `base00` to `base07` ramp at
+  that lightness; a colour takes the hue of the role of its family (red, orange, yellow, green,
+  cyan, blue, purple and pink, brown) and a chroma scaled from the most frequent colour of that
+  family, so the shades of one family keep their spread. Colours darker than `base00`, such as the
+  black shadows, are kept.
+- The tool rewrites the colour attributes and style properties of SVG and SVGZ files, the pixels
+  of PNG, JPEG and Xcursor images, the quoted colours of QML files and the colour triples of `rc`
+  files. It leaves to Plasma the elements that carry a `ColorScheme-*` class, the `<style>`
+  blocks that define those classes, and the invisible `hint` elements.
+- Per theme, a family can be sent to another role. The Plasma style sends cyan, its accent, to
+  `base0D` and loses its own `colors` file, so its classed elements follow the Bordeaux scheme.
+  The cursor and the splash screen send every family to `base0D`: they hold one painted hue, and a
+  photograph would break where its hues cross a family boundary.
+- None of the five themes followed the colour scheme on its own: the Plasma style imposed its own
+  colours through its `colors` file, and the others hold fixed colours only.
+
+Each setting has one owner. Stylix owns the colours, the fonts and the cursor (`stylix.cursor`,
+applied through `home.pointerCursor`). plasma-manager owns the Plasma style, the decoration, the
+icons and the splash screen; the panel, the effects and the lock screen will follow it. The
+look-and-feel package of Stylix also names the decoration and the Plasma style and resets them at
+every login, so the theme module reads both values from the plasma-manager options: they are set
+in one place, written by both tools with the same value. GTK takes the same icon theme from the
+plasma-manager option.
+
+The recoloured themes reach Plasma through the Home Manager profile, in `XDG_DATA_DIRS`. A copy
+installed with "Get New..." under `~/.local/share` or `~/.icons` comes first in the search path
+and hides the store version, so it must not come back.
+
 ### Declared and mutable settings
 
 The boundary between what is declared and what is left to Plasma follows one rule: the system
@@ -72,13 +109,14 @@ the display: palette and fonts, then the Plasma themes, the panel and the wallpa
 | Area | Where it lives |
 | --- | --- |
 | Display manager, session type, session restore, keyboard layout | `modules/desktop/plasma.nix` |
-| Palette, fonts and their rendering, GTK theme | `modules/desktop/theme.nix`, through Stylix |
+| Palette, fonts and their rendering, GTK theme, cursor | `modules/desktop/theme.nix`, through Stylix |
+| Plasma style, decoration, icons, splash screen | `modules/desktop/theme.nix`, through plasma-manager, recoloured from `themes/` of the private input |
 | Applications installed | `home/mowsoon/desktop.nix`, Firefox in `firefox.nix` |
 | Firefox settings, extensions, search engine | `modules/desktop/firefox.nix` |
 | Default applications per file type | `home/mowsoon/mime.nix` |
 | Outbound rules of desktop components | `plasma.nix` and `hosts/hephaestus/opensnitch.nix` |
 | KRunner shortcuts, commands of the G keys | `home/mowsoon/shortcuts.nix`, through plasma-manager |
-| Plasma style, decoration, icons, cursor, splash, wallpaper, panels, other shortcuts, scaling | Plasma settings, `~/.config` |
+| Wallpaper, panels, other shortcuts, scaling | Plasma settings, `~/.config` |
 | Lid switch, power key, sleep mode | Plasma energy settings (PowerDevil), `~/.config/powerdevilrc` |
 | Region and format overrides for the session | Plasma region settings, `~/.config/plasma-localerc` |
 | Settings of the applications not yet declared | Each application, under `~/.config` or `~/.local/share` |
@@ -500,6 +538,25 @@ not advertising or tracking are the hosts to allow.
 | Look-and-feel package | `stylix`, immutable in `kdeglobals` |
 | kded `gtkconfig` module | Not loaded, immutable in `kded5rc` |
 
+| Theme | Kind | Private source | Name | Role overrides |
+| --- | --- | --- | --- | --- |
+| Maia Transparent | Plasma style | `themes/desktoptheme/Maia_Transparent` | `Maia_Transparent` | cyan to `base0D`, `colors` removed |
+| Aquarelle | Aurorae decoration | `themes/aurorae/AquarelleRed` | `__aurorae__svg__AquarelleRed` | None |
+| material-black-mango-numix | Icons, also for GTK | `themes/icons/Material-Black-Mango-Numix` | `Material-Black-Mango-Numix` | None |
+| rage-gothic-light | Cursor, size 24 | `themes/cursors/Rage-Gothic-Light` | `Rage-Gothic-Light` | Every family to `base0D` |
+| Jolly-Splash-6 | Splash screen | `themes/look-and-feel/Jolly-Splash-6` | `Jolly-Splash-6` | Every family to `base0D` |
+
+| Colour family | Default role |
+| --- | --- |
+| Red | `base08` |
+| Orange | `base09` |
+| Yellow | `base0A` |
+| Green | `base0B` |
+| Cyan | `base0C` |
+| Blue | `base0D` |
+| Purple, pink | `base0E` |
+| Brown | `base0F` |
+
 | Slot | Colour | Role |
 | --- | --- | --- |
 | `base00` | `#1a0e11` | Default background |
@@ -604,6 +661,8 @@ not advertising or tracking are the hosts to allow.
 | XDG desktop portals | <https://flatpak.github.io/xdg-desktop-portal/> |
 | Stylix | <https://github.com/nix-community/stylix> |
 | Stylix options | <https://nix-community.github.io/stylix/options/platforms/nixos.html> |
+| OKLab colour space | <https://bottosson.github.io/posts/oklab/> |
+| Plasma theme colours | <https://develop.kde.org/docs/plasma/theme/theme-colors/> |
 | Firefox policies | <https://mozilla.github.io/enterprise-admin-reference/reference/policies/> |
 | uBlock Origin managed settings | <https://github.com/gorhill/uBlock/wiki/Deploying-uBlock-Origin:-configuration> |
 | uBlock Origin medium mode | <https://github.com/gorhill/uBlock/wiki/Blocking-mode:-medium-mode> |

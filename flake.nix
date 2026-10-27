@@ -66,6 +66,7 @@
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
       rgbEffects = pkgs.callPackage ./pkgs/rgb-effects/package.nix { };
+      themeRecolor = pkgs.callPackage ./pkgs/theme-recolor/package.nix { };
       hephaestusModules = [
         disko.nixosModules.disko
         impermanence.nixosModules.impermanence
@@ -127,7 +128,10 @@
         };
       };
 
-      packages.${system}.rgb-effects = rgbEffects;
+      packages.${system} = {
+        rgb-effects = rgbEffects;
+        theme-recolor = themeRecolor;
+      };
 
       formatter.${system} = pkgs.nixfmt-tree;
 
@@ -138,6 +142,9 @@
         rgb-effects = rgbEffects;
         rgb-effects-ruff = rgbEffects.lints.ruff;
         rgb-effects-mypy = rgbEffects.lints.mypy;
+        theme-recolor = themeRecolor;
+        theme-recolor-ruff = themeRecolor.lints.ruff;
+        theme-recolor-mypy = themeRecolor.lints.mypy;
       };
 
       devShells.${system}.default = pkgs.mkShell {

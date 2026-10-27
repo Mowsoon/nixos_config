@@ -65,7 +65,8 @@ UUID of the disks, lives in a separate private repository, `nixos_private`, decl
 `nixos-private` input with `flake = false`. Nix fetches it as a plain source tree over SSH, and
 modules import plain Nix files from it. Each file holds values only, an attribute set without
 functions; the public side builds everything derived from them, such as the `/dev/disk/...`
-paths. `flake.lock` pins its revision and hash, so only the repository URL and a commit hash are
+paths. The input also holds unmodified third-party files, the Plasma themes under `themes/`: the
+public side copies them into derivations and recolours them, and never imports them as Nix. `flake.lock` pins its revision and hash, so only the repository URL and a commit hash are
 public.
 
 Fetching the input needs a GitHub SSH key that can read the private repository. The key belongs
@@ -205,6 +206,10 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
    of the Windows disk. `ls -l /dev/disk/by-id /dev/disk/by-partuuid` lists the first two, and
    `lsblk -o NAME,SERIAL` the third.
 
+   The `themes/` directories hold one Plasma style, one Aurorae decoration, one icon theme, one
+   cursor theme and one splash screen, under the names that `modules/desktop/theme.nix` uses. Any
+   theme of the same kind works once its name is changed in that module.
+
 2. Point the input at that directory, either permanently or for one command.
 
    ```bash
@@ -230,7 +235,8 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `apps.x86_64-linux.hephaestus-vm` | Boots the workstation VM from a blank firmware and TPM |
 | `apps.x86_64-linux.rehearsal` | Boots the installer image against a blank disk |
 | `packages.x86_64-linux.rgb-effects` | Keyboard lighting effects daemon, built with its tests |
-| `checks.x86_64-linux` | `nixfmt`, `statix`, `deadnix`, `rgb-effects`, `rgb-effects-ruff`, `rgb-effects-mypy` |
+| `packages.x86_64-linux.theme-recolor` | Theme recolouring tool, built with its tests |
+| `checks.x86_64-linux` | `nixfmt`, `statix`, `deadnix`, `rgb-effects`, `rgb-effects-ruff`, `rgb-effects-mypy`, `theme-recolor`, `theme-recolor-ruff`, `theme-recolor-mypy` |
 | `formatter.x86_64-linux` | `nixfmt-tree` |
 | `devShells.x86_64-linux.default` | `nixfmt-tree`, `statix`, `deadnix`, `mkpasswd` |
 
@@ -255,6 +261,11 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | --- | --- | --- |
 | `firefox/ublock-allowances.nix` | `modules/desktop/firefox.nix` | Attribute set: site registrable domain to list of third-party registrable domains |
 | `hosts/hephaestus/hardware-ids.nix` | `hosts/hephaestus/disko.nix`, `hosts/hephaestus/default.nix` | Attribute set of strings: `systemDisk`, `windowsPartuuid`, `windowsDiskSerial` |
+| `themes/desktoptheme/<name>/` | `modules/desktop/theme.nix` | Plasma style directory as installed by "Get New..." |
+| `themes/aurorae/<name>/` | `modules/desktop/theme.nix` | Aurorae decoration directory |
+| `themes/icons/<name>/` | `modules/desktop/theme.nix` | Icon theme directory, relative symbolic links only |
+| `themes/cursors/<name>/` | `modules/desktop/theme.nix` | Xcursor theme directory with its `cursors/` |
+| `themes/look-and-feel/<name>/` | `modules/desktop/theme.nix` | Look-and-feel package holding a splash screen |
 
 | Attribute | Content | Used as |
 | --- | --- | --- |
@@ -303,7 +314,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `custom.network.opensnitch` | `network/opensnitch.nix` | Outbound firewall |
 | `custom.network.time` | `network/time.nix` | chrony with NTS |
 | `custom.plasma` | `desktop/plasma.nix` | Plasma 6 and SDDM |
-| `custom.theme` | `desktop/theme.nix` | Bordeaux palette and fonts through Stylix |
+| `custom.theme` | `desktop/theme.nix` | Bordeaux palette and fonts through Stylix, recoloured Plasma themes through plasma-manager |
 | `custom.firefox` | `desktop/firefox.nix` | Firefox policies, extensions and settings |
 | `custom.claudeDesktop` | `desktop/claude-desktop.nix` | Claude desktop application |
 | `custom.rgbEffects` | `desktop/rgb-effects.nix` | Lighting effects daemon of the Logitech keyboard, its key reader and notification watcher |
