@@ -120,125 +120,171 @@ in
     enable = lib.mkEnableOption "the bordeaux palette and the fonts applied to Plasma and GTK";
   };
 
-  config = lib.mkIf cfg.enable {
-    stylix = {
-      enable = true;
-      autoEnable = false;
-      polarity = "dark";
-      base16Scheme = scheme;
-      fonts = {
-        sansSerif = {
-          package = pkgs.noto-fonts;
-          name = "Noto Sans";
+  config = lib.mkIf cfg.enable (
+    let
+      inherit (config.stylix) fonts;
+      font = "${fonts.sansSerif.name},${toString fonts.sizes.desktop},-1,5,50,0,0,0,0,0";
+      stylixKdeTheme =
+        lib.findFirst (package: lib.hasPrefix "stylix-kde-theme" (lib.getName package))
+          (throw "custom.theme: the Stylix KDE theme package is missing")
+          config.home-manager.users.mowsoon.home.packages;
+      sddmKdeglobals = pkgs.runCommand "sddm-kdeglobals" { } ''
+        cat ${stylixKdeTheme}/share/color-schemes/${scheme.scheme}.colors > $out
+        printf '\n[General]\nfont=%s\n' '${font}' >> $out
+      '';
+      sddmPlasmarc = pkgs.writeText "sddm-plasmarc" ''
+        [Theme]
+        name=${config.home-manager.users.mowsoon.programs.plasma.workspace.theme}
+      '';
+      sddmAssets = pkgs.runCommand "sddm-bordeaux" { } ''
+        mkdir -p $out/share/sddm/themes/breeze $out/share/sddm/faces
+        printf '[General]\ntype=image\nbackground=%s\n' ${wallpaper} \
+          > $out/share/sddm/themes/breeze/theme.conf.user
+        cp ${avatar} $out/share/sddm/faces/mowsoon.face.icon
+      '';
+    in
+    {
+      stylix = {
+        enable = true;
+        autoEnable = false;
+        polarity = "dark";
+        base16Scheme = scheme;
+        fonts = {
+          sansSerif = {
+            package = pkgs.noto-fonts;
+            name = "Noto Sans";
+          };
+          serif = {
+            package = pkgs.noto-fonts;
+            name = "Noto Serif";
+          };
+          monospace = {
+            package = pkgs.nerd-fonts.jetbrains-mono;
+            name = "JetBrainsMono Nerd Font";
+          };
+          emoji = {
+            package = pkgs.noto-fonts-color-emoji;
+            name = "Noto Color Emoji";
+          };
+          sizes = {
+            applications = 10;
+            desktop = 10;
+            popups = 10;
+            terminal = 11;
+          };
         };
-        serif = {
-          package = pkgs.noto-fonts;
-          name = "Noto Serif";
+        cursor = {
+          package = cursor;
+          name = "Rage-Gothic-Light";
+          size = 24;
         };
-        monospace = {
-          package = pkgs.nerd-fonts.jetbrains-mono;
-          name = "JetBrainsMono Nerd Font";
-        };
-        emoji = {
-          package = pkgs.noto-fonts-color-emoji;
-          name = "Noto Color Emoji";
-        };
-        sizes = {
-          applications = 10;
-          desktop = 10;
-          popups = 10;
-          terminal = 11;
-        };
+        targets.gtk.enable = true;
       };
-      cursor = {
-        package = cursor;
-        name = "Rage-Gothic-Light";
-        size = 24;
+
+      fonts.packages = config.stylix.fonts.packages;
+
+      environment.systemPackages = [
+        plasmaStyle
+        cursor
+        sddmAssets
+      ];
+
+      services.displayManager.sddm.settings.Theme = {
+        CursorTheme = config.stylix.cursor.name;
+        CursorSize = config.stylix.cursor.size;
+        Font = font;
       };
-      targets.gtk.enable = true;
-    };
 
-    fonts.packages = config.stylix.fonts.packages;
+      systemd.tmpfiles.settings."10-sddm-theme" = {
+        "/var/lib/sddm/.config".d = {
+          user = "sddm";
+          group = "sddm";
+          mode = "0755";
+        };
+        "/var/lib/sddm/.config/kdeglobals"."L+".argument = "${sddmKdeglobals}";
+        "/var/lib/sddm/.config/plasmarc"."L+".argument = "${sddmPlasmarc}";
+      };
 
-    home-manager.sharedModules = [
-      (
-        { config, lib, ... }:
-        let
-          inherit (config.programs.plasma) workspace;
-        in
-        {
-          home = {
-            file.".face.icon".source = avatar;
-            packages = [
-              plasmaStyle
-              decoration
-              icons
-              splash
-            ];
-            activation.stylixLookAndFeel = lib.mkForce (lib.hm.dag.entryAnywhere "");
-          };
-
-          fonts.fontconfig = {
-            antialiasing = true;
-            hinting = "slight";
-            subpixelRendering = "vertical-bgr";
-          };
-
-          programs.plasma = {
-            enable = true;
-            workspace = {
-              colorScheme = scheme.scheme;
-              theme = "Maia_Transparent";
-              iconTheme = "Material-Black-Mango-Numix";
-              splashScreen.theme = "Jolly-Splash-6";
-              windowDecorations = {
-                library = "org.kde.kwin.aurorae.v2";
-                theme = "__aurorae__svg__AquarelleRed";
-              };
-              inherit wallpaper;
+      home-manager.sharedModules = [
+        (
+          { config, lib, ... }:
+          let
+            inherit (config.programs.plasma) workspace;
+          in
+          {
+            home = {
+              file.".face.icon".source = avatar;
+              packages = [
+                plasmaStyle
+                decoration
+                icons
+                splash
+              ];
+              activation.stylixLookAndFeel = lib.mkForce (lib.hm.dag.entryAnywhere "");
             };
-            startup.startupScript.wait_for_plasmashell = {
-              priority = 0;
-              runAlways = true;
-              text = waitForPlasmaShell;
+
+            fonts.fontconfig = {
+              antialiasing = true;
+              hinting = "slight";
+              subpixelRendering = "vertical-bgr";
             };
-            kscreenlocker.appearance = {
-              inherit wallpaper;
-            };
-            panels = [
-              {
-                location = "left";
-                floating = true;
-                height = 46;
-                widgets = [
-                  "org.kde.plasma.kickoff"
-                  "org.kde.plasma.pager"
-                  "org.kde.plasma.icontasks"
-                  "org.kde.plasma.marginsseparator"
-                  "org.kde.plasma.systemtray"
-                  "org.kde.plasma.digitalclock"
-                  "org.kde.plasma.showdesktop"
-                ];
-              }
-            ];
-          };
 
-          xdg.autostart.entries = lib.mkForce [ ];
-
-          gtk.iconTheme = {
-            name = workspace.iconTheme;
-            package = icons;
-          };
-
-          stylix.targets = {
-            kde.enable = true;
-            gtk = {
+            programs.plasma = {
               enable = true;
-              flatpakSupport.enable = false;
+              workspace = {
+                colorScheme = scheme.scheme;
+                theme = "Maia_Transparent";
+                iconTheme = "Material-Black-Mango-Numix";
+                splashScreen.theme = "Jolly-Splash-6";
+                windowDecorations = {
+                  library = "org.kde.kwin.aurorae.v2";
+                  theme = "__aurorae__svg__AquarelleRed";
+                };
+                inherit wallpaper;
+              };
+              startup.startupScript.wait_for_plasmashell = {
+                priority = 0;
+                runAlways = true;
+                text = waitForPlasmaShell;
+              };
+              kscreenlocker.appearance = {
+                inherit wallpaper;
+              };
+              panels = [
+                {
+                  location = "left";
+                  floating = true;
+                  height = 46;
+                  widgets = [
+                    "org.kde.plasma.kickoff"
+                    "org.kde.plasma.pager"
+                    "org.kde.plasma.icontasks"
+                    "org.kde.plasma.marginsseparator"
+                    "org.kde.plasma.systemtray"
+                    "org.kde.plasma.digitalclock"
+                    "org.kde.plasma.showdesktop"
+                  ];
+                }
+              ];
             };
-          };
-        }
-      )
-    ];
-  };
+
+            xdg.autostart.entries = lib.mkForce [ ];
+
+            gtk.iconTheme = {
+              name = workspace.iconTheme;
+              package = icons;
+            };
+
+            stylix.targets = {
+              kde.enable = true;
+              gtk = {
+                enable = true;
+                flatpakSupport.enable = false;
+              };
+            };
+          }
+        )
+      ];
+    }
+  );
 }

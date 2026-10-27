@@ -82,6 +82,26 @@ picture of the account comes from `avatars/` of the private input the same way a
 `~/.face.icon`, which Plasma reads for the launcher and the lock screen while AccountsService has
 no icon for the user; `/var/lib/AccountsService` is not persisted, so it never has one.
 
+#### Login screen
+
+SDDM runs its greeter as the `sddm` system user, before any session, and cannot read the home
+directory of the user, so it takes nothing from the Home Manager side by itself. The theme module
+dresses the Breeze greeter from the system side with the same sources:
+
+- the wallpaper, through a `theme.conf.user` installed next to the `theme.conf` of the Breeze
+  greeter theme in the system profile;
+- the account picture, as `mowsoon.face.icon` in the faces directory of SDDM;
+- the colours and the font, through a `kdeglobals` made of the `Bordeaux` scheme that Stylix
+  generates and the font line of Stylix, and the Plasma style, through a `plasmarc`; both are
+  linked into `/var/lib/sddm/.config` by `systemd.tmpfiles` at every boot, since the root
+  rollback empties `/var/lib/sddm`;
+- the cursor, named in the SDDM settings, with the recoloured cursor and Plasma style installed
+  in the system profile.
+
+The `kdeglobals` of the greeter takes the colour scheme from the Home Manager configuration of the
+user, where Stylix builds it; the build fails if that package is missing, instead of showing a
+greeter in other colours.
+
 #### Plasma themes
 
 The Plasma style, the window decoration, the icons, the cursor and the splash screen are
@@ -139,6 +159,7 @@ the display: palette and fonts, then the Plasma themes, the panel and the wallpa
 | Plasma style, decoration, icons, splash screen | `modules/desktop/theme.nix`, through plasma-manager, recoloured from `themes/` of the private input |
 | Panel, wallpaper of the desktop and of the lock screen | `modules/desktop/theme.nix`, through plasma-manager, image from `wallpapers/` of the private input |
 | Account picture | `modules/desktop/theme.nix`, through Home Manager, image from `avatars/` of the private input |
+| Login screen: wallpaper, account picture, colours, font, Plasma style, cursor | `modules/desktop/theme.nix`, system side, same sources as the session |
 | Applications installed | `home/mowsoon/desktop.nix`, Firefox in `firefox.nix` |
 | Firefox settings, extensions, search engine | `modules/desktop/firefox.nix` |
 | Default applications per file type | `home/mowsoon/mime.nix` |
@@ -569,6 +590,10 @@ not advertising or tracking are the hosts to allow.
 | Panel widgets, top to bottom | `kickoff`, `pager`, `icontasks`, `marginsseparator`, `systemtray`, `digitalclock`, `showdesktop` |
 | Wallpaper | `wallpapers/desktop.png` of the private input, desktop and lock screen |
 | Account picture | `avatars/mowsoon.png` of the private input, linked as `~/.face.icon` |
+| Login screen theme | `breeze`, with `theme.conf.user` setting the wallpaper |
+| Login screen picture | `share/sddm/faces/mowsoon.face.icon` in the system profile |
+| Login screen colours and style | `/var/lib/sddm/.config/kdeglobals` and `plasmarc`, links made by `systemd.tmpfiles` |
+| Login screen cursor and font | `Rage-Gothic-Light` size 24, `Noto Sans` 10, in `[Theme]` of the SDDM settings |
 | kded `gtkconfig` module | Not loaded, immutable in `kded5rc` |
 
 | Theme | Kind | Private source | Name | Role overrides |
@@ -648,7 +673,7 @@ not advertising or tracking are the hosts to allow.
 | Option | Default | Description |
 | --- | --- | --- |
 | `custom.plasma.enable` | `false` | Plasma 6, SDDM on Wayland, keyboard layout, desktop OpenSnitch rules |
-| `custom.theme.enable` | `false` | Stylix palette and fonts for the KDE and GTK targets, font rendering |
+| `custom.theme.enable` | `false` | Stylix palette and fonts, recoloured Plasma themes, panel, wallpaper, account picture, login screen |
 | `custom.firefox.enable` | `false` | Firefox with its policies, extensions and OpenSnitch rule |
 | `custom.rgbEffects.enable` | `false` | Effects daemon `rgb-effects` in the graphical session |
 | `custom.rgbEffects.user` | `"mowsoon"` | Only user whose session starts the daemon |
