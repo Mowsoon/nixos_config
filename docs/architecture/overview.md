@@ -209,7 +209,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
    The `themes/` directories hold one Plasma style, one Aurorae decoration, one icon theme, one
    cursor theme and one splash screen, under the names that `modules/desktop/theme.nix` uses. Any
    theme of the same kind works once its name is changed in that module. `wallpapers/desktop.png`
-   is any image.
+   and `avatars/mowsoon.png` are any images.
 
 2. Point the input at that directory, either permanently or for one command.
 
@@ -268,6 +268,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `themes/cursors/<name>/` | `modules/desktop/theme.nix` | Xcursor theme directory with its `cursors/` |
 | `themes/look-and-feel/<name>/` | `modules/desktop/theme.nix` | Look-and-feel package holding a splash screen |
 | `wallpapers/desktop.png` | `modules/desktop/theme.nix` | Image of the desktop and of the lock screen |
+| `avatars/mowsoon.png` | `modules/desktop/theme.nix` | Picture of the account |
 
 | Attribute | Content | Used as |
 | --- | --- | --- |

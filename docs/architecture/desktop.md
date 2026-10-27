@@ -71,11 +71,16 @@ One panel stands on the left edge, floating, with the launcher, the virtual desk
 task manager, a separator, the system tray, the clock and the show-desktop button, in that order
 from the top. plasma-manager declares it through a desktop script that removes every panel and
 creates the declared one, run at the first login after the declaration changes; a panel changed
-in the Plasma settings comes back as declared at that point.
+in the Plasma settings comes back as declared at that point. The desktop scripts need
+`plasmashell`, which starts as its own user service, so a first startup script waits for it
+([incident](../incidents/plasma-manager-desktop-scripts-before-plasmashell.md)).
 
 The wallpaper is a personal image, so it lives in the private input under `wallpapers/`. The theme
 module copies it into a store path of its own, so the system closure holds the image and not the
-whole private input, and plasma-manager sets it on every desktop and on the lock screen.
+whole private input, and plasma-manager sets it on every desktop and on the lock screen. The
+picture of the account comes from `avatars/` of the private input the same way and is linked as
+`~/.face.icon`, which Plasma reads for the launcher and the lock screen while AccountsService has
+no icon for the user; `/var/lib/AccountsService` is not persisted, so it never has one.
 
 #### Plasma themes
 
@@ -133,6 +138,7 @@ the display: palette and fonts, then the Plasma themes, the panel and the wallpa
 | Palette, fonts and their rendering, GTK theme, cursor | `modules/desktop/theme.nix`, through Stylix |
 | Plasma style, decoration, icons, splash screen | `modules/desktop/theme.nix`, through plasma-manager, recoloured from `themes/` of the private input |
 | Panel, wallpaper of the desktop and of the lock screen | `modules/desktop/theme.nix`, through plasma-manager, image from `wallpapers/` of the private input |
+| Account picture | `modules/desktop/theme.nix`, through Home Manager, image from `avatars/` of the private input |
 | Applications installed | `home/mowsoon/desktop.nix`, Firefox in `firefox.nix` |
 | Firefox settings, extensions, search engine | `modules/desktop/firefox.nix` |
 | Default applications per file type | `home/mowsoon/mime.nix` |
@@ -562,6 +568,7 @@ not advertising or tracking are the hosts to allow.
 | Panel | Left edge, floating, height 46 |
 | Panel widgets, top to bottom | `kickoff`, `pager`, `icontasks`, `marginsseparator`, `systemtray`, `digitalclock`, `showdesktop` |
 | Wallpaper | `wallpapers/desktop.png` of the private input, desktop and lock screen |
+| Account picture | `avatars/mowsoon.png` of the private input, linked as `~/.face.icon` |
 | kded `gtkconfig` module | Not loaded, immutable in `kded5rc` |
 
 | Theme | Kind | Private source | Name | Role overrides |

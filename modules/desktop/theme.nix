@@ -101,6 +101,17 @@ let
   wallpaper = pkgs.runCommand "wallpaper.png" { } ''
     cp ${inputs.nixos-private}/wallpapers/desktop.png $out
   '';
+  avatar = pkgs.runCommand "avatar.png" { } ''
+    cp ${inputs.nixos-private}/avatars/mowsoon.png $out
+  '';
+  waitForPlasmaShell = ''
+    attempt=0
+    until qdbus org.kde.plasmashell /PlasmaShell 2>/dev/null | grep -q evaluateScript; do
+      attempt=$((attempt + 1))
+      [ "$attempt" -ge 240 ] && break
+      sleep 0.5
+    done
+  '';
 in
 {
   imports = [ inputs.stylix.nixosModules.stylix ];
@@ -156,12 +167,16 @@ in
           inherit (config.programs.plasma) workspace;
         in
         {
-          home.packages = [
-            plasmaStyle
-            decoration
-            icons
-            splash
-          ];
+          home = {
+            file.".face.icon".source = avatar;
+            packages = [
+              plasmaStyle
+              decoration
+              icons
+              splash
+            ];
+            activation.stylixLookAndFeel = lib.mkForce (lib.hm.dag.entryAnywhere "");
+          };
 
           fonts.fontconfig = {
             antialiasing = true;
@@ -181,6 +196,11 @@ in
                 theme = "__aurorae__svg__AquarelleRed";
               };
               inherit wallpaper;
+            };
+            startup.startupScript.wait_for_plasmashell = {
+              priority = 0;
+              runAlways = true;
+              text = waitForPlasmaShell;
             };
             kscreenlocker.appearance = {
               inherit wallpaper;
@@ -203,7 +223,6 @@ in
             ];
           };
 
-          home.activation.stylixLookAndFeel = lib.mkForce (lib.hm.dag.entryAnywhere "");
           xdg.autostart.entries = lib.mkForce [ ];
 
           gtk.iconTheme = {
