@@ -66,8 +66,8 @@ UUID of the disks, lives in a separate private repository, `nixos_private`, decl
 modules import plain Nix files from it. Each file holds values only, an attribute set without
 functions; the public side builds everything derived from them, such as the `/dev/disk/...`
 paths. The input also holds unmodified third-party files, the Plasma themes under `themes/`: the
-public side copies them into derivations and recolours them, and never imports them as Nix. `flake.lock` pins its revision and hash, so only the repository URL and a commit hash are
-public.
+public side copies them into derivations and recolours them, and never imports them as Nix.
+`flake.lock` pins its revision and hash, so only the repository URL and a commit hash are public.
 
 Fetching the input needs a GitHub SSH key that can read the private repository. The key belongs
 to the user, not to root: the flake is evaluated as the user, and only the activation runs with

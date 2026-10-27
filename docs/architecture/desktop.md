@@ -46,11 +46,14 @@ The palette is a dark base16 scheme named Bordeaux, written in Nix. `base00` to 
 the darkest background to the lightest text, `base0D` is the accent and the selection, the other
 slots carry the semantic colours (errors, warnings, success, links).
 
-- KDE target: a colour scheme `Bordeaux` and a look-and-feel package `stylix` that applies it. The
-  package is applied with `plasma-apply-lookandfeel` at every login and every Home Manager
-  activation. Its defaults also name the window decoration and the Plasma style, so they carry the
-  ones in use; the fonts, the look-and-feel and the module switches are set in a configuration
-  directory that Home Manager prepends to `XDG_CONFIG_DIRS`, marked immutable.
+- KDE target: a colour scheme `Bordeaux`, and a configuration directory that Home Manager prepends
+  to `XDG_CONFIG_DIRS`, where the fonts, the cursor and the module switches are marked immutable.
+  The target also ships a look-and-feel package `stylix`, which it would apply with
+  `plasma-apply-lookandfeel` at every login and every Home Manager activation. The theme module
+  removes both triggers: applying a look-and-feel writes its own values to `~/.config/kdedefaults`
+  and deletes from the user files the decoration, the Plasma style and the splash screen that
+  plasma-manager writes there, and marking those keys immutable in the user file does not stop
+  it. plasma-manager applies the `Bordeaux` scheme instead.
 - GTK target: the `adw-gtk3` theme for GTK 3 and GTK 4, recoloured by a generated `gtk.css`, and
   the GTK font. Home Manager owns `settings.ini` and `gtk.css` of both versions.
 - The KDE target turns off the `gtkconfig` module of kded, which used to copy the Plasma
@@ -88,16 +91,17 @@ never changed.
   colours through its `colors` file, and the others hold fixed colours only.
 
 Each setting has one owner. Stylix owns the colours, the fonts and the cursor (`stylix.cursor`,
-applied through `home.pointerCursor`). plasma-manager owns the Plasma style, the decoration, the
-icons and the splash screen; the panel, the effects and the lock screen will follow it. The
-look-and-feel package of Stylix also names the decoration and the Plasma style and resets them at
-every login, so the theme module reads both values from the plasma-manager options: they are set
-in one place, written by both tools with the same value. GTK takes the same icon theme from the
-plasma-manager option.
+applied through `home.pointerCursor`): it generates the colour scheme, and plasma-manager only
+names it. plasma-manager owns the Plasma style, the decoration, the icons and the splash screen;
+the panel, the effects and the lock screen will follow it. GTK takes the same icon theme from the
+plasma-manager option. The icon theme inherits from `breeze-dark` instead of `gnome`, which is not
+installed, so an icon it lacks falls back to a Breeze icon drawn in the colours of the scheme.
 
 The recoloured themes reach Plasma through the Home Manager profile, in `XDG_DATA_DIRS`. A copy
 installed with "Get New..." under `~/.local/share` or `~/.icons` comes first in the search path
-and hides the store version, so it must not come back.
+and hides the store version, so it must not come back. KWin resolves the files of a decoration
+once, when it loads it: after such a copy is deleted, the running session keeps the deleted paths
+and draws the title bar without buttons until the next login.
 
 ### Declared and mutable settings
 
@@ -535,14 +539,15 @@ not advertising or tracking are the hosts to allow.
 | Stylix targets | `kde` and `gtk` (NixOS and Home Manager), Flatpak support off |
 | `stylix.polarity` | `dark` |
 | GTK theme | `adw-gtk3` with the generated `gtk.css` |
-| Look-and-feel package | `stylix`, immutable in `kdeglobals` |
+| Look-and-feel package | `stylix`, named immutable in `kdeglobals`, never applied |
+| Colour scheme | `Bordeaux`, applied by plasma-manager |
 | kded `gtkconfig` module | Not loaded, immutable in `kded5rc` |
 
 | Theme | Kind | Private source | Name | Role overrides |
 | --- | --- | --- | --- | --- |
 | Maia Transparent | Plasma style | `themes/desktoptheme/Maia_Transparent` | `Maia_Transparent` | cyan to `base0D`, `colors` removed |
 | Aquarelle | Aurorae decoration | `themes/aurorae/AquarelleRed` | `__aurorae__svg__AquarelleRed` | None |
-| material-black-mango-numix | Icons, also for GTK | `themes/icons/Material-Black-Mango-Numix` | `Material-Black-Mango-Numix` | None |
+| material-black-mango-numix | Icons, also for GTK | `themes/icons/Material-Black-Mango-Numix` | `Material-Black-Mango-Numix` | None, inherits `breeze-dark` |
 | rage-gothic-light | Cursor, size 24 | `themes/cursors/Rage-Gothic-Light` | `Rage-Gothic-Light` | Every family to `base0D` |
 | Jolly-Splash-6 | Splash screen | `themes/look-and-feel/Jolly-Splash-6` | `Jolly-Splash-6` | Every family to `base0D` |
 

@@ -81,6 +81,10 @@ let
     name = "Material-Black-Mango-Numix";
     source = "icons/Material-Black-Mango-Numix";
     target = "icons";
+    postRecolor = ''
+      substituteInPlace $out/share/icons/Material-Black-Mango-Numix/index.theme \
+        --replace-fail "Inherits=gnome,hicolor" "Inherits=breeze-dark,hicolor"
+    '';
   };
   cursor = recolored {
     name = "Rage-Gothic-Light";
@@ -144,7 +148,7 @@ in
 
     home-manager.sharedModules = [
       (
-        { config, ... }:
+        { config, lib, ... }:
         let
           inherit (config.programs.plasma) workspace;
         in
@@ -165,6 +169,7 @@ in
           programs.plasma = {
             enable = true;
             workspace = {
+              colorScheme = scheme.scheme;
               theme = "Maia_Transparent";
               iconTheme = "Material-Black-Mango-Numix";
               splashScreen.theme = "Jolly-Splash-6";
@@ -173,21 +178,10 @@ in
                 theme = "__aurorae__svg__AquarelleRed";
               };
             };
-            configFile = {
-              ksplashrc.KSplash = {
-                Engine.immutable = true;
-                Theme.immutable = true;
-              };
-              kwinrc."org.kde.kdecoration2" = {
-                library.immutable = true;
-                theme.immutable = true;
-              };
-              plasmarc.Theme.name = {
-                value = workspace.theme;
-                immutable = true;
-              };
-            };
           };
+
+          home.activation.stylixLookAndFeel = lib.mkForce (lib.hm.dag.entryAnywhere "");
+          xdg.autostart.entries = lib.mkForce [ ];
 
           gtk.iconTheme = {
             name = workspace.iconTheme;
@@ -195,12 +189,7 @@ in
           };
 
           stylix.targets = {
-            kde = {
-              enable = true;
-              decorations = workspace.windowDecorations.library;
-              decorationTheme = workspace.windowDecorations.theme;
-              applicationStyle = workspace.theme;
-            };
+            kde.enable = true;
             gtk = {
               enable = true;
               flatpakSupport.enable = false;
