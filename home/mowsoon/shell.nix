@@ -9,9 +9,16 @@ in
     zsh = {
       enable = true;
       enableCompletion = true;
-      autosuggestion.enable = true;
+      autosuggestion = {
+        enable = true;
+        strategy = [
+          "history"
+          "completion"
+        ];
+      };
       syntaxHighlighting.enable = true;
       autocd = true;
+      defaultKeymap = "emacs";
 
       setOptions = [
         "AUTO_PUSHD"
@@ -85,6 +92,19 @@ in
           fi
         '')
         "source ${./p10k.zsh}"
+        ''
+          WORDCHARS=''${WORDCHARS//\/}
+          bindkey '^[[H' beginning-of-line
+          bindkey '^[OH' beginning-of-line
+          bindkey '^[[F' end-of-line
+          bindkey '^[OF' end-of-line
+          bindkey '^[[3~' delete-char
+          bindkey '^[[1;5C' forward-word
+          bindkey '^[[1;5D' backward-word
+          bindkey '^H' backward-kill-word
+          bindkey '^[[3;5~' kill-word
+          bindkey '^[[Z' reverse-menu-complete
+        ''
         "ns() { nix shell \${@/#/nixpkgs#} }"
       ];
     };
