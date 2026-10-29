@@ -22,9 +22,10 @@ After every resume from hibernation, a service kills the lock screen greeter, wh
 locker restarts at once: the greeter carried through hibernation makes the next sleep hang
 ([incident](../incidents/sleep-after-hibernation-deadlock.md)).
 
-The DrKonqi crash handler is disabled: `drkonqi-coredump-processor@` is masked, so a crash leaves
-a core dump for `coredumpctl` and no dialog. The handler crashed in a loop at every logout
-([incident](../incidents/drkonqi-crash-loop-at-logout.md)).
+The DrKonqi crash handler is disabled: `drkonqi-coredump-processor@` and the user units that pick
+up pending crashes, launch the dialog and send reports to the KDE Sentry server are masked, so a
+crash leaves a core dump for `coredumpctl` and no dialog. The handler crashed in a loop at every
+logout ([incident](../incidents/drkonqi-crash-loop-at-logout.md)).
 
 `NIXOS_OZONE_WL=1` is set for every session. Electron and Chromium applications packaged by
 nixpkgs read it and start with their native Wayland backend instead of XWayland, which gives sharp
@@ -94,8 +95,8 @@ close with a zoom, shrink into the panel when minimised, fade between virtual de
 when maximised, and a modal dialog slides out of its parent. Every animation runs at half its
 default duration. Moved windows wobble and turn translucent, and inactive windows are dimmed.
 
-Blur is off: the transparent Plasma style shows the wallpaper behind the panel and the menus as
-it is, which stayed readable. None of the enabled effects redraws the screen while nothing
+Blur is light behind the panel and the menus of the transparent Plasma style: strength 4 of 15,
+noise 3 of 14, default saturation. None of the enabled effects redraws the screen while nothing
 moves. The decoration has a border at the bottom only, the window menu on the left, and minimise,
 maximise and close on the right.
 
@@ -257,7 +258,9 @@ prompt. Noto Sans and Noto Serif cover text in most scripts, and Noto Color Emoj
 Plasma reads the fonts from the immutable `kdeglobals` of Stylix, so the font settings page can no
 longer change them. The rendering (antialiasing, slight hinting, vertical BGR subpixel order) is
 declared through the fontconfig options of Home Manager, since the font settings page of Plasma
-writes it into a file that Home Manager owns.
+writes it into a file that Home Manager owns. Both Home Manager fontconfig files are forced, so a
+save from that page lasts until the next activation and can no longer block it
+([incident](../incidents/home-manager-blocked-by-plasma-fonts.md)).
 
 ### Keyboard lighting effects
 
@@ -564,6 +567,7 @@ not advertising or tracking are the hosts to allow.
 | `loginMode` in `/etc/xdg/ksmserverrc` | `emptySession`, immutable |
 | `system.replaceDependencies.replacements` | `kdePackages.kwin` with the patches of `pkgs/kwin/` |
 | `systemd.services."drkonqi-coredump-processor@".enable` | `false`, unit masked |
+| `systemd.user` units `drkonqi-coredump-pickup`, `drkonqi-coredump-launcher`, `drkonqi-sentry-postman` | Masked |
 
 ### Firefox
 
@@ -614,7 +618,7 @@ not advertising or tracking are the hosts to allow.
 | Virtual desktop switch | `fadedesktop` |
 | Maximise, modal dialogs | `maximize` and `sheet` effects enabled |
 | Translucency, dim inactive, wobbly windows | Enabled |
-| Blur | Disabled |
+| Blur | Strength 4, noise 3, saturation 150 % (default) |
 | `AnimationDurationFactor` in `kdeglobals` | `0.5` |
 | Decoration borders | `NoSides` |
 | Title bar buttons | Left `M` (window menu), right `IAX` (minimise, maximise, close) |

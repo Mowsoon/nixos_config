@@ -27,7 +27,9 @@ show the crash dialog. With the compositor gone, the launcher cannot reach a dis
 dumps core itself, which starts a new processor and a new launcher. The loop runs until the user
 manager stops, and its last crash is reported at the next login.
 
-Resolution: `modules/desktop/plasma.nix` masks `drkonqi-coredump-processor@`. Core dumps are still
+Resolution: `modules/desktop/plasma.nix` masks `drkonqi-coredump-processor@`, and the user units
+`drkonqi-coredump-pickup`, which runs the pending crashes again at login,
+`drkonqi-coredump-launcher` with its socket, and `drkonqi-sentry-postman`. Core dumps are still
 recorded by `systemd-coredump` and listed by `coredumpctl`; KDE no longer opens its crash dialog.
 
 ## How to verify the fix

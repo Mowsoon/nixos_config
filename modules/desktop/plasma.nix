@@ -28,21 +28,34 @@ in
       xserver.xkb.layout = "fr";
     };
 
-    systemd.services."drkonqi-coredump-processor@".enable = false;
-
-    systemd.services.restart-lock-screen-after-hibernation = {
-      description = "Replace the lock screen that went through hibernation";
-      after = [
-        "systemd-hibernate.service"
-        "systemd-suspend-then-hibernate.service"
-      ];
-      wantedBy = [
-        "systemd-hibernate.service"
-        "systemd-suspend-then-hibernate.service"
-      ];
-      serviceConfig = {
-        Type = "oneshot";
-        ExecStart = "-${pkgs.procps}/bin/pkill -f kscreenlocker_greet";
+    systemd = {
+      services = {
+        "drkonqi-coredump-processor@".enable = false;
+        restart-lock-screen-after-hibernation = {
+          description = "Replace the lock screen that went through hibernation";
+          after = [
+            "systemd-hibernate.service"
+            "systemd-suspend-then-hibernate.service"
+          ];
+          wantedBy = [
+            "systemd-hibernate.service"
+            "systemd-suspend-then-hibernate.service"
+          ];
+          serviceConfig = {
+            Type = "oneshot";
+            ExecStart = "-${pkgs.procps}/bin/pkill -f kscreenlocker_greet";
+          };
+        };
+      };
+      user = {
+        services = {
+          drkonqi-coredump-pickup.enable = false;
+          "drkonqi-coredump-launcher@".enable = false;
+          drkonqi-sentry-postman.enable = false;
+        };
+        sockets.drkonqi-coredump-launcher.enable = false;
+        timers.drkonqi-sentry-postman.enable = false;
+        paths.drkonqi-sentry-postman.enable = false;
       };
     };
 

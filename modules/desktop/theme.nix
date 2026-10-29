@@ -223,6 +223,14 @@ in
               activation.stylixLookAndFeel = lib.mkForce (lib.hm.dag.entryAnywhere "");
             };
 
+            xdg = {
+              autostart.entries = lib.mkForce [ ];
+              configFile = {
+                "fontconfig/conf.d/10-hm-fonts.conf".force = true;
+                "fontconfig/conf.d/10-hm-rendering.conf".force = true;
+              };
+            };
+
             fonts.fontconfig = {
               antialiasing = true;
               hinting = "slight";
@@ -257,7 +265,11 @@ in
                   windowOpenClose.animation = "scale";
                   minimization.animation = "magiclamp";
                   desktopSwitching.animation = "fade";
-                  blur.enable = false;
+                  blur = {
+                    enable = true;
+                    strength = 4;
+                    noiseStrength = 3;
+                  };
                   translucency.enable = true;
                   dimInactive.enable = true;
                   wobblyWindows.enable = true;
@@ -301,8 +313,6 @@ in
                 }
               ];
             };
-
-            xdg.autostart.entries = lib.mkForce [ ];
 
             gtk.iconTheme = {
               name = workspace.iconTheme;
