@@ -5,7 +5,7 @@
   ...
 }:
 let
-  konsole = lib.getExe' pkgs.kdePackages.konsole "konsole";
+  kitty = lib.getExe config.programs.kitty.package;
   nvim = lib.getExe' config.programs.nixvim.build.package "nvim";
   less = lib.getExe pkgs.less;
   repository = "${config.xdg.configHome}/nixos";
@@ -47,27 +47,30 @@ in
 {
   programs.plasma = {
     enable = true;
-    shortcuts."services/org.kde.krunner.desktop"._launch = [
-      "Alt+Space"
-      "Alt+F2"
-      "Search"
-      "Meta+Space"
-    ];
+    shortcuts = {
+      "services/org.kde.krunner.desktop"._launch = [
+        "Alt+Space"
+        "Alt+F2"
+        "Search"
+        "Meta+Space"
+      ];
+      "services/kitty.desktop"._launch = "Ctrl+Alt+T";
+    };
     hotkeys.commands = {
       show-aliases = {
         name = "Show the shell aliases";
         key = "Launch (5)";
-        command = "${konsole} -e ${less} ${aliasSheet}";
+        command = "${kitty} ${less} ${aliasSheet}";
       };
       show-editor-keymaps = {
         name = "Show the editor key mappings";
         key = "Launch (6)";
-        command = "${konsole} -e ${nvim} -R ${repository}/docs/architecture/editor-keymaps.md";
+        command = "${kitty} ${nvim} -R ${repository}/docs/architecture/editor-keymaps.md";
       };
       open-nixos-config = {
         name = "Open the NixOS configuration";
         key = "Launch (7)";
-        command = "${konsole} --workdir ${repository} -e ${nvim} .";
+        command = "${kitty} --directory ${repository} ${nvim} .";
       };
       start-focus = {
         name = "Start a focus timer on the keyboard";

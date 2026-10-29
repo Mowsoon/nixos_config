@@ -343,7 +343,7 @@ in
         "com.anthropic.Claude" = "#d97757";
         discord = "#5865f2";
         firefox = "#ff7139";
-        "org.kde.konsole" = "#2ecc71";
+        kitty = "#5fb3a8";
         "org.kde.kwrite" = "#3daee9";
         spotify = "#1db954";
       };

@@ -253,8 +253,9 @@ The Firefox theme belongs to the display part of theming and is not declared yet
 ### Fonts
 
 The fonts are Stylix roles, installed by the theme module. JetBrains Mono from the Nerd Fonts set
-is the monospace role, which covers the terminal and the editor, including the glyphs of the
-prompt. Noto Sans and Noto Serif cover text in most scripts, and Noto Color Emoji covers emoji.
+is the monospace role of Plasma and GTK applications; kitty, and the editor inside it, use Maple
+Mono NF, declared with the terminal in [User environment](user-environment.md#terminal). Noto
+Sans and Noto Serif cover text in most scripts, and Noto Color Emoji covers emoji.
 Plasma reads the fonts from the immutable `kdeglobals` of Stylix, so the font settings page can no
 longer change them. The rendering (antialiasing, slight hinting, vertical BGR subpixel order) is
 declared through the fontconfig options of Home Manager, since the font settings page of Plasma
@@ -700,7 +701,7 @@ not advertising or tracking are the hosts to allow.
 | --- | --- | --- |
 | G1 | `Launch (5)` | Shell aliases, generated from `programs.zsh.shellAliases`, opened in `less` |
 | G2 | `Launch (6)` | Working copy of `docs/architecture/editor-keymaps.md`, read-only in Neovim |
-| G3 | `Launch (7)` | `~/.config/nixos` opened in Neovim in Konsole |
+| G3 | `Launch (7)` | `~/.config/nixos` opened in Neovim in kitty |
 | G4 | `Launch (8)` | `rgb-focus 25m`: 25-minute focus timer on the function row |
 | Alt+G4 | `Alt+Launch (8)` | `rgb-focus stop` |
 | G5 | `Launch (9)` | Notification: free space on `/nix`, reboot pending when the kernel, initrd or modules differ from the booted ones |

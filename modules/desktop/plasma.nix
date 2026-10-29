@@ -67,6 +67,7 @@ in
     ];
 
     environment = {
+      plasma6.excludePackages = [ pkgs.kdePackages.konsole ];
       sessionVariables.NIXOS_OZONE_WL = "1";
       etc."xdg/ksmserverrc".text = ''
         [General]

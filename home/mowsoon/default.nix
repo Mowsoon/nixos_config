@@ -1,6 +1,7 @@
 {
   imports = [
     ./shell.nix
+    ./terminal.nix
     ./git.nix
     ./packages.nix
     ./audio.nix
