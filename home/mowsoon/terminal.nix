@@ -59,6 +59,10 @@ in
         color7 = "#b9c8c5";
         color15 = "#eef4f2";
       };
+      keybindings = {
+        "ctrl+shift+enter" = "launch --cwd=current";
+        "ctrl+shift+t" = "launch --cwd=current --type=tab";
+      };
     };
 
     plasma.configFile.kdeglobals.General = {
