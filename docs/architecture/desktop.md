@@ -86,6 +86,24 @@ picture of the account comes from `avatars/` of the private input the same way a
 `~/.face.icon`, which Plasma reads for the launcher and the lock screen while AccountsService has
 no icon for the user; `/var/lib/AccountsService` is not persisted, so it never has one.
 
+#### Effects and window decoration
+
+The effects, the animation speed, the title bar and the lock screen options were chosen by
+trying each value live in the session, then declared through plasma-manager. Windows open and
+close with a zoom, shrink into the panel when minimised, fade between virtual desktops, stretch
+when maximised, and a modal dialog slides out of its parent. Every animation runs at half its
+default duration. Moved windows wobble and turn translucent, and inactive windows are dimmed.
+
+Blur is off: the transparent Plasma style shows the wallpaper behind the panel and the menus as
+it is, which stayed readable. None of the enabled effects redraws the screen while nothing
+moves. The decoration has a border at the bottom only, the window menu on the left, and minimise,
+maximise and close on the right.
+
+The panel is not floating and is 52 pixels wide. Its opacity mode is not declared: Plasma only
+offers the adaptive and opaque modes with a Plasma style that ships opaque panel backgrounds, and
+Maia Transparent does not, so the panel stays translucent. The lock screen always shows its clock
+and shows media controls while something plays.
+
 #### Login screen
 
 SDDM runs its greeter as the `sddm` system user, before any session, and cannot read the home
@@ -591,7 +609,17 @@ not advertising or tracking are the hosts to allow.
 | GTK theme | `adw-gtk3` with the generated `gtk.css` |
 | Look-and-feel package | `stylix`, named immutable in `kdeglobals`, never applied |
 | Colour scheme | `Bordeaux`, applied by plasma-manager |
-| Panel | Left edge, floating, height 46 |
+| Window open and close | `scale` |
+| Minimise | `magiclamp` |
+| Virtual desktop switch | `fadedesktop` |
+| Maximise, modal dialogs | `maximize` and `sheet` effects enabled |
+| Translucency, dim inactive, wobbly windows | Enabled |
+| Blur | Disabled |
+| `AnimationDurationFactor` in `kdeglobals` | `0.5` |
+| Decoration borders | `NoSides` |
+| Title bar buttons | Left `M` (window menu), right `IAX` (minimise, maximise, close) |
+| Lock screen | Clock always shown, media controls shown |
+| Panel | Left edge, not floating, width 52, translucent (forced by the Plasma style) |
 | Panel widgets, top to bottom | `kickoff`, `pager`, `icontasks`, `marginsseparator`, `systemtray`, `digitalclock`, `showdesktop` |
 | Wallpaper | `wallpapers/desktop.png` of the private input, desktop and lock screen |
 | Account picture | `avatars/mowsoon.png` of the private input, linked as `~/.face.icon` |

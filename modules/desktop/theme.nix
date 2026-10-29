@@ -249,12 +249,46 @@ in
               };
               kscreenlocker.appearance = {
                 inherit wallpaper;
+                alwaysShowClock = true;
+                showMediaControls = true;
+              };
+              kwin = {
+                effects = {
+                  windowOpenClose.animation = "scale";
+                  minimization.animation = "magiclamp";
+                  desktopSwitching.animation = "fade";
+                  blur.enable = false;
+                  translucency.enable = true;
+                  dimInactive.enable = true;
+                  wobblyWindows.enable = true;
+                };
+                titlebarButtons = {
+                  left = [ "more-window-actions" ];
+                  right = [
+                    "minimize"
+                    "maximize"
+                    "close"
+                  ];
+                };
+              };
+              configFile = {
+                kdeglobals.KDE.AnimationDurationFactor = 0.5;
+                kwinrc = {
+                  Plugins = {
+                    maximizeEnabled = true;
+                    sheetEnabled = true;
+                  };
+                  "org.kde.kdecoration2" = {
+                    BorderSize = "NoSides";
+                    BorderSizeAuto = false;
+                  };
+                };
               };
               panels = [
                 {
                   location = "left";
-                  floating = true;
-                  height = 46;
+                  floating = false;
+                  height = 52;
                   widgets = [
                     "org.kde.plasma.kickoff"
                     "org.kde.plasma.pager"
