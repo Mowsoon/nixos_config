@@ -4,7 +4,7 @@
 
     settings = {
       options = {
-        theme = "rose-pine";
+        theme = "catppuccin-nvim";
         globalstatus = true;
         icons_enabled = false;
 

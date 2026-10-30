@@ -157,6 +157,10 @@ Neovim is configured with NixVim under `home/mowsoon/editor/`: core options, key
 commands in `cores/`, plugins grouped by role in `plugins/dev`, `plugins/ui` and
 `plugins/utils`. Plugins and language servers come from the Nix store; nothing is downloaded at
 editor start. Neovim is the default editor through `EDITOR`.
+The colour scheme is catppuccin mocha with its background and text shades replaced by deep violet
+ones, so the editor carries its own hue next to the bordeaux of Plasma and the verdigris of the
+terminal, while the syntax colours and the integrations with the plugins stay those of
+catppuccin. Italics are off and inactive windows are dimmed.
 The key mappings are listed in [Editor key mappings](editor-keymaps.md).
 
 ### Command-line tools and toolchains
@@ -453,6 +457,7 @@ into its database once; `~/.zsh_history` is read, not changed.
 | nix-index-database | <https://github.com/nix-community/nix-index-database> |
 | zsh completion system | <https://zsh.sourceforge.io/Doc/Release/Completion-System.html> |
 | powerlevel10k | <https://github.com/romkatv/powerlevel10k> |
+| catppuccin for Neovim | <https://github.com/catppuccin/nvim> |
 | ouch | <https://github.com/ouch-org/ouch> |
 | tealdeer | <https://tealdeer-rs.github.io/tealdeer/> |
 | kubectx | <https://github.com/ahmetb/kubectx> |
