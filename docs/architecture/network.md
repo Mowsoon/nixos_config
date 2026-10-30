@@ -212,6 +212,7 @@ second off (`makestep 1 -1`), and a timer resets the resolver's servers after ev
 | `allow-terraform`, `match-terraform-providers` | Terraform and the HashiCorp providers it downloads | `hosts/hephaestus/opensnitch.nix` |
 | `allow-helm`, `allow-kubectl`, `allow-flux`, `allow-clusterctl`, `allow-kind` | Kubernetes clients | `hosts/hephaestus/opensnitch.nix` |
 | `allow-trivy` | Vulnerability scanner | `hosts/hephaestus/opensnitch.nix` |
+| `allow-tealdeer` | `tldr`, which downloads the tldr pages once a week | `hosts/hephaestus/opensnitch.nix` |
 | `allow-spotify`, `allow-libreoffice`, `match-discord` | Desktop applications | `hosts/hephaestus/opensnitch.nix` |
 
 ### OpenSnitch daemon settings
