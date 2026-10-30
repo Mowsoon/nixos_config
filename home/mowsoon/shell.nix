@@ -243,7 +243,7 @@ in
           zle -N edit-command-line
           bindkey '^X^E' edit-command-line
         ''
-        "ns() { nix shell \${@/#/nixpkgs#} }"
+        "ns() { NS_PACKAGES=\"$*\" IN_NIX_SHELL=impure nix shell \${@/#/nixpkgs#} }"
         (lib.mkOrder 1100 "ZSH_AUTOSUGGEST_STRATEGY=(${lib.concatStringsSep " " config.programs.zsh.autosuggestion.strategy})")
       ];
     };

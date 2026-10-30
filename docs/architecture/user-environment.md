@@ -29,6 +29,15 @@ powerlevel10k prompt. The prompt configuration is the file `home/mowsoon/p10k.zs
 prompt block is placed first in `.zshrc` so the prompt appears before the plugins load. Aliases
 make `rm`, `cp` and `mv` interactive and give short names to the infrastructure clients.
 
+The prompt keeps the minimal style of powerlevel10k, in the ANSI colours of the terminal palette
+plus a muted grey-green for Git and the time. The right side adds segments only when they carry
+information: the exit code or signal name of a failed command, the battery below 20 % when
+discharging, the disk above 90 % (`/home` and `/nix` share the Btrfs volume, so this also watches
+the store), the Kubernetes context and namespace while a Kubernetes command is typed, the
+packages of a shell opened by `ns`, and direnv when it has loaded an `.envrc`. `nix shell` sets no
+variable of its own, and the kitty wrapper puts store paths in `PATH`, so `ns` marks its shell
+with `NS_PACKAGES` and `IN_NIX_SHELL` for the prompt to detect it.
+
 The zsh history saves 20 000 lines, is shared between open shells, drops consecutive repeats and
 skips commands typed with a leading space. It keeps older duplicates, because the `match_prev_cmd`
 suggestion strategy relies on the order of the history; searches skip the duplicates instead.
@@ -328,7 +337,7 @@ into its database once; `~/.zsh_history` is read, not changed.
 | `jb`, `jbu <unit>` | `journalctl -b`, `journalctl -b --no-pager -u <unit>` |
 | `jke` | `journalctl -k -p err`, kernel messages of priority error and above |
 | `gst`, `gaa`, `gcm` | `git status`, `git add -A`, `git commit -m` |
-| `ns <pkg>...` | Shell function: `nix shell nixpkgs#<pkg>...` |
+| `ns <pkg>...` | Shell function: `nix shell nixpkgs#<pkg>...`, shown in the prompt |
 | `, <command>` | comma: runs `<command>` from the package that provides it, without installing it |
 | `cpv` | `rsync -ah --info=progress2`, copy with progress |
 | `tldr <command>` | tealdeer: short examples of a command; the pages update once a week, after a first `tldr --update` |
@@ -443,6 +452,7 @@ into its database once; `~/.zsh_history` is read, not changed.
 | zsh-you-should-use | <https://github.com/MichaelAquilina/zsh-you-should-use> |
 | nix-index-database | <https://github.com/nix-community/nix-index-database> |
 | zsh completion system | <https://zsh.sourceforge.io/Doc/Release/Completion-System.html> |
+| powerlevel10k | <https://github.com/romkatv/powerlevel10k> |
 | ouch | <https://github.com/ouch-org/ouch> |
 | tealdeer | <https://tealdeer-rs.github.io/tealdeer/> |
 | kubectx | <https://github.com/ahmetb/kubectx> |
