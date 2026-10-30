@@ -133,7 +133,9 @@ Its palette, named verdigris, is its own: a petrol background with a teal accent
 bordeaux of Plasma and the violet of the editor while sharing their yellow and the teal secondary
 of Plasma. The background is slightly translucent and blurred by KWin. The font is Maple Mono NF,
 whose Nerd Font glyphs draw the prompt icons, at 10.5 points. The update check of kitty is off, so
-it opens no outbound connection.
+it opens no outbound connection. Through its shell integration, kitty knows when a command starts
+and ends: a command that runs longer than 10 seconds while the window is not focused raises a
+desktop notification when it finishes.
 
 kitty sets `TERM=xterm-kitty`, which most remote servers do not know. The system SSH client sends
 `TERM=xterm-256color` instead through `SetEnv`, which servers accept for `TERM` without any
@@ -373,6 +375,7 @@ into its database once; `~/.zsh_history` is read, not changed.
 | Scrollback | 10 000 lines |
 | New window, new tab | `Ctrl+Shift+Enter`, `Ctrl+Shift+T`, both in the current directory |
 | Update check | Off |
+| Command finished notification | Commands over 10 s, when the window is not focused |
 | Plasma default terminal | `TerminalApplication=kitty`, `TerminalService=kitty.desktop` in `kdeglobals` |
 | Launch shortcut | `Ctrl+Alt+T` |
 | SSH | `SetEnv TERM=xterm-256color` in `/etc/ssh/ssh_config` |

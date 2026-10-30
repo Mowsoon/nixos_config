@@ -22,6 +22,7 @@ in
         scrollback_lines = 10000;
         enable_audio_bell = false;
         update_check_interval = 0;
+        notify_on_cmd_finish = "unfocused 10.0";
         window_padding_width = 6;
         background_opacity = "0.92";
         background_blur = 1;
