@@ -79,6 +79,13 @@ fd lists the candidates,
 hidden files included and `.git` excluded. forgit adds interactive Git commands with previews. The
 fzf colours are ANSI indices, so they follow the terminal palette.
 
+`compinit` normally audits the permissions of every completion directory at each start, which
+took a quarter of the start-up time; the directories are in the Nix store or owned by the user.
+The completion dump is therefore named after the current system generation and Home Manager
+generation, and loaded with `compinit -C`, which skips the audit and the scan. The first shell
+after a rebuild finds no dump under the new name, rebuilds it and removes the old ones, under
+`~/.cache/zsh/`. `INTERACTIVE_COMMENTS` accepts `# comments` typed or pasted at the prompt.
+
 Variables read only by interactive shells (`MANPAGER`, the `FZF_*` settings) are exported in
 `.zshrc`. Home Manager session variables are sourced once per login session and guarded by a
 marker inherited by every terminal, so a change to them would wait for the next login.
@@ -150,7 +157,9 @@ Python are installed globally for the user. `~/go/bin` is on the `PATH` for tool
 
 Other languages and project-specific versions come from the development shell of each project.
 direnv with nix-direnv loads that shell when entering the project directory and caches it, so the
-shell survives a garbage collection until the project changes.
+shell survives a garbage collection until the project changes. direnv announces what it loads but
+hides the list of changed variables (`hide_env_diff`), which runs to dozens of lines for a Nix
+shell.
 
 ### Git
 
@@ -427,6 +436,7 @@ into its database once; `~/.zsh_history` is read, not changed.
 | atuin | <https://docs.atuin.sh/> |
 | zsh-you-should-use | <https://github.com/MichaelAquilina/zsh-you-should-use> |
 | nix-index-database | <https://github.com/nix-community/nix-index-database> |
+| zsh completion system | <https://zsh.sourceforge.io/Doc/Release/Completion-System.html> |
 | ouch | <https://github.com/ouch-org/ouch> |
 | jq | <https://jqlang.org/manual/> |
 | yq | <https://mikefarah.gitbook.io/yq> |

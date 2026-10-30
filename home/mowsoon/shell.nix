@@ -37,6 +37,22 @@ in
     zsh = {
       enable = true;
       enableCompletion = true;
+      completionInit = ''
+        autoload -U compinit
+        () {
+          local dir=''${XDG_CACHE_HOME:-$HOME/.cache}/zsh
+          local system=''${''${:-/run/current-system}:A:t}
+          local home=''${''${:-$HOME/.local/state/home-manager/gcroots/current-home}:A:t}
+          local dump=$dir/zcompdump-''${system[1,32]}-''${home[1,32]}
+          if [[ -f $dump ]]; then
+            compinit -C -d $dump
+          else
+            mkdir -p $dir
+            rm -f $dir/zcompdump-*(N)
+            compinit -d $dump
+          fi
+        }
+      '';
       autosuggestion = {
         enable = true;
         strategy = [
@@ -53,6 +69,7 @@ in
 
       setOptions = [
         "AUTO_PUSHD"
+        "INTERACTIVE_COMMENTS"
         "PUSHD_IGNORE_DUPS"
         "PUSHD_SILENT"
       ];
