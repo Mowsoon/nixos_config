@@ -94,6 +94,7 @@ in
         grep = "grep --color=auto";
         diff = "diff --color=auto";
         ip = "ip -color=auto";
+        cpv = "rsync -ah --info=progress2";
         kubectl = "kubecolor";
         k = "kubectl";
         f = "flux";
@@ -137,6 +138,23 @@ in
         {
           name = "fancy-ctrl-z";
           src = "${pkgs.oh-my-zsh}/share/oh-my-zsh/plugins/fancy-ctrl-z";
+        }
+        {
+          name = "clipboard";
+          src = "${pkgs.oh-my-zsh}/share/oh-my-zsh/lib";
+          file = "clipboard.zsh";
+        }
+        {
+          name = "copypath";
+          src = "${pkgs.oh-my-zsh}/share/oh-my-zsh/plugins/copypath";
+        }
+        {
+          name = "copyfile";
+          src = "${pkgs.oh-my-zsh}/share/oh-my-zsh/plugins/copyfile";
+        }
+        {
+          name = "copybuffer";
+          src = "${pkgs.oh-my-zsh}/share/oh-my-zsh/plugins/copybuffer";
         }
         {
           name = "dirhistory";
