@@ -51,10 +51,7 @@ in
     "flakes"
   ];
 
-  boot = {
-    initrd.systemd.enable = true;
-    loader.timeout = 1;
-  };
+  boot.loader.timeout = 1;
 
   custom = {
     secureBoot.enable = true;
