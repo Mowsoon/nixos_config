@@ -34,8 +34,24 @@
     sessionPath = [ "$HOME/go/bin" ];
   };
 
-  programs.direnv = {
-    enable = true;
-    nix-direnv.enable = true;
+  programs = {
+    direnv = {
+      enable = true;
+      nix-direnv.enable = true;
+    };
+
+    bat = {
+      enable = true;
+      config.theme = "base16";
+    };
+
+    eza = {
+      enable = true;
+      enableZshIntegration = false;
+      icons = "auto";
+      git = true;
+    };
+
+    kubecolor.enable = true;
   };
 }

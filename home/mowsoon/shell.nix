@@ -1,4 +1,9 @@
-{ lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   rebuild = action: "nixos-rebuild ${action} --flake ~/.config/nixos#hephaestus --elevate sudo";
 in
@@ -16,7 +21,10 @@ in
           "completion"
         ];
       };
-      syntaxHighlighting.enable = true;
+      syntaxHighlighting = {
+        enable = true;
+        highlighters = [ "brackets" ];
+      };
       autocd = true;
       defaultKeymap = "emacs";
 
@@ -44,9 +52,13 @@ in
         rm = "rm -I --preserve-root";
         cp = "cp -i";
         mv = "mv -i";
-        ll = "ls -l";
-        la = "ls -la";
+        ll = "eza -l";
+        la = "eza -la";
+        lt = "eza --tree --level=2";
         grep = "grep --color=auto";
+        diff = "diff --color=auto";
+        ip = "ip -color=auto";
+        kubectl = "kubecolor";
         k = "kubectl";
         f = "flux";
         cctl = "clusterctl";
@@ -93,6 +105,8 @@ in
         '')
         "source ${./p10k.zsh}"
         ''
+          export MANPAGER="sh -c 'col -bx | ${lib.getExe config.programs.bat.package} -l man -p'"
+          export MANROFFOPT=-c
           WORDCHARS=''${WORDCHARS//\/}
           bindkey '^[[H' beginning-of-line
           bindkey '^[OH' beginning-of-line
