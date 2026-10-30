@@ -254,6 +254,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `nixvim` | Editor configuration as Home Manager options |
 | `plasma-manager` | Plasma settings as Home Manager options, used for global shortcuts only |
 | `stylix` | Palette and fonts applied to Plasma and GTK, NixOS module with its Home Manager module |
+| `nix-index-database` | Prebuilt nix-index database, for the command-not-found handler and comma |
 | `nixos-private` | Private repository over SSH, `flake = false`: personal data imported by modules |
 
 ### Private input layout

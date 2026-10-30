@@ -15,6 +15,8 @@ in
 
   programs = {
     zoxide.enable = true;
+    nix-index.enable = true;
+    nix-index-database.comma.enable = true;
     fzf = {
       enable = true;
       historyWidget.command = "";
@@ -125,6 +127,18 @@ in
           src = "${pkgs.zsh-forgit}/share/zsh/zsh-forgit";
         }
         {
+          name = "you-should-use";
+          src = "${pkgs.zsh-you-should-use}/share/zsh/plugins/you-should-use";
+        }
+        {
+          name = "sudo";
+          src = "${pkgs.oh-my-zsh}/share/oh-my-zsh/plugins/sudo";
+        }
+        {
+          name = "fancy-ctrl-z";
+          src = "${pkgs.oh-my-zsh}/share/oh-my-zsh/plugins/fancy-ctrl-z";
+        }
+        {
           name = "dirhistory";
           src = "${pkgs.oh-my-zsh}/share/oh-my-zsh/plugins/dirhistory";
         }
@@ -175,6 +189,21 @@ in
           bindkey '^H' backward-kill-word
           bindkey '^[[3;5~' kill-word
           bindkey '^[[Z' reverse-menu-complete
+
+          expand-dots() {
+            if [[ $LBUFFER == (|*[[:space:]/]).. ]]; then
+              LBUFFER+=/..
+            else
+              LBUFFER+=.
+            fi
+          }
+          zle -N expand-dots
+          bindkey . expand-dots
+          bindkey -M isearch . self-insert
+
+          autoload -Uz edit-command-line
+          zle -N edit-command-line
+          bindkey '^X^E' edit-command-line
         ''
         "ns() { nix shell \${@/#/nixpkgs#} }"
         (lib.mkOrder 1100 "ZSH_AUTOSUGGEST_STRATEGY=(${lib.concatStringsSep " " config.programs.zsh.autosuggestion.strategy})")

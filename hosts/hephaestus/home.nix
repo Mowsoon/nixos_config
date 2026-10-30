@@ -31,6 +31,7 @@
     sharedModules = [
       inputs.nixvim.homeModules.nixvim
       inputs.plasma-manager.homeModules.plasma-manager
+      inputs.nix-index-database.homeModules.nix-index
     ];
     users.mowsoon.imports = [ ../../home/mowsoon ];
   };

@@ -15,7 +15,8 @@ Home Manager runs as a NixOS module, configured in `hosts/hephaestus/home.nix`:
 - `useGlobalPkgs` makes it use the system `pkgs`, with the same overlays and unfree allowlist;
 - `useUserPackages` installs user packages into the user profile of the system generation, so a
   rollback of the system also rolls back the user environment;
-- `sharedModules` loads the NixVim Home Manager module.
+- `sharedModules` loads the Home Manager modules of NixVim, plasma-manager and
+  nix-index-database.
 
 A file managed by Home Manager is read-only. A change made in an application that tries to write
 such a file fails, or is overwritten at the next activation: the change belongs in
@@ -48,6 +49,15 @@ propose the rest of a command from the history, preferring what usually follows 
 command (`match_prev_cmd`), then from the completion system when the history has no match; Right
 accepts the whole suggestion and Ctrl+Right one word of it. atuin prepends its own strategy when
 it loads, so the declared strategy list is set again after it.
+
+A few line editor additions save keystrokes. A dot typed after a standalone `..` becomes `/..`,
+so `...` reads `../..`, while `main...dev` stays intact. Ctrl+X Ctrl+E opens the command line in
+Neovim. The Oh My Zsh `sudo` plugin toggles a `sudo` prefix with Esc Esc, and `fancy-ctrl-z`
+turns Ctrl+Z on an empty line into `fg`, so the same key suspends Neovim and brings it back.
+zsh-you-should-use prints the alias of a command typed in full. A command that is not installed
+names the nixpkgs packages that provide it, from the prebuilt nix-index database of the
+`nix-index-database` input, and comma (`, <command>`) runs such a command once without installing
+it. The database is a flake input, so `nix flake update` refreshes it.
 
 Plugins come from nixpkgs through `programs.zsh.plugins` or a dedicated Home Manager module, so
 the flake lock pins them and no plugin manager runs. An Oh My Zsh plugin that stands alone is
@@ -299,6 +309,7 @@ into its database once; `~/.zsh_history` is read, not changed.
 | `jke` | `journalctl -k -p err`, kernel messages of priority error and above |
 | `gst`, `gaa`, `gcm` | `git status`, `git add -A`, `git commit -m` |
 | `ns <pkg>...` | Shell function: `nix shell nixpkgs#<pkg>...` |
+| `, <command>` | comma: runs `<command>` from the package that provides it, without installing it |
 | `ga`, `gd`, `glo`, `gcb` | forgit: interactive `git add`, `diff`, `log`, branch checkout; `gi` downloads `.gitignore` templates |
 
 ### Line editor keys
@@ -311,6 +322,10 @@ into its database once; `~/.zsh_history` is read, not changed.
 | Ctrl+Backspace, Ctrl+Delete | `backward-kill-word`, `kill-word` |
 | Shift+Tab | `reverse-menu-complete` |
 | Right | Accepts the whole suggestion |
+| `.` after a standalone `..` | Inserts `/..` |
+| Ctrl+X Ctrl+E | Edit the command line in Neovim |
+| Esc Esc | Add or remove `sudo` in front of the line |
+| Ctrl+Z on an empty line | `fg`, resumes the last suspended job |
 | Tab | Completion in fzf; `<` and `>` switch between groups |
 | `**` then Tab | fzf path completion |
 | Ctrl+T | Insert a file path, with preview |
@@ -399,6 +414,8 @@ into its database once; `~/.zsh_history` is read, not changed.
 | bat | <https://github.com/sharkdp/bat> |
 | fzf | <https://junegunn.github.io/fzf/> |
 | atuin | <https://docs.atuin.sh/> |
+| zsh-you-should-use | <https://github.com/MichaelAquilina/zsh-you-should-use> |
+| nix-index-database | <https://github.com/nix-community/nix-index-database> |
 | zsh-history-substring-search | <https://github.com/zsh-users/zsh-history-substring-search> |
 | fzf-tab | <https://github.com/Aloxaf/fzf-tab> |
 | forgit | <https://github.com/wfxr/forgit> |
