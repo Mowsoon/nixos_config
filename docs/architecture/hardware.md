@@ -57,6 +57,13 @@ management settings are the result of two incidents:
 The driver reads its options only when it is loaded: a change to them takes effect after
 `nixos-rebuild boot` and a real reboot, never after a resume from hibernation.
 
+The `nvidia`, `nvidia_modeset` and `nvidia_drm` modules load in the initrd, so the boot splash
+draws on the NVIDIA framebuffer from the first frame and the display does not switch drivers on
+its way to the login screen. The initrd then carries the GSP firmware of the driver and the same
+module options as the running system, and grows from about 31 MB to about 124 MB compressed; the
+4 GiB ESP holds ten generations of it. The driver is loaded before the hibernation image is
+resumed, so a hibernation and resume cycle is part of validating any change to it.
+
 Video decoding goes through `nvidia-vaapi-driver`, which translates VA-API, the decoding interface
 Firefox and most players use, to NVDEC, the decoder of the GPU. It uses its `direct` backend,
 because the EGL one no longer works since driver 525. That backend calls an internal interface of
@@ -363,6 +370,7 @@ an attribute crosses its failure threshold.
 | `hardware.nvidia.open` | `true` |
 | `hardware.nvidia.package` | `nvidiaPackages.stable` of the running kernel |
 | `hardware.nvidia.modesetting.enable` | `true` |
+| `boot.initrd.kernelModules` | `nvidia`, `nvidia_modeset`, `nvidia_drm` |
 | `hardware.nvidia.powerManagement.enable` | `true` |
 | `hardware.nvidia.powerManagement.kernelSuspendNotifier` | `false` |
 | Suspend-then-hibernate unit and hook | `nvidia-suspend-then-hibernate`, `/etc/systemd/system-sleep/nvidia` |

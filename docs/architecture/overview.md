@@ -318,6 +318,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `custom.network.opensnitch` | `network/opensnitch.nix` | Outbound firewall |
 | `custom.network.time` | `network/time.nix` | chrony with NTS |
 | `custom.plasma` | `desktop/plasma.nix` | Plasma 6 and SDDM |
+| `custom.bootSplash` | `desktop/boot-splash.nix` | Plymouth splash, quiet boot, console palette and keymap from the initrd on |
 | `custom.theme` | `desktop/theme.nix` | Bordeaux palette and fonts through Stylix, recoloured Plasma themes through plasma-manager, login screen |
 | `custom.firefox` | `desktop/firefox.nix` | Firefox policies, extensions and settings |
 | `custom.claudeDesktop` | `desktop/claude-desktop.nix` | Claude desktop application |

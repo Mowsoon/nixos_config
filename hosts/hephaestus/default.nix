@@ -32,6 +32,7 @@ in
     ../../modules/core/nix-maintenance.nix
     ../../modules/core/memory.nix
     ../../modules/virtualisation/docker.nix
+    ../../modules/desktop/boot-splash.nix
     ../../modules/desktop/claude-desktop.nix
     ../../modules/desktop/firefox.nix
     ../../modules/desktop/plasma.nix
@@ -67,6 +68,8 @@ in
     plasma.enable = true;
 
     theme.enable = true;
+
+    bootSplash.enable = true;
 
     firefox.enable = true;
 

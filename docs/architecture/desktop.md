@@ -45,8 +45,9 @@ session has lost the GPUs, which happens at every sleep, resume and shutdown bec
 `modules/desktop/theme.nix` declares the palette and the fonts through Stylix, imported as a
 NixOS module that also loads its Home Manager module. Stylix themes nothing on its own
 (`autoEnable` is off): only the KDE, GTK, zathura and mpv targets are enabled, so the desktop
-applications share the palette while the terminal, the editor, the console and the boot screens
-keep their own colours.
+applications share the palette while the terminal and the editor keep their own colours. The
+boot splash module enables the Plymouth and console targets, described in
+[Boot chain](boot-chain.md#boot-splash).
 
 The palette is a dark base16 scheme named Bordeaux, written in Nix. `base00` to `base07` run from
 the darkest background to the lightest text, `base0D` is the accent and the selection, the other
@@ -613,7 +614,7 @@ not advertising or tracking are the hosts to allow.
 | Setting | Value |
 | --- | --- |
 | `stylix.autoEnable` | `false` |
-| Stylix targets | `kde` and `gtk` (NixOS and Home Manager), `zathura` and `mpv` (Home Manager), Flatpak support off |
+| Stylix targets | `kde` and `gtk` (NixOS and Home Manager), `zathura` and `mpv` (Home Manager), `plymouth` and `console` (NixOS, from `desktop/boot-splash.nix`), Flatpak support off |
 | `stylix.polarity` | `dark` |
 | GTK theme | `adw-gtk3` with the generated `gtk.css` |
 | Look-and-feel package | `stylix`, named immutable in `kdeglobals`, never applied |

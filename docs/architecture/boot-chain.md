@@ -53,6 +53,19 @@ the TPM2 unseal fails. The enrollment of these slots is a manual procedure, desc
 [LUKS enrollment](../operations/luks-enrollment.md), because each slot produces a secret bound to
 the machine.
 
+### Boot splash
+
+Plymouth starts in the initrd and shows the NixOS logo turning on the bordeaux background of the
+desktop palette until the login screen. The kernel, udev and the initrd print errors only, and
+Escape during the splash shows the messages; `journalctl -b` keeps all of them. When the TPM2
+unseal fails, the passphrase prompt appears inside the splash. The keymap and the console palette
+are copied into the initrd (`console.earlySetup`), so the passphrase and the recovery key are typed
+with the French layout, and the emergency shell uses the same colours as the virtual consoles.
+
+Changing the splash, the initrd or the kernel command line changes the measurements of the boot
+images, never PCR 7, which records only the Secure Boot state and keys, so the TPM2 unlock is not
+affected.
+
 ### Resume and root rollback
 
 The initrd runs `systemd-hibernate-resume` first. When the system hibernated, systemd recorded
@@ -190,6 +203,7 @@ Prerequisites: the LUKS recovery key and the BitLocker recovery key are availabl
 | `custom.secureBoot.pkiBundle` | `/var/lib/sbctl` | Directory of the enrolled keys, persisted |
 | `custom.luks.tpm2Unlock` | `false` | Adds `tpm2-device=auto` to the crypttab entry of the container |
 | `custom.luks.name` | `cryptroot` | Name of the LUKS mapping declared by disko |
+| `custom.bootSplash.enable` | `false` | Plymouth splash with the Stylix theme, quiet boot, console palette and keymap in the initrd |
 | `custom.rootRollback.enable` | `false` | Installs `rollback-root.service` in the initrd |
 | `custom.rootRollback.device` | None | Unlocked device holding the Btrfs filesystem |
 | `custom.rootRollback.subvolume` | `@root` | Subvolume mounted on `/` |
