@@ -23,6 +23,7 @@
       lynis
       trivy
       kubectl
+      kubectx
       kubernetes-helm
       fluxcd
       clusterctl

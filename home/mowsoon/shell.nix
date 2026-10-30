@@ -236,6 +236,9 @@ in
           bindkey . expand-dots
           bindkey -M isearch . self-insert
 
+          autoload -U +X bashcompinit && bashcompinit
+          complete -o nospace -C ${lib.getExe pkgs.terraform} terraform
+
           autoload -Uz edit-command-line
           zle -N edit-command-line
           bindkey '^X^E' edit-command-line
