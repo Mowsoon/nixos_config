@@ -15,7 +15,22 @@ in
 
   programs = {
     zoxide.enable = true;
-    fzf.enable = true;
+    fzf = {
+      enable = true;
+      historyWidget.command = "";
+    };
+
+    atuin = {
+      enable = true;
+      flags = [ "--disable-up-arrow" ];
+      forceOverwriteSettings = true;
+      settings = {
+        auto_sync = false;
+        update_check = false;
+        enter_accept = false;
+        workspaces = true;
+      };
+    };
 
     zsh = {
       enable = true;
@@ -23,7 +38,7 @@ in
       autosuggestion = {
         enable = true;
         strategy = [
-          "history"
+          "match_prev_cmd"
           "completion"
         ];
       };
@@ -50,7 +65,20 @@ in
         save = 20000;
         append = true;
         share = true;
-        ignoreAllDups = true;
+        ignoreDups = true;
+        findNoDups = true;
+      };
+
+      historySubstringSearch = {
+        enable = true;
+        searchUpKey = [
+          "^[[A"
+          "^[OA"
+        ];
+        searchDownKey = [
+          "^[[B"
+          "^[OB"
+        ];
       };
 
       shellAliases = {
@@ -135,6 +163,7 @@ in
         ''
           export MANPAGER="sh -c 'col -bx | ${bat} -l man -p'"
           export MANROFFOPT=-c
+          export HISTORY_SUBSTRING_SEARCH_ENSURE_UNIQUE=1
           WORDCHARS=''${WORDCHARS//\/}
           bindkey '^[[H' beginning-of-line
           bindkey '^[OH' beginning-of-line
@@ -148,6 +177,7 @@ in
           bindkey '^[[Z' reverse-menu-complete
         ''
         "ns() { nix shell \${@/#/nixpkgs#} }"
+        (lib.mkOrder 1100 "ZSH_AUTOSUGGEST_STRATEGY=(${lib.concatStringsSep " " config.programs.zsh.autosuggestion.strategy})")
       ];
     };
   };
