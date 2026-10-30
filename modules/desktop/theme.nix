@@ -321,6 +321,8 @@ in
 
             stylix.targets = {
               kde.enable = true;
+              zathura.enable = true;
+              mpv.enable = true;
               gtk = {
                 enable = true;
                 flatpakSupport.enable = false;

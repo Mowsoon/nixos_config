@@ -44,8 +44,9 @@ session has lost the GPUs, which happens at every sleep, resume and shutdown bec
 
 `modules/desktop/theme.nix` declares the palette and the fonts through Stylix, imported as a
 NixOS module that also loads its Home Manager module. Stylix themes nothing on its own
-(`autoEnable` is off): only the KDE and GTK targets are enabled, so the terminal, the editor, the
-console and the boot screens keep their own colours.
+(`autoEnable` is off): only the KDE, GTK, zathura and mpv targets are enabled, so the desktop
+applications share the palette while the terminal, the editor, the console and the boot screens
+keep their own colours.
 
 The palette is a dark base16 scheme named Bordeaux, written in Nix. `base00` to `base07` run from
 the darkest background to the lightest text, `base0D` is the accent and the selection, the other
@@ -59,6 +60,9 @@ slots carry the semantic colours (errors, warnings, success, links).
   and deletes from the user files the decoration, the Plasma style and the splash screen that
   plasma-manager writes there, and marking those keys immutable in the user file does not stop
   it. plasma-manager applies the `Bordeaux` scheme instead.
+- zathura and mpv targets: the interface colours of the PDF viewer and of the on-screen text of
+  the video player, with Noto Sans for the player text and subtitles. zathura keeps document pages
+  as they are; Ctrl+R recolours them in the palette.
 - GTK target: the `adw-gtk3` theme for GTK 3 and GTK 4, recoloured by a generated `gtk.css`, and
   the GTK font. Home Manager owns `settings.ini` and `gtk.css` of both versions.
 - The KDE target turns off the `gtkconfig` module of kded, which used to copy the Plasma
@@ -609,7 +613,7 @@ not advertising or tracking are the hosts to allow.
 | Setting | Value |
 | --- | --- |
 | `stylix.autoEnable` | `false` |
-| Stylix targets | `kde` and `gtk` (NixOS and Home Manager), Flatpak support off |
+| Stylix targets | `kde` and `gtk` (NixOS and Home Manager), `zathura` and `mpv` (Home Manager), Flatpak support off |
 | `stylix.polarity` | `dark` |
 | GTK theme | `adw-gtk3` with the generated `gtk.css` |
 | Look-and-feel package | `stylix`, named immutable in `kdeglobals`, never applied |
