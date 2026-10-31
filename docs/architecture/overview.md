@@ -74,7 +74,11 @@ to the user, not to root: the flake is evaluated as the user, and only the activ
 elevated privileges, as described in [How to apply a change to the
 workstation](#how-to-apply-a-change-to-the-workstation).
 
-A fork has no access to this repository. It must provide its own source tree with the same
+A second private repository, `DublinLife`, is a flake input of its own, `dublinlife`: a personal
+site whose package and Home Manager module the user environment imports, described in [User
+environment](user-environment.md#dublinlife). It is fetched over SSH with the same key.
+
+A fork has no access to these repositories. It must provide its own source tree with the same
 layout, either by changing the URL of the input or by overriding it at each command, as described
 in [How to build without the private repository](#how-to-build-without-the-private-repository).
 
@@ -211,17 +215,38 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
    theme of the same kind works once its name is changed in that module. `wallpapers/desktop.png`
    and `avatars/mowsoon.png` are any images.
 
-2. Point the input at that directory, either permanently or for one command.
+2. Create a second directory holding a `flake.nix` that replaces DublinLife: its Home Manager
+   module accepts the `services.dublinlife` settings and does nothing with them.
 
-   ```bash
-   nix flake lock --override-input nixos-private path:<directory>
-   nix flake check --override-input nixos-private path:<directory> --no-write-lock-file
+   ```nix
+   {
+     outputs = _: {
+       homeManagerModules.default =
+         { lib, ... }:
+         {
+           options.services.dublinlife = lib.mkOption {
+             type = lib.types.attrsOf lib.types.anything;
+             default = { };
+           };
+         };
+     };
+   }
    ```
 
-   `<directory>` is the absolute path of the directory created in step 1. The first command
-   writes the override into `flake.lock`; the second applies it to one command only and leaves
-   `flake.lock` untouched. A fork can instead set the `nixos-private` URL in `flake.nix` to its
-   own repository.
+3. Point both inputs at these directories, either permanently or for one command.
+
+   ```bash
+   nix flake lock --override-input nixos-private path:<directory> \
+     --override-input dublinlife path:<stub>
+   nix flake check --override-input nixos-private path:<directory> \
+     --override-input dublinlife path:<stub> --no-write-lock-file
+   ```
+
+   `<directory>` is the absolute path of the directory created in step 1, `<stub>` the one created
+   in step 2. The first command writes the overrides into `flake.lock`; the second applies them to
+   one command only and leaves `flake.lock` untouched. A fork can instead set the URLs in
+   `flake.nix` to its own repositories, or remove the `dublinlife` input with its line in
+   `hosts/hephaestus/home.nix` and the file `home/mowsoon/dublinlife.nix`.
 
 ## Reference
 
@@ -256,6 +281,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `stylix` | Palette and fonts applied to Plasma and GTK, NixOS module with its Home Manager module |
 | `nix-index-database` | Prebuilt nix-index database, for the command-not-found handler and comma |
 | `nixos-private` | Private repository over SSH, `flake = false`: personal data imported by modules |
+| `dublinlife` | Private repository over SSH: the DublinLife site package and its Home Manager module |
 
 ### Private input layout
 

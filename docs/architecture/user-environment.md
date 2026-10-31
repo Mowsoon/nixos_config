@@ -15,8 +15,8 @@ Home Manager runs as a NixOS module, configured in `hosts/hephaestus/home.nix`:
 - `useGlobalPkgs` makes it use the system `pkgs`, with the same overlays and unfree allowlist;
 - `useUserPackages` installs user packages into the user profile of the system generation, so a
   rollback of the system also rolls back the user environment;
-- `sharedModules` loads the Home Manager modules of NixVim, plasma-manager and
-  nix-index-database.
+- `sharedModules` loads the Home Manager modules of NixVim, plasma-manager, nix-index-database
+  and DublinLife.
 
 A file managed by Home Manager is read-only. A change made in an application that tries to write
 such a file fails, or is overwritten at the next activation: the change belongs in
@@ -213,6 +213,25 @@ the service loads it at start through the EasyEffects socket. The preset is read
 changed in the EasyEffects window is lost at the next start unless it is exported back into the
 repository. The chain and its tuning are described in [Hardware](hardware.md).
 
+### DublinLife
+
+DublinLife is a personal reference site for everyday life in Dublin: recipes, products and where
+to buy them, appliance guides, routines, local procedures and notes. Its code and content live in
+a private repository of their own, consumed as the `dublinlife` flake input; its flake exports
+the package and a Home Manager module, which `home/mowsoon/dublinlife.nix` enables.
+
+The module declares a user socket on `127.0.0.1:8420` and a service started by that socket. No
+process runs until the first request; the server exits after ten minutes without requests, and
+systemd starts it again on the next one. Browsers resolve every `*.localhost` name to the loopback
+address, so the site is reached at `http://dublinlife.localhost:8420`; the server refuses any
+other host name, which blocks DNS rebinding from other sites.
+
+The server reads its Markdown content from the working copy in `~/Projects/DublinLife/content` on
+every request, so an edited sheet shows on the next refresh, without a rebuild. A change to the
+code reaches the workstation only through `flake.lock`, as described in [How to update
+DublinLife](#how-to-update-dublinlife). The socket listens on loopback only, so the firewall stays
+closed, and the server opens no outbound connection, so it needs no OpenSnitch rule.
+
 ### Default applications
 
 The association between file types and applications is declared in `home/mowsoon/mime.nix`.
@@ -313,6 +332,27 @@ into its database once; `~/.zsh_history` is read, not changed.
 
 3. Copy the printed hash into `sha256`, then apply the configuration.
 
+## How to update DublinLife
+
+1. Commit and push the change in `~/Projects/DublinLife`.
+2. Move the input to the pushed commit, as the user:
+
+   ```bash
+   nix flake update dublinlife
+   ```
+
+3. Apply the generation with `nixos-rebuild test`, then `switch`, as described in
+   [Overview](overview.md#how-to-apply-a-change-to-the-workstation).
+4. Stop the running server so that the next request starts the new one:
+
+   ```bash
+   systemctl --user stop dublinlife.service
+   ```
+
+   The socket stays active and keeps listening.
+
+An edit under `content/` needs none of these steps: refresh the page.
+
 ## Reference
 
 ### Files under `home/mowsoon/`
@@ -330,6 +370,7 @@ into its database once; `~/.zsh_history` is read, not changed.
 | `desktop.nix` | Desktop applications, OpenSnitch UI |
 | `mime.nix` | Default applications, zathura, mpv |
 | `shortcuts.nix` | Plasma global shortcuts: KRunner and the G keys of the G915 X |
+| `dublinlife.nix` | DublinLife site, started by its systemd user socket |
 | `editor/nixvim.nix` | NixVim entry point |
 | `editor/cores/` | Options, key mappings, commands, colour scheme |
 | `editor/plugins/` | Plugins grouped in `dev`, `ui` and `utils` |
@@ -474,6 +515,7 @@ into its database once; `~/.zsh_history` is read, not changed.
 | atuin | <https://docs.atuin.sh/> |
 | zsh-you-should-use | <https://github.com/MichaelAquilina/zsh-you-should-use> |
 | nix-index-database | <https://github.com/nix-community/nix-index-database> |
+| systemd socket units | <https://www.freedesktop.org/software/systemd/man/latest/systemd.socket.html> |
 | zsh completion system | <https://zsh.sourceforge.io/Doc/Release/Completion-System.html> |
 | powerlevel10k | <https://github.com/romkatv/powerlevel10k> |
 | catppuccin for Neovim | <https://github.com/catppuccin/nvim> |

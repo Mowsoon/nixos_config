@@ -56,6 +56,11 @@
       url = "git+ssh://git@github.com/Mowsoon/nixos_private";
       flake = false;
     };
+
+    dublinlife = {
+      url = "git+ssh://git@github.com/Mowsoon/DublinLife";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =

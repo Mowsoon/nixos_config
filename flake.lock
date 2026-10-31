@@ -103,6 +103,26 @@
         "type": "github"
       }
     },
+    "dublinlife": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1793487330,
+        "narHash": "sha256-/isRLfG4wcShEVvVORve7SfSzOwdC/yyJYfL+7/tepE=",
+        "ref": "refs/heads/main",
+        "rev": "a7b541d808dfbad2f93c49dffbcb1d39792bd1b0",
+        "revCount": 2,
+        "type": "git",
+        "url": "ssh://git@github.com/Mowsoon/DublinLife"
+      },
+      "original": {
+        "type": "git",
+        "url": "ssh://git@github.com/Mowsoon/DublinLife"
+      }
+    },
     "firefox-gnome-theme": {
       "flake": false,
       "locked": {
@@ -453,6 +473,7 @@
     "root": {
       "inputs": {
         "disko": "disko",
+        "dublinlife": "dublinlife",
         "home-manager": "home-manager",
         "impermanence": "impermanence",
         "lanzaboote": "lanzaboote",

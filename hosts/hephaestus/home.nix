@@ -33,6 +33,7 @@
       inputs.nixvim.homeModules.nixvim
       inputs.plasma-manager.homeModules.plasma-manager
       inputs.nix-index-database.homeModules.nix-index
+      inputs.dublinlife.homeManagerModules.default
     ];
     users.mowsoon.imports = [ ../../home/mowsoon ];
   };

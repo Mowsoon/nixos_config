@@ -8,6 +8,7 @@
     ./desktop.nix
     ./mime.nix
     ./shortcuts.nix
+    ./dublinlife.nix
     ./editor/nixvim.nix
   ];
 

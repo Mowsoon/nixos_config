@@ -24,8 +24,8 @@ filtered per executable and DNS is encrypted. The design of each part is describ
 ## Getting started
 
 Prerequisites: Nix with the `nix-command` and `flakes` experimental features enabled.
-The `hephaestus` systems also import a private input that a fork cannot read; see [Build without
-the private repository](docs/architecture/overview.md#how-to-build-without-the-private-repository).
+The `hephaestus` systems also import two private inputs that a fork cannot read; see
+[the fork procedure](docs/architecture/overview.md#how-to-build-without-the-private-repository).
 
 1. Generate the password hash of the `mowsoon` user for the test machine.
 
