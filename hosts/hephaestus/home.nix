@@ -20,6 +20,7 @@
   custom.unfreePackages = [
     "discord"
     "discord-unwrapped"
+    "obsidian"
     "spotify"
     "terraform"
     "unrar"

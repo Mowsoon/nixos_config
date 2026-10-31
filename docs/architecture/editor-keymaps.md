@@ -271,6 +271,16 @@ deletes both.
 | `b`, `B`, `r` as surround characters | Stand for `)`, `}` and `]`, which avoids AltGr: `ysiwB` gives `{word}` | Plugin |
 | `(` / `)` as surround characters | With / without spaces inside: `( word )` / `(word)` | Plugin |
 
+### Markdown
+
+Markdown files are rendered in place: headings, tables, checkboxes and callouts such as
+`> [!note]` are drawn, and the line under the cursor shows its raw text. Obsidian, opened on the
+same directory, shows the full rendering, Mermaid graphs included.
+
+| Keys | Action | Origin |
+| --- | --- | --- |
+| `:RenderMarkdown toggle` | Switch between the rendered and the raw view of the file | Plugin |
+
 ### Macros
 
 | Keys | Action | Origin |

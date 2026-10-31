@@ -166,7 +166,9 @@ The colour scheme is catppuccin mocha with its background and text shades replac
 ones, so the editor carries its own hue next to the bordeaux of Plasma and the verdigris of the
 terminal, while the syntax colours and the integrations with the plugins stay those of
 catppuccin. Italics are off and inactive windows are dimmed. Diagnostics show their message at
-the end of the line, errors first, since Neovim no longer does by default.
+the end of the line, errors first, since Neovim no longer does by default. Markdown files are
+rendered in place by render-markdown: headings, tables, checkboxes and callouts are drawn, and the
+line under the cursor shows its raw text for editing; Mermaid blocks stay as code.
 Started without argument, Neovim shows the alpha dashboard; started on a directory, it opens the
 neo-tree explorer on it. alpha redraws itself whenever any window is resized, but can keep the
 identifier of a closed window and then fails on it; its redraw is wrapped to drop closed windows
@@ -197,7 +199,11 @@ Phase 8 subject of the migration roadmap.
 
 ### Desktop applications and user services
 
-Discord, Spotify, LibreOffice and Solaar are user packages. Two user services run in the graphical
+Discord, Spotify, LibreOffice, Solaar and Obsidian are user packages. Obsidian renders the Markdown
+notes edited in Neovim, Mermaid graphs and callouts included, and reloads a file when Neovim saves
+it; Home Manager keeps its in-app updates off in `~/.config/obsidian/obsidian.json`, so its version
+is the one of nixpkgs, and leaves the list of vaults to the application. Two user services run in
+the graphical
 session: the OpenSnitch UI, which shows the prompts of the outbound firewall, and EasyEffects, the
 audio effects processor. Their own settings are kept in the persistent home.
 

@@ -7,5 +7,6 @@
     ./alpha.nix
     ./bufferline.nix
     ./fidget.nix
+    ./render-markdown.nix
   ];
 }

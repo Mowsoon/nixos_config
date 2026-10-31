@@ -25,6 +25,7 @@
           nix
           terraform
           markdown
+          markdown_inline
           lua
           make
         ];

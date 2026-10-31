@@ -7,5 +7,7 @@
     solaar
   ];
 
+  programs.obsidian.enable = true;
+
   services.opensnitch-ui.enable = true;
 }
