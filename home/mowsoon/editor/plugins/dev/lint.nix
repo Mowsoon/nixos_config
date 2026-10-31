@@ -35,17 +35,5 @@
         ];
       };
     };
-
-    keymaps = [
-      {
-        mode = "n";
-        key = "<leader>cl";
-        action = ''<cmd>lua require("lint").try_lint()<CR>'';
-        options = {
-          silent = true;
-          desc = "Trigger linter (nvim-lint)";
-        };
-      }
-    ];
   };
 }

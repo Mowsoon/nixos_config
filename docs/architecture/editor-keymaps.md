@@ -100,6 +100,42 @@ attached to.
 | `Ctrl+O` / `Ctrl+I` | Go back / forward to the previous / next position, such as after `gd` | Native |
 | `<leader>cf` | Format the file; saving formats it too | Config |
 
+### Diagnostics
+
+Errors and warnings of the language server and of the linter are underlined, marked in the margin
+and their message shows at the end of the line, errors first. The linter runs when a file is opened
+or saved. Trouble lists them in a panel, like the problems panel of an IDE.
+
+| Keys | Action | Origin |
+| --- | --- | --- |
+| `]d` / `[d` | Go to the next / previous diagnostic; needs AltGr on an AZERTY keyboard | Native |
+| `Ctrl+W d` | Show the full message of the diagnostic under the cursor in a popup | Native |
+| `<leader>xx` | List the diagnostics of the project in Trouble | Config |
+| `<leader>xb` | List the diagnostics of the current file in Trouble | Config |
+| `<leader>cs` | List the symbols of the file in Trouble, like an outline panel | Config |
+| `<leader>cl` | List the definitions, references and implementations of the symbol in Trouble | Config |
+| `<leader>xq` / `<leader>xl` | Show the quickfix list / location list in Trouble | Config |
+
+In the Trouble panel:
+
+| Keys | Action | Origin |
+| --- | --- | --- |
+| `Enter` | Go to the location | Plugin |
+| `p` | Preview the location | Plugin |
+| `q` | Close the panel | Plugin |
+| `?` | List every key of the panel | Plugin |
+
+The quickfix list is one list for the whole editor, filled for example by `Ctrl+Q` in a search. The
+location list belongs to a window, filled for example by `gO`.
+
+| Keys | Action | Origin |
+| --- | --- | --- |
+| `:copen` / `:cclose` | Open / close the quickfix list | Native |
+| `:cn` / `:cp` | Go to the next / previous entry of the quickfix list | Native |
+| `]q` / `[q` | Same as `:cn` / `:cp`; needs AltGr on an AZERTY keyboard | Native |
+| `:lopen`, `:ln`, `:lp` | Same for the location list; `]l` / `[l` with AltGr | Native |
+| `Enter` in a list | Go to the location of the entry | Native |
+
 ### Git
 
 Fugitive runs the Git commands of the repository; gitsigns marks the changed lines in the margin

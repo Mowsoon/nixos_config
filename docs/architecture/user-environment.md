@@ -163,7 +163,8 @@ through `EDITOR`.
 The colour scheme is catppuccin mocha with its background and text shades replaced by deep violet
 ones, so the editor carries its own hue next to the bordeaux of Plasma and the verdigris of the
 terminal, while the syntax colours and the integrations with the plugins stay those of
-catppuccin. Italics are off and inactive windows are dimmed.
+catppuccin. Italics are off and inactive windows are dimmed. Diagnostics show their message at
+the end of the line, errors first, since Neovim no longer does by default.
 Started without argument, Neovim shows the alpha dashboard; started on a directory, it opens the
 neo-tree explorer on it. alpha redraws itself whenever any window is resized, but can keep the
 identifier of a closed window and then fails on it; its redraw is wrapped to drop closed windows

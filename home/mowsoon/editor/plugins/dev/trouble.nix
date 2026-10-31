@@ -16,7 +16,7 @@
       }
       {
         mode = "n";
-        key = "<leader>xX";
+        key = "<leader>xb";
         action = "<cmd>Trouble diagnostics toggle filter.buf=0<CR>";
         options = {
           silent = true;
@@ -43,7 +43,7 @@
       }
       {
         mode = "n";
-        key = "<leader>xL";
+        key = "<leader>xl";
         action = "<cmd>Trouble loclist toggle<CR>";
         options = {
           silent = true;
@@ -52,7 +52,7 @@
       }
       {
         mode = "n";
-        key = "<leader>xQ";
+        key = "<leader>xq";
         action = "<cmd>Trouble qflist toggle<CR>";
         options = {
           silent = true;

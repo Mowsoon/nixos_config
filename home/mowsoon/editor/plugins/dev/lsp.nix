@@ -37,12 +37,12 @@
           "gd" = "definition";
           "gD" = "declaration";
         };
-        diagnostic = {
-          "[d" = "goto_prev";
-          "]d" = "goto_next";
-          "<leader>d" = "open_float";
-        };
       };
     };
+  };
+
+  programs.nixvim.diagnostic.settings = {
+    virtual_text = true;
+    severity_sort = true;
   };
 }
