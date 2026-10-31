@@ -155,6 +155,23 @@ suggestion is selected when the menu opens. Without the menu, these keys keep th
 | `Ctrl+X` then `Ctrl+F` | Native completion of a file path | Native |
 | `Ctrl+X` then `Ctrl+L` | Native completion of a whole line already written | Native |
 
+### Code structure (Treesitter)
+
+Treesitter parses the code into functions, classes and parameters. Its text objects combine with
+the native operators: `d` deletes, `c` changes, `y` copies and `v` selects, so `daf` deletes a
+whole function and `cif` replaces its body.
+
+| Keys | Action | Origin |
+| --- | --- | --- |
+| `v` then `an` | Select the enclosing node, wider at each press | Native |
+| `in` in visual mode | Select the inner node, narrower at each press | Native |
+| `]n` / `[n` in visual mode | Select the next / previous node; needs AltGr on an AZERTY keyboard | Native |
+| `af` / `if` | A whole function / the body of the function, after an operator or in visual mode | Config |
+| `ac` / `ic` | A whole class / the body of the class | Config |
+| `aa` / `ia` | A parameter with its separator / the parameter alone | Config |
+| `]m` / `[m` | Go to the start of the next / previous function; needs AltGr on an AZERTY keyboard | Config |
+| `]]` / `[[` | Go to the start of the next / previous class; needs AltGr on an AZERTY keyboard | Config |
+
 ### Git
 
 Fugitive runs the Git commands of the repository; gitsigns marks the changed lines in the margin

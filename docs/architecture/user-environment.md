@@ -158,8 +158,10 @@ commands in `cores/`, plugins grouped by role in `plugins/dev`, `plugins/ui` and
 `plugins/utils`. Plugins and language servers come from the Nix store; nothing is downloaded at
 editor start. Every plugin is set up at start: a plugin pulled into the start package by a
 dependency defeats lazy loading and its setup never ran
-([incident](../incidents/telescope-settings-never-applied.md)). Neovim is the default editor
-through `EDITOR`.
+([incident](../incidents/telescope-settings-never-applied.md)). The Treesitter text objects and
+moves are declared as key mappings, since nvim-treesitter no longer reads them from its settings
+([incident](../incidents/treesitter-keymaps-ignored.md)). Neovim is the default editor through
+`EDITOR`.
 The colour scheme is catppuccin mocha with its background and text shades replaced by deep violet
 ones, so the editor carries its own hue next to the bordeaux of Plasma and the verdigris of the
 terminal, while the syntax colours and the integrations with the plugins stay those of

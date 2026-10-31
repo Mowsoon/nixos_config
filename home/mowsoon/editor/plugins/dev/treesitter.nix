@@ -1,91 +1,147 @@
-{ pkgs, ... }:
+{ lib, pkgs, ... }:
 
 {
-  programs.nixvim.plugins = {
-    treesitter = {
-      enable = true;
+  programs.nixvim = {
+    globals = {
+      no_python_maps = 1;
+      no_go_maps = 1;
+      no_rust_maps = 1;
+    };
 
-      grammarPackages = with pkgs.vimPlugins.nvim-treesitter.builtGrammars; [
-        bash
-        c
-        cpp
-        go
-        gomod
-        gosum
-        python
-        yaml
-        json
-        nix
-        terraform
-        markdown
-        lua
-        make
-      ];
+    plugins = {
+      treesitter = {
+        enable = true;
 
-      settings = {
-        highlight = {
-          enable = true;
-          additional_vim_regex_highlighting = false;
-        };
+        grammarPackages = with pkgs.vimPlugins.nvim-treesitter.builtGrammars; [
+          bash
+          c
+          cpp
+          go
+          gomod
+          gosum
+          python
+          yaml
+          json
+          nix
+          terraform
+          markdown
+          lua
+          make
+        ];
 
-        indent = {
-          enable = true;
-        };
-
-        incremental_selection = {
-          enable = true;
-          keymaps = {
-            init_selection = "<Enter>";
-            node_incremental = "<Enter>";
-            scope_incremental = false;
-            node_decremental = "<BS>";
+        settings = {
+          highlight = {
+            enable = true;
+            additional_vim_regex_highlighting = false;
           };
+
+          indent = {
+            enable = true;
+          };
+        };
+
+        nixvimInjections = true;
+      };
+
+      treesitter-context = {
+        enable = true;
+
+        settings = {
+          max_lines = 3;
+          min_window_height = 20;
+          line_numbers = true;
+          mode = "cursor";
         };
       };
 
-      nixvimInjections = true;
-    };
+      treesitter-textobjects = {
+        enable = true;
 
-    treesitter-context = {
-      enable = true;
-
-      settings = {
-        max_lines = 3;
-        min_window_height = 20;
-        line_numbers = true;
-        mode = "cursor";
-      };
-    };
-
-    treesitter-textobjects = {
-      enable = true;
-
-      settings = {
-        select = {
-          enable = true;
-          lookahead = true;
-          keymaps = {
-            "af" = "@function.outer";
-            "if" = "@function.inner";
-            "ac" = "@class.outer";
-            "ic" = "@class.inner";
-            "aa" = "@parameter.outer";
-            "ia" = "@parameter.inner";
-          };
-        };
-        move = {
-          enable = true;
-          set_jumps = true;
-          goto_next_start = {
-            "]m" = "@function.outer";
-            "]]" = "@class.outer";
-          };
-          goto_previous_start = {
-            "[m" = "@function.outer";
-            "[[" = "@class.outer";
-          };
+        settings = {
+          select.lookahead = true;
+          move.set_jumps = true;
         };
       };
     };
+
+    keymaps =
+      lib.mapAttrsToList
+        (key: target: {
+          mode = [
+            "x"
+            "o"
+          ];
+          inherit key;
+          action.__raw = ''
+            function()
+              require("nvim-treesitter-textobjects.select").select_textobject("${target.query}", "textobjects")
+            end
+          '';
+          options.desc = target.desc;
+        })
+        {
+          "af" = {
+            query = "@function.outer";
+            desc = "Around function";
+          };
+          "if" = {
+            query = "@function.inner";
+            desc = "Inside function";
+          };
+          "ac" = {
+            query = "@class.outer";
+            desc = "Around class";
+          };
+          "ic" = {
+            query = "@class.inner";
+            desc = "Inside class";
+          };
+          "aa" = {
+            query = "@parameter.outer";
+            desc = "Around parameter";
+          };
+          "ia" = {
+            query = "@parameter.inner";
+            desc = "Inside parameter";
+          };
+        }
+      ++
+        lib.mapAttrsToList
+          (key: target: {
+            mode = [
+              "n"
+              "x"
+              "o"
+            ];
+            inherit key;
+            action.__raw = ''
+              function()
+                require("nvim-treesitter-textobjects.move").${target.move}("${target.query}", "textobjects")
+              end
+            '';
+            options.desc = target.desc;
+          })
+          {
+            "]m" = {
+              move = "goto_next_start";
+              query = "@function.outer";
+              desc = "Next function";
+            };
+            "[m" = {
+              move = "goto_previous_start";
+              query = "@function.outer";
+              desc = "Previous function";
+            };
+            "]]" = {
+              move = "goto_next_start";
+              query = "@class.outer";
+              desc = "Next class";
+            };
+            "[[" = {
+              move = "goto_previous_start";
+              query = "@class.outer";
+              desc = "Previous class";
+            };
+          };
   };
 }
