@@ -156,7 +156,10 @@ kitty sets `TERM=xterm-kitty`, which most remote servers do not know. The system
 Neovim is configured with NixVim under `home/mowsoon/editor/`: core options, key mappings and
 commands in `cores/`, plugins grouped by role in `plugins/dev`, `plugins/ui` and
 `plugins/utils`. Plugins and language servers come from the Nix store; nothing is downloaded at
-editor start. Neovim is the default editor through `EDITOR`.
+editor start. Every plugin is set up at start: a plugin pulled into the start package by a
+dependency defeats lazy loading and its setup never ran
+([incident](../incidents/telescope-settings-never-applied.md)). Neovim is the default editor
+through `EDITOR`.
 The colour scheme is catppuccin mocha with its background and text shades replaced by deep violet
 ones, so the editor carries its own hue next to the bordeaux of Plasma and the verdigris of the
 terminal, while the syntax colours and the integrations with the plugins stay those of

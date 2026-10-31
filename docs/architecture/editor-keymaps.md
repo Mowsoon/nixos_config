@@ -48,6 +48,38 @@ and the numbers follow that order.
 | `<leader>a` | Show the dashboard | Config |
 | `<leader>sr` | Reopen the files left open at the last exit from this directory | Config |
 
+### Search
+
+The search window filters as you type and previews the selected result. Searches by name and by
+content include hidden files, but not `.git/` nor what `.gitignore` excludes.
+
+| Keys | Action | Origin |
+| --- | --- | --- |
+| `<leader>ff` | Search a file by name | Config |
+| `<leader>fg` | Search a text in every file of the project | Config |
+| `<leader>fr` | Search the recently opened files | Config |
+| `<leader>fh` | Search the Neovim help | Config |
+| `:Telescope keymaps` | Search every active key mapping | Plugin |
+| `/text` then `Enter` | Search forward in the current file; `/` is `Shift+:` on AZERTY | Native |
+| `?text` then `Enter` | Search backward in the current file; `?` is `Shift+,` on AZERTY | Native |
+| `n` / `N` | Go to the next / previous match | Native |
+| `*` | Search the word under the cursor | Native |
+| `Esc` | Clear the highlight of the last search | Config |
+
+In the search window:
+
+| Keys | Action | Origin |
+| --- | --- | --- |
+| `Ctrl+J` / `Ctrl+K` | Go to the next / previous result | Config |
+| `Down` / `Up`, `Ctrl+N` / `Ctrl+P` | Go to the next / previous result | Plugin |
+| `Enter` | Open the result | Plugin |
+| `Ctrl+X` / `Ctrl+V` | Open the result in a split below / beside | Plugin |
+| `Ctrl+U` / `Ctrl+D` | Scroll the preview up / down | Plugin |
+| `Tab` | Select several results | Plugin |
+| `Ctrl+Q` | Send every result to the quickfix list and open it | Plugin |
+| `Ctrl+/` | List every key of the search window | Plugin |
+| `Esc` | Close the search window | Config |
+
 ### Macros
 
 | Keys | Action | Origin |

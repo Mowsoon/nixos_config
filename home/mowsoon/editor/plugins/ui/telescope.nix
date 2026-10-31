@@ -11,17 +11,6 @@
 
     extensions.fzf-native.enable = true;
 
-    lazyLoad.settings = {
-      cmd = [ "Telescope" ];
-      keys = [
-        "<leader>ff"
-        "<leader>fg"
-        "<leader>fb"
-        "<leader>fr"
-        "<leader>fh"
-      ];
-    };
-
     keymaps = {
       "<leader>ff" = {
         action = "find_files";
@@ -45,6 +34,14 @@
       };
     };
 
+    settings.pickers = {
+      find_files.hidden = true;
+      live_grep.additional_args = [
+        "--hidden"
+        "--glob=!.git/"
+      ];
+    };
+
     settings.defaults = {
       prompt_prefix = "> ";
       selection_caret = "> ";
@@ -61,7 +58,6 @@
         i = {
           "<C-j>" = "move_selection_next";
           "<C-k>" = "move_selection_previous";
-          "<C-q>" = "send_to_qflist";
           "<Esc>" = "close";
         };
       };
