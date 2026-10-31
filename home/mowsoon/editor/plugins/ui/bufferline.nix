@@ -12,6 +12,8 @@
         show_buffer_icons = false;
         show_buffer_close_icons = false;
         show_close_icon = false;
+        close_command.__raw = "function(buffer) require('mini.bufremove').delete(buffer, false) end";
+        right_mouse_command.__raw = "function(buffer) require('mini.bufremove').delete(buffer, false) end";
 
         truncate_names = true;
         max_name_length = 25;

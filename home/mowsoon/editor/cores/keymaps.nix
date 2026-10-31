@@ -42,7 +42,7 @@
     {
       mode = "n";
       key = "<leader>bd";
-      action = "<cmd>bdelete<CR>";
+      action.__raw = "function() require('mini.bufremove').delete() end";
       options = {
         silent = true;
         desc = "Delete buffer";

@@ -2,17 +2,6 @@
   programs.nixvim.plugins.neo-tree = {
     enable = true;
 
-    lazyLoad.settings = {
-      cmd = [ "Neotree" ];
-      keys = [
-        {
-          __unkeyed-1 = "<leader>e";
-          __unkeyed-2 = "<cmd>Neotree toggle<CR>";
-          desc = "Toggle file explorer";
-        }
-      ];
-    };
-
     settings = {
       close_if_last_window = true;
       popup_border_style = "rounded";
@@ -25,26 +14,13 @@
         width = 32;
         auto_expand_width = true;
         mappings = {
-          "<CR>" = "open";
-          "l" = "open";
-          "h" = "close_node";
+          "<space>" = "none";
+          "l" = "none";
           "s" = "open_split";
           "v" = "open_vsplit";
-          "a" = "add";
-          "d" = "delete";
-          "r" = "rename";
           "c" = "copy_to_clipboard";
-          "m" = "cut_to_clipboard";
-          "p" = "paste_from_clipboard";
-          "H" = "toggle_hidden";
-          "R" = "refresh";
-          "P" = {
-            command = "toggle_preview";
-            config = {
-              use_float = true;
-            };
-          };
-          "Y" = "copy_path";
+          "T" = "none";
+          "U" = "none";
         };
       };
 
@@ -53,6 +29,12 @@
         cwd_target.sidebar = "tab";
         hijack_netrw_behavior = "open_default";
         use_libuv_file_watcher = true;
+        window.mappings = {
+          "h" = "toggle_hidden";
+          "H" = "none";
+          "y" = "copy_path";
+          "d" = "trash_now";
+        };
         follow_current_file = {
           enabled = true;
           leave_dirs_open = false;
@@ -78,6 +60,34 @@
               local filepath = node:get_id()
               vim.fn.setreg("+", filepath)
               print("Path copied to clipboard: " .. filepath)
+            end
+          '';
+          trash_now.__raw = ''
+            function(state)
+              local inputs = require("neo-tree.ui.inputs")
+              local confirm = inputs.confirm
+              inputs.confirm = function(_, callback)
+                callback(true)
+              end
+              local ok, err = pcall(require("neo-tree.sources.filesystem.commands").trash, state)
+              inputs.confirm = confirm
+              assert(ok, err)
+            end
+          '';
+          trash_now_visual.__raw = ''
+            function(state, selected_nodes)
+              local inputs = require("neo-tree.ui.inputs")
+              local confirm = inputs.confirm
+              inputs.confirm = function(_, callback)
+                callback(true)
+              end
+              local ok, err = pcall(
+                require("neo-tree.sources.filesystem.commands").trash_visual,
+                state,
+                selected_nodes
+              )
+              inputs.confirm = confirm
+              assert(ok, err)
             end
           '';
         };

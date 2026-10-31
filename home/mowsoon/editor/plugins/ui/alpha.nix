@@ -3,20 +3,6 @@
     enable = true;
     theme = null;
 
-    lazyLoad.settings = {
-      cmd = [
-        "Alpha"
-        "AlphaRedraw"
-      ];
-      keys = [
-        {
-          __unkeyed-1 = "<leader>a";
-          __unkeyed-2 = "<cmd>Alpha<CR>";
-          desc = "Dashboard";
-        }
-      ];
-    };
-
     settings.layout = [
       {
         type = "padding";
@@ -161,4 +147,16 @@
       }
     ];
   };
+
+  programs.nixvim.keymaps = [
+    {
+      mode = "n";
+      key = "<leader>a";
+      action = "<cmd>Alpha<CR>";
+      options = {
+        silent = true;
+        desc = "Dashboard";
+      };
+    }
+  ];
 }

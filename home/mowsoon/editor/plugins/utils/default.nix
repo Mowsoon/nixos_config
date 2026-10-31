@@ -6,6 +6,7 @@
     ./toggleterm.nix
     ./autosession.nix
     ./autopairs.nix
+    ./bufremove.nix
     ./surround.nix
     ./comment.nix
     ./lazyload.nix
