@@ -246,7 +246,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
    in step 2. The first command writes the overrides into `flake.lock`; the second applies them to
    one command only and leaves `flake.lock` untouched. A fork can instead set the URLs in
    `flake.nix` to its own repositories, or remove the `dublinlife` input with its line in
-   `hosts/hephaestus/home.nix` and the file `home/mowsoon/dublinlife.nix`.
+   `hosts/hephaestus/home.nix` and the file `home/mowsoon/services/dublinlife.nix`.
 
 ## Reference
 

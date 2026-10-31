@@ -1,5 +1,4 @@
 {
-
   imports = [
     ./cores
     ./plugins

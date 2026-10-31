@@ -9,7 +9,7 @@ let
   nvim = lib.getExe' config.programs.nixvim.build.package "nvim";
   less = lib.getExe pkgs.less;
   repository = "${config.xdg.configHome}/nixos";
-  rgbFocus = lib.getExe' (pkgs.callPackage ../../pkgs/rgb-effects/package.nix { }) "rgb-focus";
+  rgbFocus = lib.getExe' (pkgs.callPackage ../../../pkgs/rgb-effects/package.nix { }) "rgb-focus";
   aliases = config.programs.zsh.shellAliases;
   width = lib.foldl' (widest: name: lib.max widest (lib.stringLength name)) 0 (lib.attrNames aliases);
   pad = name: name + lib.strings.replicate (width - lib.stringLength name) " ";

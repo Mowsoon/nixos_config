@@ -27,8 +27,8 @@ generation, whose plugin directory had no catppuccin, while the `init.lua` linke
 to a G key had the same flaw; the others only failed silently, by running an older script or
 showing an older alias list.
 
-Resolution: `home/mowsoon/shortcuts.nix` installs each G key command as a script of the user
-profile, named after the command, and binds the key to
+Resolution: `home/mowsoon/desktop/shortcuts.nix` installs each G key command as a script of the
+user profile, named after the command, and binds the key to
 `/etc/profiles/per-user/mowsoon/bin/<command>`. That path never changes, and each switch points it
 to the script of the new generation, so the line kept by kglobalaccel stays valid. Only a new or
 rebound key still needs a new session.

@@ -24,10 +24,10 @@ such a file fails, or is overwritten at the next activation: the change belongs 
 
 ### Shell
 
-zsh is the login shell, with completion, autosuggestions, syntax highlighting and the
-powerlevel10k prompt. The prompt configuration is the file `home/mowsoon/p10k.zsh`; its instant
-prompt block is placed first in `.zshrc` so the prompt appears before the plugins load. Aliases
-make `rm`, `cp` and `mv` interactive and give short names to the infrastructure clients.
+zsh is the login shell, with completion, autosuggestions, syntax highlighting and the powerlevel10k
+prompt. The prompt configuration is the file `home/mowsoon/shell/p10k.zsh`; its instant prompt block
+is placed first in `.zshrc` so the prompt appears before the plugins load. Aliases make `rm`, `cp`
+and `mv` interactive and give short names to the infrastructure clients.
 
 The prompt keeps the minimal style of powerlevel10k, in the ANSI colours of the terminal palette
 plus a muted grey-green for Git and the time. The right side adds segments only when they carry
@@ -133,7 +133,7 @@ configuration, which avoids running it twice.
 
 ### Terminal
 
-kitty is the terminal, configured in `home/mowsoon/terminal.nix`, and Plasma uses it as its
+kitty is the terminal, configured in `home/mowsoon/desktop/terminal.nix`, and Plasma uses it as its
 default terminal application: "Open terminal here", terminal applications launched from a menu or
 a file association, and `Ctrl+Alt+T`. Konsole is removed from the Plasma packages, so the terminal
 panel of Dolphin, which embeds Konsole, is gone.
@@ -207,9 +207,9 @@ the graphical
 session: the OpenSnitch UI, which shows the prompts of the outbound firewall, and EasyEffects, the
 audio effects processor. Their own settings are kept in the persistent home.
 
-The EasyEffects input preset `microphone` is declared: `home/mowsoon/audio/microphone.json` holds
-it as EasyEffects exports it, Home Manager links it into `~/.local/share/easyeffects/input/`, and
-the service loads it at start through the EasyEffects socket. The preset is read-only; a setting
+The EasyEffects input preset `microphone` is declared: `home/mowsoon/desktop/audio/microphone.json`
+holds it as EasyEffects exports it, Home Manager links it into `~/.local/share/easyeffects/input/`,
+and the service loads it at start through the EasyEffects socket. The preset is read-only; a setting
 changed in the EasyEffects window is lost at the next start unless it is exported back into the
 repository. The chain and its tuning are described in [Hardware](hardware.md).
 
@@ -218,7 +218,7 @@ repository. The chain and its tuning are described in [Hardware](hardware.md).
 DublinLife is a personal reference site for everyday life in Dublin: recipes, products and where
 to buy them, appliance guides, routines, local procedures and notes. Its code and content live in
 a private repository of their own, consumed as the `dublinlife` flake input; its flake exports
-the package and a Home Manager module, which `home/mowsoon/dublinlife.nix` enables.
+the package and a Home Manager module, which `home/mowsoon/services/dublinlife.nix` enables.
 
 The module declares a user socket on `127.0.0.1:8420` and a service started by that socket. No
 process runs until the first request; the server exits after ten minutes without requests, and
@@ -234,7 +234,7 @@ closed, and the server opens no outbound connection, so it needs no OpenSnitch r
 
 ### Default applications
 
-The association between file types and applications is declared in `home/mowsoon/mime.nix`.
+The association between file types and applications is declared in `home/mowsoon/desktop/mime.nix`.
 Home Manager writes `~/.config/mimeapps.list` as a read-only link into the store, so the Plasma
 "Default Applications" page and the "Remember application association" box of "Open With" no
 longer save anything: a new association is a change in Nix. Glob keys such as `image/*` are
@@ -274,7 +274,9 @@ directories.
 
 ## How to add a command-line tool
 
-1. Add the package to `home.packages` in `home/mowsoon/packages.nix`.
+1. Add the package to `home.packages` in `home/mowsoon/shell/packages.nix`, or in
+   `home/mowsoon/dev/infra.nix` for an infrastructure client and in
+   `home/mowsoon/dev/languages.nix` for a language toolchain.
 2. If the tool opens network connections, add its OpenSnitch rule to
    `hosts/hephaestus/opensnitch.nix`, as described in [Network](network.md).
 3. If the package is unfree, add its name to `custom.unfreePackages` in `hosts/hephaestus/home.nix`.
@@ -357,23 +359,33 @@ An edit under `content/` needs none of these steps: refresh the page.
 
 ### Files under `home/mowsoon/`
 
+Each directory is one domain; its `default.nix` imports the files of the domain.
+
 | File | Content |
 | --- | --- |
-| `default.nix` | Imports and `home.stateVersion` |
-| `shell.nix` | zsh, history, atuin, aliases, keymap, completion, navigation, fzf, plugins, powerlevel10k |
-| `p10k.zsh` | Prompt configuration generated by `p10k configure` |
-| `terminal.nix` | kitty, its palette and font, default terminal of Plasma |
-| `git.nix` | Git identity and defaults |
-| `packages.nix` | Command-line tools, clipboard, archives, JSON and YAML, toolchains, direnv, bat, eza, kubecolor, kubectx, tealdeer |
-| `audio.nix` | EasyEffects service and its declared input preset |
-| `audio/microphone.json` | EasyEffects input preset for the built-in microphone |
-| `desktop.nix` | Desktop applications, OpenSnitch UI |
-| `mime.nix` | Default applications, zathura, mpv |
-| `shortcuts.nix` | Plasma global shortcuts: KRunner and the G keys of the G915 X |
-| `dublinlife.nix` | DublinLife site, started by its systemd user socket |
-| `editor/nixvim.nix` | NixVim entry point |
+| `default.nix` | Imports of the domains and `home.stateVersion` |
+| `shell/zsh.nix` | zsh options, completion, history, line editor keys, `ns` |
+| `shell/aliases.nix` | Shell aliases |
+| `shell/plugins.nix` | zsh plugins and fzf-tab |
+| `shell/prompt.nix` | powerlevel10k and its instant prompt |
+| `shell/p10k.zsh` | Prompt configuration generated by `p10k configure` |
+| `shell/integrations.nix` | zoxide, fzf, atuin, nix-index, bat, eza, tealdeer, man pager |
+| `shell/packages.nix` | Monitoring, network, file and archive tools, clipboard, JSON and YAML |
+| `dev/git.nix` | Git identity and defaults |
+| `dev/direnv.nix` | direnv and nix-direnv |
+| `dev/languages.nix` | Go and Python, `~/go/bin` on the `PATH` |
+| `dev/infra.nix` | Infrastructure clients, kubecolor, kubectx, terraform completion |
+| `desktop/apps.nix` | Desktop applications, OpenSnitch UI |
+| `desktop/terminal.nix` | kitty, its palette and font, default terminal of Plasma |
+| `desktop/mime.nix` | Default applications, zathura, mpv |
+| `desktop/shortcuts.nix` | Plasma global shortcuts: KRunner and the G keys of the G915 X |
+| `desktop/audio/default.nix` | EasyEffects service and its declared input preset |
+| `desktop/audio/microphone.json` | EasyEffects input preset for the built-in microphone |
+| `editor/default.nix` | NixVim entry point |
 | `editor/cores/` | Options, key mappings, commands, colour scheme |
 | `editor/plugins/` | Plugins grouped in `dev`, `ui` and `utils` |
+| `services/` | User services, one file each, imported from `services/default.nix` |
+| `services/dublinlife.nix` | DublinLife site, started by its systemd user socket |
 
 ### Shell aliases
 

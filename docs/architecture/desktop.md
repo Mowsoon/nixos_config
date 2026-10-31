@@ -188,11 +188,11 @@ the display: palette and fonts, then the Plasma themes, the panel and the wallpa
 | Panel, wallpaper of the desktop and of the lock screen | `modules/desktop/theme.nix`, through plasma-manager, image from `wallpapers/` of the private input |
 | Account picture | `modules/desktop/theme.nix`, through Home Manager, image from `avatars/` of the private input |
 | Login screen: wallpaper, account picture, colours, font, Plasma style, cursor | `modules/desktop/theme.nix`, system side, same sources as the session |
-| Applications installed | `home/mowsoon/desktop.nix`, Firefox in `firefox.nix` |
+| Applications installed | `home/mowsoon/desktop/apps.nix`, Firefox in `firefox.nix` |
 | Firefox settings, extensions, search engine | `modules/desktop/firefox.nix` |
-| Default applications per file type | `home/mowsoon/mime.nix` |
+| Default applications per file type | `home/mowsoon/desktop/mime.nix` |
 | Outbound rules of desktop components | `plasma.nix` and `hosts/hephaestus/opensnitch.nix` |
-| KRunner shortcuts, commands of the G keys | `home/mowsoon/shortcuts.nix`, through plasma-manager |
+| KRunner shortcuts, commands of the G keys | `home/mowsoon/desktop/shortcuts.nix`, through plasma-manager |
 | Other shortcuts, scaling, desktop icons | Plasma settings, `~/.config` |
 | Lid switch, power key, sleep mode | Plasma energy settings (PowerDevil), `~/.config/powerdevilrc` |
 | Region and format overrides for the session | Plasma region settings, `~/.config/plasma-localerc` |
@@ -433,7 +433,7 @@ binaries are the `.<name>-wrapped` files behind the nixpkgs wrappers. The full l
 
 ## How to add a desktop application
 
-1. Add the package to `home.packages` in `home/mowsoon/desktop.nix`.
+1. Add the package to `home.packages` in `home/mowsoon/desktop/apps.nix`.
 2. Add its OpenSnitch rule to `hosts/hephaestus/opensnitch.nix`. The real binary of an Electron
    or Qt application is often a `.<name>-wrapped` file or a file under `lib/` or `opt/` of the
    package; find it as described in [Network](network.md).
