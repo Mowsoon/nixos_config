@@ -23,12 +23,28 @@ apply only while the cursor is in the explorer window.
 | `:q` | Close the current window, not the file | Native |
 | `:qa` | Quit Neovim | Native |
 
-### Files
+### Open files
+
+An open file is a buffer, shown as a numbered tab in the buffer line at the top. Closing a window
+with `:q` leaves its file open in the background. The tabs are sorted by directory, then by name,
+and the numbers follow that order.
 
 | Keys | Action | Origin |
 | --- | --- | --- |
+| `Tab` / `Shift+Tab` | Go to the next / previous file of the buffer line | Config |
+| `Alt` with a key of the number row, `&` to `ç` | Go to the file with that number in the buffer line, counting the visible tabs | Config |
+| Left click on a tab of the buffer line | Go to that file | Plugin |
+| `<leader>fb` | Pick an open file by fuzzy search on its name | Config |
+| `:BufferLinePick` | Show a letter on each tab, then go to the tab whose letter is typed | Plugin |
 | `<leader>bd` | Close the current file and keep its window | Config |
 | Right click on a tab of the buffer line | Close that file and keep its window | Config |
+| `:e <path>` | Open a file; `Tab` completes the path | Native |
+| `:w` / `:wa` | Save the current file / every file | Native |
+| `:ls` | List the open files with their number | Native |
+| `:b <number>` / `:b <name>` | Go to the file with that number, or whose name contains that text | Native |
+| `:bn` / `:bp` | Go to the next / previous file | Native |
+| `]b` / `[b` | Go to the next / previous file; needs AltGr on an AZERTY keyboard | Native |
+| `Ctrl+^` / `:b#` | Go back to the previous file, back and forth | Native |
 | `<leader>a` | Show the dashboard | Config |
 | `<leader>sr` | Reopen the files left open at the last exit from this directory | Config |
 
