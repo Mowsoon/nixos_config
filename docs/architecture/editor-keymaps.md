@@ -206,6 +206,22 @@ In the Git status window:
 A commit opens its message in a buffer: `i` to type, `Esc`, then `:wq` to save and commit, or `:q!`
 to quit without saving; an empty message aborts the commit.
 
+### Terminal
+
+The integrated terminal has two modes: in terminal mode the keys go to the shell; in normal mode its
+output is plain text to scroll, search with `/` and copy with `y`.
+
+| Keys | Action | Origin |
+| --- | --- | --- |
+| `F12` | Open or close the floating terminal, from any mode | Config |
+| `2` then `F12` | Open or close a second terminal, distinct from the first | Plugin |
+| `<leader>tf` | Open or close the floating terminal | Config |
+| `<leader>th` | Open or close the terminal at the bottom of the screen | Config |
+| `Esc` `Esc` | Leave terminal mode for normal mode; a single `Esc` goes to the program | Config |
+| `Ctrl+\` then `Ctrl+N` | Leave terminal mode for normal mode | Native |
+| `i` | Go back to terminal mode to type in the shell | Native |
+| `:terminal` | Open a terminal in the current window | Native |
+
 ### Macros
 
 | Keys | Action | Origin |

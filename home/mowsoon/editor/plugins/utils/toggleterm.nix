@@ -13,7 +13,7 @@
         end
       '';
 
-      open_mapping = "[[<C-\\>]]";
+      open_mapping = "[[<F12>]]";
       hide_numbers = true;
       shade_terminals = false;
       start_in_insert = true;
@@ -31,10 +31,7 @@
 
   programs.nixvim.keymaps = [
     {
-      mode = [
-        "n"
-        "t"
-      ];
+      mode = "n";
       key = "<leader>tf";
       action = "<cmd>ToggleTerm direction=float<CR>";
       options = {
@@ -43,15 +40,21 @@
       };
     }
     {
-      mode = [
-        "n"
-        "t"
-      ];
+      mode = "n";
       key = "<leader>th";
       action = "<cmd>ToggleTerm size=15 direction=horizontal<CR>";
       options = {
         silent = true;
         desc = "Toggle terminal (horizontal split)";
+      };
+    }
+    {
+      mode = "t";
+      key = "<Esc><Esc>";
+      action = "<C-\\><C-n>";
+      options = {
+        silent = true;
+        desc = "Leave terminal mode";
       };
     }
   ];
