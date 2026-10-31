@@ -23,6 +23,27 @@ apply only while the cursor is in the explorer window.
 | `:q` | Close the current window, not the file | Native |
 | `:qa` | Quit Neovim | Native |
 
+### Selecting, cutting and pasting
+
+Deleting cuts: `d`, `c` and `x` put the text in the clipboard, like `y` copies it, and `p` pastes
+it. The clipboard is the one of the desktop, so text copied in Firefox pastes with `p`. A selection
+made with the mouse is a visual mode selection, so every key of the visual mode applies to it.
+
+| Keys | Action | Origin |
+| --- | --- | --- |
+| `v` / `V` / `Ctrl+V` | Start selecting characters / whole lines / a rectangle | Native |
+| A motion in visual mode | Extend the selection: `w` next word, `e` end of word, `b` previous word, `j` / `k` line below / above, `$` end of line, `_` start of line, `G` end of file, `gg` start of file | Native |
+| A text object in visual mode | Select it: `iw` word, `i"` inside quotes, `i(` inside parentheses, `ip` paragraph, `af` function | Native |
+| `o` in visual mode | Move the cursor to the other end of the selection | Native |
+| `d` / `y` / `c` on a selection | Cut / copy / delete and type the replacement | Native |
+| `p` / `P` | Paste after / before the cursor; lines go below / above; on a selection, replace it | Native |
+| `dd` / `yy` / `cc` | Cut / copy / rewrite the whole line; `3dd` cuts three lines | Native |
+| `d`, `y` or `c` followed by a motion or a text object | Act without selecting: `dw` a word, `d$` to the end of the line, `diw` the word under the cursor, `ci"` inside quotes, `dap` a paragraph | Native |
+| `x` | Cut the character under the cursor | Native |
+| `"_d` | Delete without touching the clipboard | Native |
+| `u` / `Ctrl+R` | Undo / redo | Native |
+| `.` | Repeat the last change | Native |
+
 ### Open files
 
 An open file is a buffer, shown as a numbered tab in the buffer line at the top. Closing a window

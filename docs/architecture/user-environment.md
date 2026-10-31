@@ -349,6 +349,7 @@ into its database once; `~/.zsh_history` is read, not changed.
 | `nrr` | `sudo nixos-rebuild switch --rollback` |
 | `nkern` | Booted and current kernel paths; a difference means a reboot is pending |
 | `cdn` | `cd ~/.config/nixos` |
+| `n` | `nvim` |
 | `hib`, `sus`, `sush` | `systemctl hibernate`, `suspend`, `suspend-then-hibernate` |
 | `jb`, `jbu <unit>` | `journalctl -b`, `journalctl -b --no-pager -u <unit>` |
 | `jke` | `journalctl -k -p err`, kernel messages of priority error and above |

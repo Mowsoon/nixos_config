@@ -125,6 +125,7 @@ in
         nrr = "sudo nixos-rebuild switch --rollback";
         nkern = "readlink /run/booted-system/kernel /run/current-system/kernel";
         cdn = "cd ~/.config/nixos";
+        n = "nvim";
 
         hib = "systemctl hibernate";
         sus = "systemctl suspend";
