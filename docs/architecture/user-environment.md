@@ -162,7 +162,9 @@ ones, so the editor carries its own hue next to the bordeaux of Plasma and the v
 terminal, while the syntax colours and the integrations with the plugins stay those of
 catppuccin. Italics are off and inactive windows are dimmed.
 Started without argument, Neovim shows the alpha dashboard; started on a directory, it opens the
-neo-tree explorer on it. auto-session saves the open files of a directory when Neovim exits, but
+neo-tree explorer on it. alpha redraws itself whenever any window is resized, but can keep the
+identifier of a closed window and then fails on it; its redraw is wrapped to drop closed windows
+first. auto-session saves the open files of a directory when Neovim exits, but
 restores them only on request. Closing a file keeps its window, so closing the last file never
 quits the editor while the explorer is open.
 The key mappings are listed in [Editor key mappings](editor-keymaps.md).
