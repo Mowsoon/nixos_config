@@ -36,12 +36,6 @@
         lspBuf = {
           "gd" = "definition";
           "gD" = "declaration";
-          "gi" = "implementation";
-          "gr" = "references";
-          "K" = "hover";
-          "<leader>rn" = "rename";
-          "<leader>ca" = "code_action";
-          "<leader>f" = "format";
         };
         diagnostic = {
           "[d" = "goto_prev";

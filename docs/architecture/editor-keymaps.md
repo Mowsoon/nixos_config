@@ -80,6 +80,26 @@ In the search window:
 | `Ctrl+/` | List every key of the search window | Plugin |
 | `Esc` | Close the search window | Config |
 
+### Code (LSP)
+
+The language server of the file type understands the code. Its keys work only in a file it is
+attached to.
+
+| Keys | Action | Origin |
+| --- | --- | --- |
+| `gd` / `gD` | Go to the definition / declaration | Config |
+| `Ctrl+]` | Go to the definition; needs AltGr on an AZERTY keyboard | Native |
+| `grr` | List the references | Native |
+| `gri` | List the implementations | Native |
+| `grt` | Go to the definition of the type | Native |
+| `grn` | Rename the symbol everywhere | Native |
+| `gra` | Code actions on the cursor or the selection, such as quick fixes | Native |
+| `gO` | List the symbols of the file | Native |
+| `K` | Show the documentation of the symbol under the cursor | Native |
+| `Ctrl+S` in insert mode | Show the signature of the function being called | Native |
+| `Ctrl+O` / `Ctrl+I` | Go back / forward to the previous / next position, such as after `gd` | Native |
+| `<leader>cf` | Format the file; saving formats it too | Config |
+
 ### Git
 
 Fugitive runs the Git commands of the repository; gitsigns marks the changed lines in the margin
