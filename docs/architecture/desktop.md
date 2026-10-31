@@ -212,10 +212,13 @@ settings at the next activation. KRunner keeps its default shortcuts and gains M
 Each G key of the G915 X reaches Plasma as a dedicated key symbol, set in
 [Hardware](hardware.md). A command is bound to that symbol through
 `programs.plasma.hotkeys.commands`, which generates one hidden desktop entry whose actions are the
-commands; kglobalaccel starts the action, and its output goes to the journal. A new or changed
-binding is read by kglobalaccel at the next login. G6 to G9 and the Alt layer apart from Alt+G4
-stay unbound on purpose: applications are launched through KRunner, and a key is bound only once
-a recurring need appears.
+commands; kglobalaccel starts the action, and its output goes to the journal. kglobalaccel runs
+inside KWin and keeps the command line of each action for the whole session, so every command is
+a script of the user profile, called through its stable path in `/etc/profiles/per-user/mowsoon`:
+a switch updates what the key runs without a new session
+([incident](../incidents/hotkey-stale-command.md)). A new or rebound key is read by kglobalaccel
+at the next login. G6 to G9 and the Alt layer apart from Alt+G4 stay unbound on purpose:
+applications are launched through KRunner, and a key is bound only once a recurring need appears.
 
 ### Firefox
 
@@ -702,14 +705,14 @@ not advertising or tracking are the hosts to allow.
 
 ### G key commands
 
-| Key | Shortcut | Command |
-| --- | --- | --- |
-| G1 | `Launch (5)` | Shell aliases, generated from `programs.zsh.shellAliases`, opened in `less` |
-| G2 | `Launch (6)` | Working copy of `docs/architecture/editor-keymaps.md`, read-only in Neovim |
-| G3 | `Launch (7)` | `~/.config/nixos` opened in Neovim in kitty |
-| G4 | `Launch (8)` | `rgb-focus 25m`: 25-minute focus timer on the function row |
-| Alt+G4 | `Alt+Launch (8)` | `rgb-focus stop` |
-| G5 | `Launch (9)` | Notification: free space on `/nix`, reboot pending when the kernel, initrd or modules differ from the booted ones |
+| Key | Shortcut | Script | Command |
+| --- | --- | --- | --- |
+| G1 | `Launch (5)` | `show-aliases` | Shell aliases, generated from `programs.zsh.shellAliases`, opened in `less` |
+| G2 | `Launch (6)` | `show-editor-keymaps` | Working copy of `docs/architecture/editor-keymaps.md`, read-only in Neovim |
+| G3 | `Launch (7)` | `open-nixos-config` | `~/.config/nixos` opened in Neovim in kitty |
+| G4 | `Launch (8)` | `start-focus` | `rgb-focus 25m`: 25-minute focus timer on the function row |
+| Alt+G4 | `Alt+Launch (8)` | `stop-focus` | `rgb-focus stop` |
+| G5 | `Launch (9)` | `show-system-status` | Notification: free space on `/nix`, reboot pending when the kernel, initrd or modules differ from the booted ones |
 
 ### Options
 
