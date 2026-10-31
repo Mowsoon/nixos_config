@@ -80,6 +80,40 @@ In the search window:
 | `Ctrl+/` | List every key of the search window | Plugin |
 | `Esc` | Close the search window | Config |
 
+### Git
+
+Fugitive runs the Git commands of the repository; gitsigns marks the changed lines in the margin
+and works on hunks, the blocks of consecutive changed lines. The author and date of the last commit
+of the line under the cursor show in grey at its end.
+
+| Keys | Action | Origin |
+| --- | --- | --- |
+| `<leader>gs` | Open the Git status window | Config |
+| `<leader>gd` | Show the changes of the current file side by side | Config |
+| `<leader>gc` | Commit | Config |
+| `<leader>gp` | Push | Config |
+| `<leader>gl` | Show the history, one line per commit | Config |
+| `<leader>gb` | Show the full blame of the line in a popup | Config |
+| `]c` / `[c` | Go to the next / previous hunk; in a side-by-side diff, the next / previous difference | Config / Native |
+| `<leader>hp` | Preview the hunk: its previous content in a popup | Config |
+| `<leader>hs` | Stage the hunk, or the selected lines in visual mode | Config |
+| `<leader>hr` | Reset the hunk, or the selected lines in visual mode, to the last commit | Config |
+
+In the Git status window:
+
+| Keys | Action | Origin |
+| --- | --- | --- |
+| `s` / `u` / `-` | Stage / unstage / toggle the file under the cursor | Plugin |
+| `=` | Expand the diff of the file under the cursor in place | Plugin |
+| `dv` | Show the diff of the file side by side | Plugin |
+| `X` | Discard the changes of the file, for good | Plugin |
+| `cc` | Commit | Plugin |
+| `Enter` | Open the file | Plugin |
+| `g?` / `gq` | Help / close the window | Plugin |
+
+A commit opens its message in a buffer: `i` to type, `Esc`, then `:wq` to save and commit, or `:q!`
+to quit without saving; an empty message aborts the commit.
+
 ### Macros
 
 | Keys | Action | Origin |

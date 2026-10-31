@@ -27,7 +27,15 @@
     {
       mode = "n";
       key = "]c";
-      action = ''<cmd>lua require("gitsigns").next_hunk()<CR>'';
+      action.__raw = ''
+        function()
+          if vim.wo.diff then
+            vim.cmd.normal({ "]c", bang = true })
+          else
+            require("gitsigns").nav_hunk("next")
+          end
+        end
+      '';
       options = {
         silent = true;
         desc = "Next git hunk";
@@ -36,7 +44,15 @@
     {
       mode = "n";
       key = "[c";
-      action = ''<cmd>lua require("gitsigns").prev_hunk()<CR>'';
+      action.__raw = ''
+        function()
+          if vim.wo.diff then
+            vim.cmd.normal({ "[c", bang = true })
+          else
+            require("gitsigns").nav_hunk("prev")
+          end
+        end
+      '';
       options = {
         silent = true;
         desc = "Previous git hunk";
@@ -68,6 +84,24 @@
       options = {
         silent = true;
         desc = "Reset git hunk";
+      };
+    }
+    {
+      mode = "x";
+      key = "<leader>hs";
+      action.__raw = ''function() require("gitsigns").stage_hunk({ vim.fn.line("."), vim.fn.line("v") }) end'';
+      options = {
+        silent = true;
+        desc = "Stage selected lines";
+      };
+    }
+    {
+      mode = "x";
+      key = "<leader>hr";
+      action.__raw = ''function() require("gitsigns").reset_hunk({ vim.fn.line("."), vim.fn.line("v") }) end'';
+      options = {
+        silent = true;
+        desc = "Reset selected lines";
       };
     }
     {
