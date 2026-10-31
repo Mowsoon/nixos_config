@@ -8,7 +8,6 @@
     ./autopairs.nix
     ./bufremove.nix
     ./surround.nix
-    ./comment.nix
     ./lazyload.nix
   ];
 }

@@ -46,7 +46,6 @@ and the numbers follow that order.
 | `]b` / `[b` | Go to the next / previous file; needs AltGr on an AZERTY keyboard | Native |
 | `Ctrl+^` / `:b#` | Go back to the previous file, back and forth | Native |
 | `<leader>a` | Show the dashboard | Config |
-| `<leader>sr` | Reopen the files left open at the last exit from this directory | Config |
 
 ### Search
 
@@ -221,6 +220,35 @@ output is plain text to scroll, search with `/` and copy with `y`.
 | `Ctrl+\` then `Ctrl+N` | Leave terminal mode for normal mode | Native |
 | `i` | Go back to terminal mode to type in the shell | Native |
 | `:terminal` | Open a terminal in the current window | Native |
+
+### Sessions
+
+The files left open when Neovim exits are saved for the current directory, and reopened only on
+request.
+
+| Keys | Action | Origin |
+| --- | --- | --- |
+| `<leader>ss` | Save the session of this directory now | Config |
+| `<leader>sr` | Reopen the files left open at the last exit from this directory | Config |
+| `<leader>sd` | Delete the session of this directory | Config |
+| `<leader>sl` | Search every saved session and open one | Config |
+
+### Editing helpers
+
+Brackets and quotes are closed as they are typed, except in strings and comments; typing the
+closing character over an existing one steps over it, and `Backspace` between an empty pair
+deletes both.
+
+| Keys | Action | Origin |
+| --- | --- | --- |
+| `gcc` | Comment or uncomment the line | Native |
+| `gc` with a motion or in visual mode | Comment or uncomment the lines, such as `gcap` for a paragraph | Native |
+| `ys` with a text object and a character | Surround: `ysiw"` turns `word` into `"word"` | Plugin |
+| `ds` with a character | Delete the surrounding pair: `ds"` | Plugin |
+| `cs` with the old and new characters | Change the surrounding pair: `cs"'` | Plugin |
+| `S` with a character in visual mode | Surround the selection | Plugin |
+| `b`, `B`, `r` as surround characters | Stand for `)`, `}` and `]`, which avoids AltGr: `ysiwB` gives `{word}` | Plugin |
+| `(` / `)` as surround characters | With / without spaces inside: `( word )` / `(word)` | Plugin |
 
 ### Macros
 

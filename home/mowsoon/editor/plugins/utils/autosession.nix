@@ -58,5 +58,14 @@
         desc = "Delete current session";
       };
     }
+    {
+      mode = "n";
+      key = "<leader>sl";
+      action = "<cmd>SessionSearch<CR>";
+      options = {
+        silent = true;
+        desc = "List sessions";
+      };
+    }
   ];
 }
