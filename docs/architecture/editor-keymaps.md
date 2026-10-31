@@ -136,6 +136,25 @@ location list belongs to a window, filled for example by `gO`.
 | `:lopen`, `:ln`, `:lp` | Same for the location list; `]l` / `[l` with AltGr | Native |
 | `Enter` in a list | Go to the location of the entry | Native |
 
+### Completion
+
+In insert mode, a menu of suggestions opens while typing: `[LSP]` from the language server,
+`[Snip]` snippets, `[Path]` file paths, `[Buf]` words of the open files from three letters. No
+suggestion is selected when the menu opens. Without the menu, these keys keep their usual meaning.
+
+| Keys | Action | Origin |
+| --- | --- | --- |
+| `Ctrl+Space` | Open the menu | Config |
+| `Tab` / `Shift+Tab` | Select the next / previous suggestion; in a snippet, go to the next / previous field | Config |
+| `Down` / `Up`, `Ctrl+J` / `Ctrl+K` | Select the next / previous suggestion | Config |
+| `Space` | Insert the selected suggestion and a space; a plain space when nothing is selected | Config |
+| `Enter` | Always a new line, never a suggestion | Native |
+| `Ctrl+E` | Close the menu without inserting | Config |
+| `Ctrl+B` / `Ctrl+F` | Scroll the documentation of the suggestion | Config |
+| `Ctrl+N` / `Ctrl+P` | Native completion from the words of the open files | Native |
+| `Ctrl+X` then `Ctrl+F` | Native completion of a file path | Native |
+| `Ctrl+X` then `Ctrl+L` | Native completion of a whole line already written | Native |
+
 ### Git
 
 Fugitive runs the Git commands of the repository; gitsigns marks the changed lines in the margin

@@ -39,9 +39,25 @@
         mapping = {
           "<C-Space>" = "cmp.mapping.complete()";
           "<C-e>" = "cmp.mapping.abort()";
-          "<CR>" = "cmp.mapping.confirm({ select = false })";
+          "<Space>" = ''
+            cmp.mapping(function(fallback)
+            local entry = cmp.get_selected_entry()
+            if cmp.visible() and entry then
+                local snippet = entry:get_completion_item().insertTextFormat == 2
+                cmp.confirm({ select = false }, function()
+                    if not snippet then
+                        vim.api.nvim_feedkeys(" ", "n", false)
+                    end
+                end)
+            else
+                fallback()
+            end
+            end, { "i" })
+          '';
           "<C-j>" = "cmp.mapping.select_next_item()";
           "<C-k>" = "cmp.mapping.select_prev_item()";
+          "<Down>" = "cmp.mapping.select_next_item()";
+          "<Up>" = "cmp.mapping.select_prev_item()";
           "<C-b>" = "cmp.mapping.scroll_docs(-4)";
           "<C-f>" = "cmp.mapping.scroll_docs(4)";
 
