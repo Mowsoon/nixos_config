@@ -7,3 +7,4 @@ result-*
 /rehearsal/
 .markdownlint.jsonc
 advanced-conf.md
+*/.obsidian
