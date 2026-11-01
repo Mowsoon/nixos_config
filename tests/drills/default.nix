@@ -16,4 +16,7 @@ let
         + builtins.readFile ./${name}.py;
     };
 in
-pkgs.lib.genAttrs [ "boot" ] mkDrill
+pkgs.lib.genAttrs [
+  "boot"
+  "enrollment"
+] mkDrill

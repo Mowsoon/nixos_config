@@ -19,6 +19,11 @@ store and a blank TPM. The firmware variables and the TPM state survive a crash 
 inside one drill, as they would on the hardware. The LUKS passphrase of the image is `disko`, the
 fixed passphrase disko uses for test images.
 
+Most drills start from a provisioned machine, the state of the workstation after installation:
+the first boot has enrolled the Secure Boot keys, then the recovery key and the TPM2 slot sealed
+against PCR 7 are enrolled as in [LUKS enrollment](luks-enrollment.md). The `enrollment` drill
+asserts that state, so the manual procedure is a regression test.
+
 The drills are flake checks named `drill-<name>`. Nix caches a passed drill and runs it again only
 when one of its inputs changes: nixpkgs, disko, lanzaboote, impermanence or one of the imported
 modules. After a `nix flake update`, the first `nix flake check` therefore runs every drill.
@@ -59,10 +64,12 @@ modules. After a `nix flake update`, the first `nix flake check` therefore runs 
 | --- | --- | --- | --- |
 | `boot` | Nothing on first boot, then the power during a running system | Keys generated and enrolled, Secure Boot in user mode; after the power loss, the root is empty, `/persist` keeps its files and the keys are not generated again | Passed on 2026-11-01 in 80 s: two passphrase prompts on first boot (before and after the enrollment reboot), Secure Boot in user mode, root marker gone and `/persist` marker kept after the crash |
 
+| `enrollment` | Nothing: replays [LUKS enrollment](luks-enrollment.md) on the provisioned machine | A `systemd-recovery` token and a `systemd-tpm2` token sealed against PCR 7; the next boot opens the container without a passphrase prompt, Secure Boot still in user mode | Passed on 2026-11-01 in 91 s: both tokens present, `tpm2-pcrs` is `[7]` in the JSON metadata, no prompt on the next boot. The plain `luksDump` output does not list the PCRs |
+
 | File | Content |
 | --- | --- |
 | `tests/drills/default.nix` | One flake check per drill script, built on the shared machine |
 | `tests/drills/node.nix` | Drill machine: boot chain modules of `hephaestus` and the shared VM settings |
-| `tests/drills/helpers.py` | Overlay disk in the machine state directory, passphrase unlock, Secure Boot assertion |
+| `tests/drills/helpers.py` | Overlay disk, passphrase and TPM2 boots, first boot with key enrollment, recovery key and TPM2 enrollment |
 | `tests/drills/<name>.py` | Script of one drill |
 | `hosts/hephaestus/vm.nix` | VM settings shared with `hephaestus-vm` |

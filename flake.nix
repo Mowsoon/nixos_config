@@ -156,8 +156,8 @@
         theme-recolor = themeRecolor;
         theme-recolor-ruff = themeRecolor.lints.ruff;
         theme-recolor-mypy = themeRecolor.lints.mypy;
-        drill-boot = drills.boot;
-      };
+      }
+      // nixpkgs.lib.mapAttrs' (name: nixpkgs.lib.nameValuePair "drill-${name}") drills;
 
       devShells.${system}.default = pkgs.mkShell {
         packages = [

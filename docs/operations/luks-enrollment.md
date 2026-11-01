@@ -14,6 +14,9 @@ always enrolled last. The `tpm2-device=auto` crypttab option, declared in
 `modules/security/luks.nix`, makes the initrd try the TPM2 slot before asking
 for a passphrase.
 
+The recovery key and TPM2 enrollment, and the recovery from a failed unseal, are
+replayed on a virtual machine by the [failure drills](failure-drills.md).
+
 ## How to enroll the recovery key
 
 Prerequisites: the system is booted and the container passphrase is known.
@@ -44,11 +47,15 @@ is enrolled.
    ```
 
 2. Reboot. The container opens without a passphrase prompt.
-3. Verify that a `systemd-tpm2` token exists and lists PCR 7.
+3. Verify that a `systemd-tpm2` token exists and lists PCR 7. The plain
+   `luksDump` output names the token without its PCR list, so read the JSON
+   metadata instead.
 
    ```bash
-   sudo cryptsetup luksDump /dev/disk/by-partlabel/disk-main-luks
+   sudo cryptsetup luksDump --dump-json-metadata /dev/disk/by-partlabel/disk-main-luks | jq '.tokens'
    ```
+
+   The `systemd-tpm2` token shows `"tpm2-pcrs": [ 7 ]`.
 
 ## How to back up the header
 
