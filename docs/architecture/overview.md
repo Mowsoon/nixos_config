@@ -88,7 +88,7 @@ A change moves through increasingly realistic machines before it reaches the har
 
 | Stage | What it proves |
 | --- | --- |
-| `nix flake check` | Formatting (`nixfmt`), lints (`statix`, `deadnix`), the tests, lint (`ruff`) and typing (`mypy`) of the Python packages, and the evaluation of every system |
+| `nix flake check` | Formatting (`nixfmt`), lints (`statix`, `deadnix`), the tests, lint (`ruff`) and typing (`mypy`) of the Python packages, the evaluation of every system, and the [failure drills](../operations/failure-drills.md) of the boot chain |
 | `vm-test` | The base user, sudo and Nix settings boot in QEMU |
 | `nix run .#hephaestus-vm` | The real `hephaestus` modules boot from the disko layout, with OVMF Secure Boot, an emulated TPM and throwaway keys |
 | `nix run .#rehearsal` | The installer image installs `hephaestus` onto a blank virtual NVMe disk |
@@ -97,7 +97,9 @@ A change moves through increasingly realistic machines before it reaches the har
 The `hephaestus-vm` variant is the same configuration with overrides in
 `virtualisation.vmVariantWithDisko`: NVIDIA and ASUS support are disabled, the Windows volume is a
 LUKS stand-in disk, Secure Boot keys are generated and enrolled automatically, and the password
-comes from `hosts/vm-test/mowsoon.hash`.
+comes from `hosts/vm-test/mowsoon.hash`. The settings that any VM of the boot chain needs, the
+firmware, the TPM and the key enrollment, live in `hosts/hephaestus/vm.nix`, which the failure
+drills import as well.
 
 ### User environment
 
@@ -262,7 +264,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `apps.x86_64-linux.rehearsal` | Boots the installer image against a blank disk |
 | `packages.x86_64-linux.rgb-effects` | Keyboard lighting effects daemon, built with its tests |
 | `packages.x86_64-linux.theme-recolor` | Theme recolouring tool, built with its tests |
-| `checks.x86_64-linux` | `nixfmt`, `statix`, `deadnix`, `rgb-effects`, `rgb-effects-ruff`, `rgb-effects-mypy`, `theme-recolor`, `theme-recolor-ruff`, `theme-recolor-mypy` |
+| `checks.x86_64-linux` | `nixfmt`, `statix`, `deadnix`, `rgb-effects`, `rgb-effects-ruff`, `rgb-effects-mypy`, `theme-recolor`, `theme-recolor-ruff`, `theme-recolor-mypy`, `drill-boot` |
 | `formatter.x86_64-linux` | `nixfmt-tree` |
 | `devShells.x86_64-linux.default` | `nixfmt-tree`, `statix`, `deadnix`, `mkpasswd` |
 
@@ -314,6 +316,8 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `home.nix` | Home Manager, login shell, unfree user applications |
 | `opensnitch.nix` | Outbound rules of user tools and applications |
 | `rehearsal.nix` | Disk override of the rehearsal machine |
+| `vm.nix` | VM settings of the boot chain, shared by `hephaestus-vm` and the failure drills |
+| `early-mounts.nix` | Subvolumes mounted from the initrd, for the workstation and its VMs |
 
 ### Modules
 

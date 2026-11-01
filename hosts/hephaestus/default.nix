@@ -1,21 +1,6 @@
-{
-  inputs,
-  lib,
-  pkgs,
-  ...
-}:
+{ inputs, lib, ... }:
 let
   hardwareIds = import "${inputs.nixos-private}/hosts/hephaestus/hardware-ids.nix";
-  earlyMounts =
-    lib.genAttrs
-      [
-        "/home"
-        "/persist"
-        "/var/log"
-      ]
-      (_: {
-        neededForBoot = true;
-      });
 in
 {
   imports = [
@@ -111,7 +96,7 @@ in
     };
   };
 
-  fileSystems = earlyMounts;
+  fileSystems = import ./early-mounts.nix lib;
 
   services.btrfs.autoScrub = {
     enable = true;
@@ -142,23 +127,8 @@ in
   };
 
   virtualisation.vmVariantWithDisko = {
-    disko = {
-      tests.efi = true;
-      imageBuilder = {
-        copyNixStore = lib.mkForce true;
-        pkgs = pkgs.extend (
-          _: prev: {
-            vmTools = prev.vmTools.override {
-              kernelImage = prev.linux.target;
-            };
-          }
-        );
-      };
-      devices.disk.main = {
-        imageSize = "32G";
-        content.partitions.luks.content.content.subvolumes."@swap".swap.swapfile.size = lib.mkForce "1G";
-      };
-    };
+    imports = [ ./vm.nix ];
+    disko.devices.disk.main.imageSize = "32G";
     custom = {
       nvidia.enable = lib.mkForce false;
       asus.enable = lib.mkForce false;
@@ -168,24 +138,7 @@ in
         diskSerial = lib.mkForce "windows-test";
       };
     };
-    boot = {
-      kernelParams = [
-        "console=tty0"
-        "console=ttyS0,115200n8"
-      ];
-      initrd.systemd.emergencyAccess = true;
-      lanzaboote = {
-        autoGenerateKeys.enable = true;
-        autoEnrollKeys = {
-          enable = true;
-          autoReboot = true;
-        };
-      };
-    };
-    systemd = {
-      services.generate-sb-keys.unitConfig.RequiresMountsFor = [ "/var/lib/sbctl" ];
-      sleep.settings.Sleep.HibernateMode = "reboot";
-    };
+    systemd.sleep.settings.Sleep.HibernateMode = "reboot";
     users.users.mowsoon = {
       hashedPasswordFile = lib.mkForce null;
       hashedPassword = lib.fileContents ../vm-test/mowsoon.hash;
@@ -197,14 +150,6 @@ in
       }
     ];
     virtualisation = {
-      tpm.enable = true;
-      useBootLoader = true;
-      useEFIBoot = true;
-      bootPartition = null;
-      efi.keepVariables = false;
-      writableStore = false;
-      sharedDirectories = lib.mkForce { };
-      fileSystems = earlyMounts;
       emptyDiskImages = [
         {
           size = 512;

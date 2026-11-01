@@ -77,6 +77,7 @@
       pkgs = nixpkgs.legacyPackages.${system};
       rgbEffects = pkgs.callPackage ./pkgs/rgb-effects/package.nix { };
       themeRecolor = pkgs.callPackage ./pkgs/theme-recolor/package.nix { };
+      drills = import ./tests/drills { inherit pkgs inputs; };
       hephaestusModules = [
         disko.nixosModules.disko
         impermanence.nixosModules.impermanence
@@ -155,6 +156,7 @@
         theme-recolor = themeRecolor;
         theme-recolor-ruff = themeRecolor.lints.ruff;
         theme-recolor-mypy = themeRecolor.lints.mypy;
+        drill-boot = drills.boot;
       };
 
       devShells.${system}.default = pkgs.mkShell {
