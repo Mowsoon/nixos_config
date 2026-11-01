@@ -175,6 +175,11 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
    A change to the kernel, the initrd, the encrypted container or the NVIDIA driver takes effect
    only after a reboot: use `nixos-rebuild boot`, then reboot.
 
+   If the power is lost during the command, boot the generation the menu offers and run the same
+   command again. The [failure drills](../operations/failure-drills.md#reference) show that the
+   machine comes back on a complete generation and that the new generation may be missing from
+   the profile, so running only `switch-to-configuration` again is not enough.
+
 4. Verify that no reboot is pending. The two paths are identical when the running kernel is the
    one of the active generation.
 

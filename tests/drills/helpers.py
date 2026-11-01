@@ -1,3 +1,5 @@
+import base64
+import datetime as dt
 import json
 import os
 import re
@@ -24,11 +26,14 @@ LUKS_DEVICE = "/dev/disk/by-partlabel/disk-main-luks"
 LUKS_PROMPT = "Please enter passphrase (or recovery key )?for disk"
 TEST_PASSPHRASE = "disko"
 BOOT_DONE = "Reached target Multi-User System"
+SYSTEM_PROFILE = "/nix/var/nix/profiles/system"
+LOADER_GUID = "4a67b082-0a4c-41cf-b6c7-440b29bb8c4f"
+POWER_CUT_TIMEOUT = dt.timedelta(minutes=5)
 RECOVERY_KEY = re.compile(r"[cbdefghijklnrtuv]{8}(?:-[cbdefghijklnrtuv]{8}){7}")
 
 
-def unlock_with_passphrase() -> None:
-    machine.wait_for_console_text(LUKS_PROMPT)
+def unlock_with_passphrase(timeout: dt.timedelta | None = None) -> None:
+    machine.wait_for_console_text(LUKS_PROMPT, timeout)
     machine.send_console(f"{TEST_PASSPHRASE}\n")
     machine.connected = False
     machine.connect()
@@ -116,3 +121,51 @@ def reenroll_tpm2(recovery_key: str) -> None:
 
 def pcr7() -> str:
     return machine.succeed("cat /sys/class/tpm/tpm0/pcr-sha256/7").strip()
+
+
+def power_cut_when(condition: str) -> None:
+    machine.succeed(
+        "systemd-run --unit=drill-power-cut"
+        f" sh -c 'until {condition}; do :; done; echo b > /proc/sysrq-trigger'"
+    )
+
+
+def boot_after_power_cut() -> None:
+    unlock_with_passphrase(POWER_CUT_TIMEOUT)
+    machine.wait_for_unit("multi-user.target")
+    print(machine.succeed("journalctl -b -o cat --unit 'systemd-fsck@*'"))
+    print(machine.succeed(f"ls -l {SYSTEM_PROFILE}*"))
+
+
+def profile_generation() -> int:
+    match = re.search(r"system-(\d+)-link", machine.succeed(f"readlink {SYSTEM_PROFILE}"))
+    assert match is not None
+    return int(match.group(1))
+
+
+def rebuild_command(system: str, action: str) -> str:
+    return (
+        f"/run/current-system/sw/bin/nix-env --profile {SYSTEM_PROFILE} --set {system}"
+        f" && {system}/bin/switch-to-configuration {action}"
+    )
+
+
+def booted_entry() -> str:
+    raw = base64.b64decode(
+        machine.succeed(
+            f"base64 -w0 /sys/firmware/efi/efivars/LoaderEntrySelected-{LOADER_GUID}"
+        )
+    )
+    return raw[4:].decode("utf-16-le").rstrip("\x00")
+
+
+def assert_esp_consistent() -> None:
+    machine.fail("ls /boot/EFI/Linux/*.tmp /boot/EFI/nixos/*.tmp")
+    report = machine.succeed("sbctl verify 2>&1")
+    print(report)
+    unsigned = [
+        line
+        for line in report.splitlines()
+        if "\u2717" in line and "/EFI/nixos/" not in line
+    ]
+    t.assertEqual([], unsigned)

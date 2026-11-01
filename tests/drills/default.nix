@@ -11,6 +11,7 @@ let
         ''
           disko_image = "${nodes.machine.system.build.diskoImages}/main.qcow2"
           qemu_img = "${nodes.machine.virtualisation.qemu.package}/bin/qemu-img"
+          next_system = "${nodes.machine.system.build.drillNextGeneration}"
         ''
         + builtins.readFile ./helpers.py
         + builtins.readFile ./${name}.py;
@@ -20,5 +21,6 @@ pkgs.lib.genAttrs [
   "boot"
   "dbx-update"
   "enrollment"
+  "rebuild-power-loss"
   "tpm-clear"
 ] mkDrill

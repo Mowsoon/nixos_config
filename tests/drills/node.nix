@@ -1,4 +1,20 @@
-{ inputs, pkgs, ... }:
+{
+  extendModules,
+  inputs,
+  lib,
+  pkgs,
+  ...
+}:
+let
+  nextGeneration = extendModules {
+    modules = [
+      {
+        environment.etc."drill-generation".text = "next";
+        system.extraDependencies = lib.mkForce [ ];
+      }
+    ];
+  };
+in
 {
   imports = [
     inputs.disko.nixosModules.disko
@@ -39,7 +55,11 @@
     pkgs.tpm2-tools
   ];
 
-  system.switch.enable = true;
+  system = {
+    switch.enable = true;
+    build.drillNextGeneration = nextGeneration.config.system.build.toplevel;
+    extraDependencies = [ nextGeneration.config.system.build.toplevel ];
+  };
 
   virtualisation = {
     memorySize = 2048;

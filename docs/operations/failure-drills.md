@@ -25,6 +25,14 @@ the first boot has enrolled the Secure Boot keys, then the recovery key and the 
 against PCR 7 are enrolled as in [LUKS enrollment](luks-enrollment.md). The `enrollment` drill
 asserts that state, so the manual procedure is a regression test.
 
+The `rebuild-power-loss` drill needs a power cut at an exact moment of a rebuild, a window of
+milliseconds. A crash ordered from the host by the test driver arrives too late, so the machine
+cuts itself: a transient service loops on a condition, such as a file appearing on the ESP, then
+writes `b` to `/proc/sysrq-trigger`, which restarts the kernel at once without syncing or
+unmounting any filesystem. The drill machine carries a second system, identical except for the
+file `/etc/drill-generation`, so a rebuild has a new generation to install without downloading
+anything.
+
 The drills are flake checks named `drill-<name>`. Nix caches a passed drill and runs it again only
 when one of its inputs changes: nixpkgs, disko, lanzaboote, impermanence or one of the imported
 modules. After a `nix flake update`, the first `nix flake check` therefore runs every drill.
@@ -68,12 +76,13 @@ modules. After a `nix flake update`, the first `nix flake check` therefore runs 
 | `dbx-update` | The firmware forbidden signature database: a throwaway certificate appended to dbx, signed with the KEK from the running system as Windows Update does | PCR 7 changes at the next boot, the unseal fails and the recovery key opens the container; wiping and enrolling the TPM2 slot again restores the unattended boot, Secure Boot still in user mode | Passed on 2026-11-01 in 131 s: the firmware accepts the KEK-signed append, PCR 7 differs at the next boot, the recovery key opens the container and the wipe-then-enroll procedure restores the unattended boot. A trial run with the single combined `systemd-cryptenroll` call also enrolled a new slot here: only the TPM clear leaves the PCR policy unchanged |
 | `enrollment` | Nothing: replays [LUKS enrollment](luks-enrollment.md) on the provisioned machine | A `systemd-recovery` token and a `systemd-tpm2` token sealed against PCR 7; the next boot opens the container without a passphrase prompt, Secure Boot still in user mode | Passed on 2026-11-01 in 91 s: both tokens present, `tpm2-pcrs` is `[7]` in the JSON metadata, no prompt on the next boot. The plain `luksDump` output does not list the PCRs |
 
+| `rebuild-power-loss` | The power during a rebuild: once while lanzaboote installs the stub of generation 2, once while `switch-to-configuration switch` activates generation 3 | A complete generation boots each time: generation 1 for the first cut, generation 3 for the second, whose stub was written and synced before the activation. Running the whole rebuild again, profile update included, leaves no temporary file on the ESP, every stub and systemd-boot signed, and boots the new generation | Passed on 2026-11-01 in 167 s. First cut 0.65 s into the install: the profile had lost the `system-2-link` written by `nix-env --set` just before, so running only `switch-to-configuration` again installed nothing new. Second cut: `system-3-link` survived. After each cut, `fsck.vfat` found the dirty bit of the ESP and removed it; no file was damaged |
 | `tpm-clear` | The TPM, cleared from the running system with `tpm2_clear` | The unseal fails and the initrd asks for the passphrase or the recovery key; the recovery key opens the container; the procedure of [LUKS enrollment](luks-enrollment.md#how-to-recover-from-a-failed-tpm2-unseal), run with the recovery key as the only secret, leaves one TPM2 token on PCR 7 and the next boot is unattended | Passed on 2026-11-01 in 123 s, after a fix of the procedure: the unseal fails with a TPM key integrity error, the prompt offers the recovery key, which opens the container. The documented single `--wipe-slot=tpm2 --tpm2-device=auto` call reported the PCR set as already enrolled and changed nothing; wiping first, then enrolling, restores the unattended boot |
 
 | File | Content |
 | --- | --- |
 | `tests/drills/default.nix` | One flake check per drill script, built on the shared machine |
-| `tests/drills/node.nix` | Drill machine: boot chain modules of `hephaestus` and the shared VM settings |
-| `tests/drills/helpers.py` | Overlay disk, passphrase and TPM2 boots, first boot with key enrollment, recovery key and TPM2 enrollment, recovery and new TPM2 enrollment, token and PCR 7 checks |
+| `tests/drills/node.nix` | Drill machine: boot chain modules of `hephaestus`, the shared VM settings and the second generation used by `rebuild-power-loss` |
+| `tests/drills/helpers.py` | Overlay disk, passphrase and TPM2 boots, first boot with key enrollment, recovery key and TPM2 enrollment, recovery and new TPM2 enrollment, token and PCR 7 checks, power cut, booted entry, ESP check |
 | `tests/drills/<name>.py` | Script of one drill |
 | `hosts/hephaestus/vm.nix` | VM settings shared with `hephaestus-vm` |
