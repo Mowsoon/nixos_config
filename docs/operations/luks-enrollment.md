@@ -82,11 +82,23 @@ Blast radius: none, the command only reads the device.
    systemd-analyze pcrs 7
    ```
 
-3. Replace the stale TPM2 slot with a new one sealed against the current state.
+3. Remove the stale TPM2 slot. The passphrase and the recovery key slots stay.
 
    ```bash
-   sudo systemd-cryptenroll /dev/disk/by-partlabel/disk-main-luks --wipe-slot=tpm2 --tpm2-device=auto --tpm2-pcrs=7
+   sudo systemd-cryptenroll /dev/disk/by-partlabel/disk-main-luks --wipe-slot=tpm2
    ```
+
+4. Seal a new key against the current state. The command asks for the
+   passphrase or the recovery key.
+
+   ```bash
+   sudo systemd-cryptenroll /dev/disk/by-partlabel/disk-main-luks --tpm2-device=auto --tpm2-pcrs=7
+   ```
+
+   The two commands stay separate. Combined in one call, `systemd-cryptenroll`
+   compares the requested PCR policy with the existing slot; after a TPM clear
+   the PCR values are unchanged, so it reports that the PCR set is already
+   enrolled and does nothing, leaving a slot sealed to the old TPM.
 
 ## Reference
 

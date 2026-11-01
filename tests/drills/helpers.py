@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import subprocess
@@ -20,7 +21,7 @@ subprocess.run(
 os.environ["tmp"] = disk_dir
 
 LUKS_DEVICE = "/dev/disk/by-partlabel/disk-main-luks"
-LUKS_PROMPT = "Please enter passphrase for disk"
+LUKS_PROMPT = "Please enter passphrase (or recovery key )?for disk"
 TEST_PASSPHRASE = "disko"
 BOOT_DONE = "Reached target Multi-User System"
 RECOVERY_KEY = re.compile(r"[cbdefghijklnrtuv]{8}(?:-[cbdefghijklnrtuv]{8}){7}")
@@ -42,7 +43,7 @@ def boot_with_passphrase() -> None:
 def boot_with_tpm2() -> None:
     machine.start(allow_reboot=True)
     machine.wait_for_console_text(f"{LUKS_PROMPT}|{BOOT_DONE}")
-    t.assertNotIn(LUKS_PROMPT, machine.get_console_log())
+    t.assertNotRegex(machine.get_console_log(), LUKS_PROMPT)
     machine.connect()
 
 
@@ -72,6 +73,20 @@ def enroll_tpm2() -> None:
         f"PASSWORD={TEST_PASSPHRASE} systemd-cryptenroll {LUKS_DEVICE}"
         " --tpm2-device=auto --tpm2-pcrs=7"
     )
+
+
+def luks_tokens() -> list[dict]:
+    metadata = json.loads(
+        machine.succeed(f"cryptsetup luksDump --dump-json-metadata {LUKS_DEVICE}")
+    )
+    return list(metadata["tokens"].values())
+
+
+def assert_one_tpm2_token_on_pcr7() -> None:
+    pcrs = [
+        token["tpm2-pcrs"] for token in luks_tokens() if token["type"] == "systemd-tpm2"
+    ]
+    t.assertEqual([[7]], pcrs)
 
 
 def provision() -> str:

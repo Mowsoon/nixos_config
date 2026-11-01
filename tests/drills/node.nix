@@ -33,6 +33,8 @@
 
   disko.devices.disk.main.imageSize = "8G";
 
+  environment.systemPackages = [ pkgs.tpm2-tools ];
+
   system.switch.enable = true;
 
   virtualisation = {

@@ -9,8 +9,9 @@ the serial console and asserts every step. A drill passes when its build succeed
 
 The drill machine is not the full workstation. It imports the modules of the boot chain only: the
 disko layout of `hephaestus`, Secure Boot through lanzaboote, the LUKS2 container with its TPM2
-unlock, the root rollback and the persistence. Desktop, NVIDIA and Home Manager are left out, so
-the disk image stays small and a drill does not rebuild the KWin graft. The VM settings it shares
+unlock, the root rollback and the persistence, plus `tpm2-tools` to break the TPM. Desktop,
+NVIDIA and Home Manager are left out, so the disk image stays small and a drill does not rebuild
+the KWin graft. The VM settings it shares
 with `hephaestus-vm` live in `hosts/hephaestus/vm.nix`: OVMF firmware with Secure Boot support, an
 emulated TPM (swtpm), and Secure Boot keys generated at first boot and enrolled by systemd-boot.
 
@@ -66,10 +67,12 @@ modules. After a `nix flake update`, the first `nix flake check` therefore runs 
 
 | `enrollment` | Nothing: replays [LUKS enrollment](luks-enrollment.md) on the provisioned machine | A `systemd-recovery` token and a `systemd-tpm2` token sealed against PCR 7; the next boot opens the container without a passphrase prompt, Secure Boot still in user mode | Passed on 2026-11-01 in 91 s: both tokens present, `tpm2-pcrs` is `[7]` in the JSON metadata, no prompt on the next boot. The plain `luksDump` output does not list the PCRs |
 
+| `tpm-clear` | The TPM, cleared from the running system with `tpm2_clear` | The unseal fails and the initrd asks for the passphrase or the recovery key; the recovery key opens the container; the procedure of [LUKS enrollment](luks-enrollment.md#how-to-recover-from-a-failed-tpm2-unseal), run with the recovery key as the only secret, leaves one TPM2 token on PCR 7 and the next boot is unattended | Passed on 2026-11-01 in 123 s, after a fix of the procedure: the unseal fails with a TPM key integrity error, the prompt offers the recovery key, which opens the container. The documented single `--wipe-slot=tpm2 --tpm2-device=auto` call reported the PCR set as already enrolled and changed nothing; wiping first, then enrolling, restores the unattended boot |
+
 | File | Content |
 | --- | --- |
 | `tests/drills/default.nix` | One flake check per drill script, built on the shared machine |
 | `tests/drills/node.nix` | Drill machine: boot chain modules of `hephaestus` and the shared VM settings |
-| `tests/drills/helpers.py` | Overlay disk, passphrase and TPM2 boots, first boot with key enrollment, recovery key and TPM2 enrollment |
+| `tests/drills/helpers.py` | Overlay disk, passphrase and TPM2 boots, first boot with key enrollment, recovery key and TPM2 enrollment, token checks |
 | `tests/drills/<name>.py` | Script of one drill |
 | `hosts/hephaestus/vm.nix` | VM settings shared with `hephaestus-vm` |

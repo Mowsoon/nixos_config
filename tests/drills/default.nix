@@ -19,4 +19,5 @@ in
 pkgs.lib.genAttrs [
   "boot"
   "enrollment"
+  "tpm-clear"
 ] mkDrill
