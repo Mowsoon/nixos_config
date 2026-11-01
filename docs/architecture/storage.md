@@ -47,6 +47,11 @@ snapshotted: the store is reproducible, logs are append-only, and container imag
 disposable. A snapshot lives on the same disk: it protects against a mistake, not against a disk
 failure.
 
+A snapshot stops at nested subvolumes: their content is left out. A directory that churns through
+gigabytes of disposable files inside `/home`, such as the kernel build output
+`~/src/kernel/build`, is therefore a nested subvolume, declared by a tmpfiles `v` rule in the
+module that owns it.
+
 ### Memory and swap
 
 Two swap devices coexist. zram, a compressed swap device in RAM sized to half of the memory, has

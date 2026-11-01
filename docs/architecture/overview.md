@@ -272,6 +272,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `checks.x86_64-linux` | `nixfmt`, `statix`, `deadnix`, `rgb-effects`, `rgb-effects-ruff`, `rgb-effects-mypy`, `theme-recolor`, `theme-recolor-ruff`, `theme-recolor-mypy`, one `drill-<name>` per failure drill |
 | `formatter.x86_64-linux` | `nixfmt-tree` |
 | `devShells.x86_64-linux.default` | `nixfmt-tree`, `statix`, `deadnix`, `mkpasswd` |
+| `devShells.x86_64-linux.kernel` | Toolchain of the zen kernel, clang and llvm, pahole, bpftool, QEMU, b4, git with `send-email`, and the zen configuration as `KERNEL_BASE_CONFIG` |
 
 ### Flake inputs
 

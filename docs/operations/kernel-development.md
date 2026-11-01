@@ -1,0 +1,112 @@
+# Kernel development
+
+## Overview
+
+Kernel work for hephaestus (power limits, module signing, BPF schedulers and policies) is written
+against upstream trees and tested in a virtual machine before it reaches the workstation. A Nix
+build of the kernel starts from scratch at every change, which takes over half an hour for the
+zen configuration, so the development loop builds incrementally in a source tree, from a
+development shell of the flake. A finished patch reaches hephaestus through `boot.kernelPatches`
+on the zen kernel, where Nix builds it reproducibly.
+
+The source tree is a blobless clone of mainline: it holds the whole history of commits and trees,
+and fetches the content of an old file only when a command needs it. A patch for a subsystem is
+written against the tree of that subsystem, added as a git worktree of the same clone: each tree
+has its own working directory and they share one object store.
+
+Builds run out of tree (`make O=`) into `~/src/kernel/build/<tree>`. `~/src/kernel/build` is a
+nested Btrfs subvolume, created by a user tmpfiles rule from `home/mowsoon/dev/kernel.nix`, so
+the gigabytes of objects of a build stay out of the hourly snapshots of `/home`, while the sources
+stay in them.
+
+The `kernel` development shell carries the toolchain of the zen kernel package (compilers, Rust,
+`pahole` for BTF), clang and llvm for the BPF selftests, `bpftool`, QEMU, b4 and git with
+`send-email`. It exports `KERNEL_BASE_CONFIG`, the configuration of the zen kernel that hephaestus
+runs, so a build starts from the options the workstation actually uses.
+
+## How to set up the source tree
+
+Blast radius: none outside `~/src/kernel`.
+
+1. Clone mainline without the content of old files.
+
+   ```bash
+   mkdir -p ~/src/kernel
+   git clone --filter=blob:none https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git ~/src/kernel/mainline
+   ```
+
+2. Check that the build directory is a subvolume: a subvolume root always has inode number 256.
+
+   ```bash
+   stat -c %i ~/src/kernel/build
+   ```
+
+   If the directory is missing, apply the configuration once (`nixos-rebuild test`), which runs
+   the tmpfiles rules of Home Manager.
+
+## How to add a subsystem tree
+
+1. Add the subsystem repository as a remote and fetch it.
+
+   ```bash
+   git -C ~/src/kernel/mainline remote add <remote> <url>
+   git -C ~/src/kernel/mainline fetch --filter=blob:none <remote>
+   ```
+
+2. Check out its branch in its own worktree.
+
+   ```bash
+   git -C ~/src/kernel/mainline worktree add ~/src/kernel/<remote> <remote>/<branch>
+   ```
+
+`<remote>` names the tree, such as `pdx86`. `<url>` and `<branch>` come from the `MAINTAINERS`
+entry of the subsystem, line `T:`.
+
+## How to configure and build a tree
+
+1. Open the kernel shell and go to the tree.
+
+   ```bash
+   nix develop ~/.config/nixos#kernel
+   cd ~/src/kernel/<tree>
+   ```
+
+   `<tree>` is `mainline` or a worktree name.
+
+2. Start from the zen configuration and adapt it to the tree. The store copy is read-only, hence
+   the `chmod`.
+
+   ```bash
+   mkdir -p ../build/<tree>
+   cp "$KERNEL_BASE_CONFIG" ../build/<tree>/.config
+   chmod u+w ../build/<tree>/.config
+   make O=../build/<tree> olddefconfig
+   ```
+
+3. Build the kernel and its modules. After a change, run the same command again: only what
+   depends on the changed files is rebuilt, and most of the time goes into walking the tree.
+
+   ```bash
+   make O=../build/<tree> -j"$(nproc)"
+   ```
+
+   A single module target, such as `drivers/platform/x86/asus-armoury.ko`, fails at the
+   `modpost` stage, and a directory target compiles the objects without linking the modules: the
+   full `make` is the command of the loop.
+
+## Reference
+
+| Path | Content |
+| --- | --- |
+| `~/src/kernel/mainline` | Blobless clone of the mainline tree |
+| `~/src/kernel/<remote>` | Worktree of a subsystem tree |
+| `~/src/kernel/build/<tree>` | Out-of-tree build output, in the nested subvolume |
+| `tools/kernel-shell.nix` | The `kernel` development shell |
+| `home/mowsoon/dev/kernel.nix` | tmpfiles rule of the build subvolume |
+
+| Measure, 2026-11-01, mainline `7.4-rc1`, zen `7.2.9` configuration | Value |
+| --- | --- |
+| Blobless clone | 3.9 GiB of history, 1.8 GiB of working tree, about 45 min at 3 MiB/s |
+| First full build, `-j32` | 1979 s, 7389 modules, no warning |
+| Build output | 28 GiB in `~/src/kernel/build/mainline` |
+| Rebuild after touching one driver | 27 to 36 s |

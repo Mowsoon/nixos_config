@@ -61,6 +61,7 @@ The machine reaches a login prompt in the terminal. Press `Ctrl+A` then `X` to s
 | `nix fmt` | Formats every Nix file with `nixfmt` |
 | `nix flake check` | Runs `nixfmt --check`, `statix`, `deadnix`, the tests, `ruff` and `mypy` of `rgb-effects` and `theme-recolor`, the failure drills, and evaluates every host |
 | `nix develop` | Opens a shell with `nixfmt-tree`, `statix`, `deadnix` and `mkpasswd` |
+| `nix develop .#kernel` | Opens the kernel development shell described in [kernel development](docs/operations/kernel-development.md) |
 | `nix build .#rgb-effects` | Builds the lighting effects daemon and runs its tests |
 | `nix build .#theme-recolor` | Builds the theme recolouring tool and runs its tests |
 | `nix run .#hephaestus-vm` | Builds the `hephaestus` disko VM and boots it from a blank firmware and TPM |

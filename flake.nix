@@ -159,13 +159,17 @@
       }
       // nixpkgs.lib.mapAttrs' (name: nixpkgs.lib.nameValuePair "drill-${name}") drills;
 
-      devShells.${system}.default = pkgs.mkShell {
-        packages = [
-          pkgs.nixfmt-tree
-          pkgs.statix
-          pkgs.deadnix
-          pkgs.mkpasswd
-        ];
+      devShells.${system} = {
+        kernel = pkgs.callPackage ./tools/kernel-shell.nix { };
+
+        default = pkgs.mkShell {
+          packages = [
+            pkgs.nixfmt-tree
+            pkgs.statix
+            pkgs.deadnix
+            pkgs.mkpasswd
+          ];
+        };
       };
     };
 }

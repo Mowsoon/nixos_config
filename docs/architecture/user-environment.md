@@ -192,6 +192,13 @@ shell survives a garbage collection until the project changes. direnv announces 
 hides the list of changed variables (`hide_env_diff`), which runs to dozens of lines for a Nix
 shell.
 
+Source code lives under `~/src`, in the persisted `/home`: the root is erased at every boot, so the
+FHS locations `/usr/src` and `/opt` would not survive. The kernel work of
+[kernel development](../operations/kernel-development.md) uses `~/src/kernel`, whose `build`
+directory is a nested Btrfs subvolume declared by a user tmpfiles rule, so the build output stays
+out of the hourly snapshots of `/home`. Its toolchain is the `kernel` development shell of the
+flake, `nix develop .#kernel`.
+
 ### Git
 
 Git uses the identity `Mowsoon` and creates repositories on the branch `main`. Commit signing is a
@@ -375,6 +382,7 @@ Each directory is one domain; its `default.nix` imports the files of the domain.
 | `dev/direnv.nix` | direnv and nix-direnv |
 | `dev/languages.nix` | Go and Python, `~/go/bin` on the `PATH` |
 | `dev/infra.nix` | Infrastructure clients, kubecolor, kubectx, terraform completion |
+| `dev/kernel.nix` | Nested subvolume `~/src/kernel/build` for kernel build output |
 | `desktop/apps.nix` | Desktop applications, OpenSnitch UI |
 | `desktop/terminal.nix` | kitty, its palette and font, default terminal of Plasma |
 | `desktop/mime.nix` | Default applications, zathura, mpv |
