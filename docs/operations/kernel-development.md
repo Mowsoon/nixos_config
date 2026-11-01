@@ -24,6 +24,18 @@ The `kernel` development shell carries the toolchain of the zen kernel package (
 `send-email`. It exports `KERNEL_BASE_CONFIG`, the configuration of the zen kernel that hephaestus
 runs, so a build starts from the options the workstation actually uses.
 
+A build is tested in `kernel-test`, a variant of `vm-test` where root is logged in on the serial
+console and `~/src/kernel` is shared on `/src` through virtiofs. `nix run .#kernel-vm` boots its
+NixOS initrd and userspace on the `bzImage` of a build directory, through the
+`NIXPKGS_QEMU_KERNEL_kernel_test` variable of the NixOS VM script: nothing is installed and the
+ESP is never touched.
+
+The initrd and the NixOS userspace carry the modules of the NixOS kernel, which a kernel of
+another version cannot load. The VM build therefore has no module to load: `make localyesconfig`
+turns every module that the VM loads on the NixOS kernel into a built-in and disables all the
+others. The list of those modules is the `kernel-vm-modules` package of the flake, the `lsmod` of
+`kernel-test` recorded by a NixOS test, so it follows the VM configuration and nixpkgs.
+
 ## How to set up the source tree
 
 Blast radius: none outside `~/src/kernel`.
@@ -94,6 +106,34 @@ entry of the subsystem, line `T:`.
    `modpost` stage, and a directory target compiles the objects without linking the modules: the
    full `make` is the command of the loop.
 
+## How to boot a build in the VM
+
+1. In the kernel shell, configure a VM build of the tree: the zen configuration, then only the
+   modules the VM loads, built in. `yes ""` accepts the default of every question.
+
+   ```bash
+   mkdir -p ../build/<tree>-vm
+   cp "$KERNEL_BASE_CONFIG" ../build/<tree>-vm/.config
+   chmod u+w ../build/<tree>-vm/.config
+   make O=../build/<tree>-vm olddefconfig
+   yes "" | make O=../build/<tree>-vm LSMOD="$(nix build --no-link --print-out-paths ~/.config/nixos#kernel-vm-modules)/lsmod" localyesconfig
+   make O=../build/<tree>-vm -j"$(nproc)"
+   ```
+
+2. Boot it. The VM disk lives in `~/src/kernel/build/vm`, out of the snapshots.
+
+   ```bash
+   nix run ~/.config/nixos#kernel-vm -- ~/src/kernel/build/<tree>-vm
+   ```
+
+3. In the VM, check the running kernel and the shared tree, then power off.
+
+   ```bash
+   uname -r
+   ls /src
+   poweroff
+   ```
+
 ## Reference
 
 | Path | Content |
@@ -103,6 +143,11 @@ entry of the subsystem, line `T:`.
 | `~/src/kernel/build/<tree>` | Out-of-tree build output, in the nested subvolume |
 | `tools/kernel-shell.nix` | The `kernel` development shell |
 | `home/mowsoon/dev/kernel.nix` | tmpfiles rule of the build subvolume |
+| `~/src/kernel/build/<tree>-vm` | VM build: modules of the VM built in, all others disabled |
+| `~/src/kernel/build/vm` | Disk image of the `kernel-test` VM |
+| `hosts/kernel-test/default.nix` | VM booted on the build |
+| `tools/kernel-vm.nix` | `kernel-vm` launcher |
+| `tools/kernel-vm-modules.nix` | NixOS test that records the `lsmod` of the VM |
 
 | Measure, 2026-11-01, mainline `7.4-rc1`, zen `7.2.9` configuration | Value |
 | --- | --- |
@@ -110,3 +155,5 @@ entry of the subsystem, line `T:`.
 | First full build, `-j32` | 1979 s, 7389 modules, no warning |
 | Build output | 28 GiB in `~/src/kernel/build/mainline` |
 | Rebuild after touching one driver | 27 to 36 s |
+| VM build with `localyesconfig`, `-j32` | 290 s, no module, 4.6 GiB |
+| VM boot on the VM build | `uname -r` gives `7.4.0-rc1`, the system is `running` with no failed unit |

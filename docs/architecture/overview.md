@@ -2,13 +2,15 @@
 
 ## Overview
 
-The repository is a Nix flake pinned to `nixos-unstable`. It builds four NixOS systems and two
+The repository is a Nix flake pinned to `nixos-unstable`. It builds five NixOS systems and three
 helper applications from the same set of modules. `hephaestus` is the physical workstation; the
 other systems exist to validate it before a change reaches the hardware.
 
 ```mermaid
 flowchart LR
   flake[flake.nix] --> vmtest[vm-test]
+  vmtest --> kerneltest[kernel-test]
+  kerneltest --> kernelvm[nix run .#kernel-vm]
   flake --> heph[hephaestus]
   flake --> rehearsal[hephaestus-rehearsal]
   flake --> installer[installer]
@@ -262,13 +264,16 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | Output | Content |
 | --- | --- |
 | `nixosConfigurations.vm-test` | Minimal QEMU machine |
+| `nixosConfigurations.kernel-test` | `vm-test` with root logged in on the console and `~/src/kernel` shared on `/src` |
 | `nixosConfigurations.hephaestus` | Workstation |
 | `nixosConfigurations.hephaestus-rehearsal` | Workstation retargeted at the virtual disk of the rehearsal |
 | `nixosConfigurations.installer` | Live image used to install the workstation |
 | `apps.x86_64-linux.hephaestus-vm` | Boots the workstation VM from a blank firmware and TPM |
 | `apps.x86_64-linux.rehearsal` | Boots the installer image against a blank disk |
+| `apps.x86_64-linux.kernel-vm` | Boots a kernel build directory in the `kernel-test` VM |
 | `packages.x86_64-linux.rgb-effects` | Keyboard lighting effects daemon, built with its tests |
 | `packages.x86_64-linux.theme-recolor` | Theme recolouring tool, built with its tests |
+| `packages.x86_64-linux.kernel-vm-modules` | `lsmod` of the `kernel-test` VM on the NixOS kernel, input of `localyesconfig` |
 | `checks.x86_64-linux` | `nixfmt`, `statix`, `deadnix`, `rgb-effects`, `rgb-effects-ruff`, `rgb-effects-mypy`, `theme-recolor`, `theme-recolor-ruff`, `theme-recolor-mypy`, one `drill-<name>` per failure drill |
 | `formatter.x86_64-linux` | `nixfmt-tree` |
 | `devShells.x86_64-linux.default` | `nixfmt-tree`, `statix`, `deadnix`, `mkpasswd` |

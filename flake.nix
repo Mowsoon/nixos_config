@@ -97,6 +97,10 @@
           modules = [ ./hosts/vm-test ];
         };
 
+        kernel-test = nixpkgs.lib.nixosSystem {
+          modules = [ ./hosts/kernel-test ];
+        };
+
         hephaestus = nixpkgs.lib.nixosSystem {
           specialArgs = { inherit inputs; };
           modules = hephaestusModules;
@@ -128,6 +132,16 @@
           );
         };
 
+        kernel-vm = {
+          type = "app";
+          meta.description = "Boot a kernel build directory in the kernel-test VM, with the kernel sources shared on /src";
+          program = nixpkgs.lib.getExe (
+            pkgs.callPackage ./tools/kernel-vm.nix {
+              vm = self.nixosConfigurations.kernel-test.config.system.build.vm;
+            }
+          );
+        };
+
         rehearsal = {
           type = "app";
           meta.description = "Boot the installer ISO against a blank NVMe disk, Secure Boot firmware in setup mode and a TPM";
@@ -142,6 +156,7 @@
       packages.${system} = {
         rgb-effects = rgbEffects;
         theme-recolor = themeRecolor;
+        kernel-vm-modules = pkgs.callPackage ./tools/kernel-vm-modules.nix { };
       };
 
       formatter.${system} = pkgs.nixfmt-tree;
