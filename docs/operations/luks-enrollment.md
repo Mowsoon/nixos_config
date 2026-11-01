@@ -98,7 +98,9 @@ Blast radius: none, the command only reads the device.
    The two commands stay separate. Combined in one call, `systemd-cryptenroll`
    compares the requested PCR policy with the existing slot; after a TPM clear
    the PCR values are unchanged, so it reports that the PCR set is already
-   enrolled and does nothing, leaving a slot sealed to the old TPM.
+   enrolled and does nothing, leaving a slot sealed to the old TPM. After a
+   change of PCR 7, such as a dbx update, the combined call works; the separate
+   commands work in both cases.
 
 ## Reference
 

@@ -18,6 +18,7 @@ let
 in
 pkgs.lib.genAttrs [
   "boot"
+  "dbx-update"
   "enrollment"
   "tpm-clear"
 ] mkDrill

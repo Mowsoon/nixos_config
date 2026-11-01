@@ -33,7 +33,11 @@
 
   disko.devices.disk.main.imageSize = "8G";
 
-  environment.systemPackages = [ pkgs.tpm2-tools ];
+  environment.systemPackages = [
+    pkgs.efitools
+    pkgs.openssl
+    pkgs.tpm2-tools
+  ];
 
   system.switch.enable = true;
 
