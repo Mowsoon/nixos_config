@@ -17,6 +17,11 @@ in
     };
 
     custom = {
+      hardening.serviceExposure = {
+        NetworkManager = "6.8";
+        NetworkManager-dispatcher = "9.4";
+        iwd = "6.0";
+      };
       network.opensnitch.allowedExecutables.NetworkManager = "${config.networking.networkmanager.package}/bin/NetworkManager";
       persistence.directories = [
         {

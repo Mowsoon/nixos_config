@@ -80,6 +80,31 @@ every notification: sender, title and text. That access is also kept in a proces
 the effects daemon, logs nothing of the content, and runs without network or write access. The
 feature is off unless `custom.rgbEffects.notifications.enable` is set.
 
+### Service sandboxing
+
+A system service that parses input from outside its own process is where a remote or local
+attacker meets root code. systemd can confine each service (read-only system, private `/tmp`, no
+new privileges, a bounded capability set, filtered system calls and address families), and
+`systemd-analyze security` scores how much of that confinement a unit lacks, from 0 (confined) to
+10 (none). The score measures what a service is allowed, not what an attacker can reach: a console
+`getty` scores 9.6 and is no remote surface, while a 6.0 Wi-Fi daemon parses frames from any access
+point in range. The audit therefore ranks services by real exposure and hardens the ones that
+parse untrusted input first.
+
+Each module that owns a service records the highest score accepted for it in
+`custom.hardening.serviceExposure`. The `service-exposure` flake check runs `systemd-analyze
+security --offline` on the unit files of the built generation, drop-ins included, and fails when a
+service rises above its threshold. It needs no VM: it reads only the unit directory of the
+generation, inside `bubblewrap`, which provides the `/run` the analyzer insists on creating.
+
+Services left out of the audit, and why:
+
+| Services | Reason |
+| --- | --- |
+| `getty@`, `rescue`, `emergency`, `plymouth-*`, `systemd-ask-password-*` | Console and boot interface: reaching them already means physical access |
+| `docker`, `nix-daemon`, `udisks2`, `display-manager`, `dbus-broker`, `auditd`, `systemd-udevd`, `user@1000` | Privilege is their function; confining them breaks them. Docker is root-equivalent by design |
+| `snapper-*`, `btrfs-scrub@`, `nix-optimise` | Root batch jobs on local data, no untrusted input |
+
 ### Software supply
 
 Unfree packages are allowed one by one: each module that needs one adds its name to
@@ -183,7 +208,30 @@ audit or test artefact cannot be committed by accident.
 | Option | Default | Description |
 | --- | --- | --- |
 | `custom.hardening.enable` | `false` | AppArmor, audit, sysctls, wheel-only sudo and Nix daemon |
+| `custom.hardening.serviceExposure` | `{ }` | Highest accepted exposure score of each system service, set by its owner module |
 | `custom.unfreePackages` | `[ ]` | Names of the unfree packages allowed to build |
+
+### Service exposure
+
+Scores of `systemd-analyze security`, offline, on 2026-11-02. The threshold is the value recorded in
+`custom.hardening.serviceExposure`.
+
+| Service | Owner module | Input from | Threshold |
+| --- | --- | --- | --- |
+| `opensnitchd` | `network/opensnitch.nix` | Every outbound connection and DNS answer | 9.4 |
+| `iwd` | `network/manager.nix` | 802.11 frames of any access point in range | 6.0 |
+| `NetworkManager` | `network/manager.nix` | DHCP answers of the network | 6.8 |
+| `NetworkManager-dispatcher` | `network/manager.nix` | Connection events of NetworkManager | 9.4 |
+| `smartd` | `hardware/disk-health.nix` | Disk firmware data | 9.4 |
+| `nvidia-powerd` | `hardware/nvidia.nix` | GPU driver; closed-source root daemon | 9.4 |
+| `acpid` | `hardware/nvidia.nix` | ACPI events; enabled by the NixOS NVIDIA module | 9.4 |
+| `nscd` | `security/hardening.nix` | Name and user lookups of every process | 8.2 |
+| `chronyd` | `network/time.nix` | NTS-authenticated time servers | 3.3 |
+| `systemd-resolved` | `network/dns.nix` | DNS answers over TLS | 2.2 |
+| `asusd` | `hardware/asus.nix` | Platform firmware attributes | 1.8 |
+| `openrgb` | `hardware/rgb.nix` | Lighting clients on the local socket | 1.3 |
+| `power-profiles-daemon` | `hardware/power.nix` | Profile requests over D-Bus | 1.0 |
+| `rgb-keyreader` | `desktop/rgb-effects.nix` | Keyboard events | 0.6 |
 
 ### Upstream documentation
 
@@ -192,6 +240,8 @@ audit or test artefact cannot be committed by accident.
 | Kernel sysctl reference | <https://docs.kernel.org/admin-guide/sysctl/kernel.html> |
 | Linux Security Modules | <https://docs.kernel.org/admin-guide/LSM/index.html> |
 | Kernel lockdown | <https://man7.org/linux/man-pages/man7/kernel_lockdown.7.html> |
+| `systemd.exec` sandboxing | <https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html> |
+| `systemd-analyze security` | <https://www.freedesktop.org/software/systemd/man/latest/systemd-analyze.html> |
 | `security.apparmor` | <https://search.nixos.org/options?channel=unstable&query=security.apparmor> |
 | `security.auditd` | <https://search.nixos.org/options?channel=unstable&query=security.auditd> |
 | `security.sudo` | <https://search.nixos.org/options?channel=unstable&query=security.sudo> |

@@ -8,6 +8,8 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    custom.hardening.serviceExposure.smartd = "9.4";
+
     services.smartd = {
       enable = true;
       autodetect = true;

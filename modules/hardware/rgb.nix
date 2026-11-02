@@ -20,6 +20,8 @@ in
   options.custom.rgb.enable = lib.mkEnableOption "the OpenRGB SDK server, confined to the Logitech LIGHTSPEED receiver";
 
   config = lib.mkIf cfg.enable {
+    custom.hardening.serviceExposure.openrgb = "1.3";
+
     services = {
       hardware.openrgb = {
         enable = true;

@@ -39,7 +39,7 @@ host can enable.
 
 ### Contribution lists
 
-Three options are lists or attribute sets that the module system merges across every module that
+Several options are lists or attribute sets that the module system merges across every module that
 sets them. A module that owns a service contributes, in the same file, everything that service
 needs outside its own configuration:
 
@@ -47,6 +47,7 @@ needs outside its own configuration:
 | --- | --- | --- |
 | `custom.persistence.directories` | `environment.persistence."/persist".directories` | The directory survives the root rollback |
 | `custom.unfreePackages` | `nixpkgs.config.allowUnfreePredicate` | The package is allowed to build despite its license |
+| `custom.hardening.serviceExposure` | The `service-exposure` flake check | The service fails the check above this exposure score |
 | `custom.network.opensnitch.allowedExecutables` | `services.opensnitch.rules` | The executable may open outbound connections |
 | `custom.network.opensnitch.allowedExecutablePatterns` | `services.opensnitch.rules` | Executables whose path matches the expression may open outbound connections |
 
@@ -89,7 +90,7 @@ A change moves through increasingly realistic machines before it reaches the har
 
 | Stage | What it proves |
 | --- | --- |
-| `nix flake check` | Formatting (`nixfmt`), lints (`statix`, `deadnix`), the tests, lint (`ruff`) and typing (`mypy`) of the Python packages, the evaluation of every system, and the [failure drills](../operations/failure-drills.md) of the boot chain |
+| `nix flake check` | Formatting (`nixfmt`), lints (`statix`, `deadnix`), the tests, lint (`ruff`) and typing (`mypy`) of the Python packages, the evaluation of every system, the exposure thresholds of the system services, and the [failure drills](../operations/failure-drills.md) of the boot chain |
 | `vm-test` | The base user, sudo and Nix settings boot in QEMU |
 | `nix run .#hephaestus-vm` | The real `hephaestus` modules boot from the disko layout, with OVMF Secure Boot, an emulated TPM and throwaway keys |
 | `nix run .#rehearsal` | The installer image installs `hephaestus` onto a blank virtual NVMe disk |
@@ -274,7 +275,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `packages.x86_64-linux.theme-recolor` | Theme recolouring tool, built with its tests |
 | `packages.x86_64-linux.vmlinux-h` | `vmlinux.h` of the hephaestus kernel, for CO-RE BPF programs |
 | `packages.x86_64-linux.kernel-vm-modules` | `lsmod` of the `kernel-test` VM on the NixOS kernel, input of `localyesconfig` |
-| `checks.x86_64-linux` | `nixfmt`, `statix`, `deadnix`, `rgb-effects`, `rgb-effects-ruff`, `rgb-effects-mypy`, `theme-recolor`, `theme-recolor-ruff`, `theme-recolor-mypy`, one `drill-<name>` per failure drill |
+| `checks.x86_64-linux` | `nixfmt`, `statix`, `deadnix`, `rgb-effects`, `rgb-effects-ruff`, `rgb-effects-mypy`, `theme-recolor`, `theme-recolor-ruff`, `theme-recolor-mypy`, `service-exposure`, one `drill-<name>` per failure drill |
 | `formatter.x86_64-linux` | `nixfmt-tree` |
 | `devShells.x86_64-linux.default` | `nixfmt-tree`, `statix`, `deadnix`, `mkpasswd` |
 | `devShells.x86_64-linux.kernel` | Toolchain of the zen kernel, clang, llvm and lld, pahole, bpftool, libbpf, QEMU, b4, git with `send-email`, the zen configuration as `KERNEL_BASE_CONFIG`, and `CLANG` set to `clang-bpf` for the BPF selftests |

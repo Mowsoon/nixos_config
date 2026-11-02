@@ -64,6 +64,9 @@ in
       "systemd/system-sleep/hibernate-input-wakeup".source = inputWakeupHook;
     };
 
-    custom.persistence.directories = [ "/var/lib/power-profiles-daemon" ];
+    custom = {
+      persistence.directories = [ "/var/lib/power-profiles-daemon" ];
+      hardening.serviceExposure.power-profiles-daemon = "1.0";
+    };
   };
 }

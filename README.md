@@ -60,7 +60,7 @@ The machine reaches a login prompt in the terminal. Press `Ctrl+A` then `X` to s
 | Command | Effect |
 | --- | --- |
 | `nix fmt` | Formats every Nix file with `nixfmt` |
-| `nix flake check` | Runs `nixfmt --check`, `statix`, `deadnix`, the tests, `ruff` and `mypy` of `rgb-effects` and `theme-recolor`, the failure drills, and evaluates every host |
+| `nix flake check` | Runs `nixfmt --check`, `statix`, `deadnix`, the tests, `ruff` and `mypy` of `rgb-effects` and `theme-recolor`, the service exposure thresholds, the failure drills, and evaluates every host |
 | `nix develop` | Opens a shell with `nixfmt-tree`, `statix`, `deadnix` and `mkpasswd` |
 | `nix run .#kernel-vm -- <build directory>` | Boots a kernel build in the `kernel-test` VM |
 | `nix develop .#kernel` | Opens the kernel development shell described in [kernel development](docs/operations/kernel-development.md) |

@@ -69,6 +69,9 @@ in
       };
     };
 
-    custom.persistence.directories = [ "/etc/asusd" ];
+    custom = {
+      persistence.directories = [ "/etc/asusd" ];
+      hardening.serviceExposure.asusd = "1.8";
+    };
   };
 }

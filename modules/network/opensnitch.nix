@@ -91,6 +91,7 @@ in
     };
 
     custom = {
+      hardening.serviceExposure.opensnitchd = "9.4";
       network.opensnitch = {
         allowedExecutables = lib.optionalAttrs config.services.timesyncd.enable {
           systemd-timesyncd = "${config.systemd.package}/lib/systemd/systemd-timesyncd";

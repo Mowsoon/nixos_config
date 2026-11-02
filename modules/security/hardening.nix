@@ -5,6 +5,15 @@ in
 {
   options.custom.hardening = {
     enable = lib.mkEnableOption "the kernel and privilege hardening baseline";
+
+    serviceExposure = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.strMatching "[0-9]+\\.[0-9]");
+      default = { };
+      example = {
+        chronyd = "3.3";
+      };
+      description = "Highest exposure score, as computed by `systemd-analyze security`, accepted for each system service; set by the module that owns the service.";
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -16,6 +25,8 @@ in
     };
 
     nix.settings.allowed-users = [ "@wheel" ];
+
+    custom.hardening.serviceExposure.nscd = "8.2";
 
     boot.kernel.sysctl = {
       "kernel.kptr_restrict" = 2;

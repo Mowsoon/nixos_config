@@ -41,7 +41,9 @@ in
       };
     };
 
-    custom.network.opensnitch.allowedExecutables.systemd-resolved =
-      "${config.systemd.package}/lib/systemd/systemd-resolved";
+    custom = {
+      network.opensnitch.allowedExecutables.systemd-resolved = "${config.systemd.package}/lib/systemd/systemd-resolved";
+      hardening.serviceExposure.systemd-resolved = "2.2";
+    };
   };
 }

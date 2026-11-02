@@ -384,6 +384,8 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    custom.hardening.serviceExposure = lib.mkIf cfg.keys.enable { rgb-keyreader = "0.6"; };
+
     assertions = [
       {
         assertion = config.custom.rgb.enable;

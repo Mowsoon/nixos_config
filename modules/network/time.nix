@@ -38,6 +38,7 @@ in
     };
 
     custom = {
+      hardening.serviceExposure.chronyd = "3.3";
       network.opensnitch.allowedExecutables.chronyd = "${config.services.chrony.package}/bin/chronyd";
       persistence.directories = [
         {

@@ -14,10 +14,16 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    custom.unfreePackages = [
-      "nvidia-x11"
-      "nvidia-settings"
-    ];
+    custom = {
+      unfreePackages = [
+        "nvidia-x11"
+        "nvidia-settings"
+      ];
+      hardening.serviceExposure = {
+        acpid = "9.4";
+        nvidia-powerd = "9.4";
+      };
+    };
 
     services.xserver.videoDrivers = [ "nvidia" ];
 

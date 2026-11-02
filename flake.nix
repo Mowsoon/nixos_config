@@ -84,6 +84,7 @@
         lanzaboote.nixosModules.lanzaboote
         ./hosts/hephaestus
       ];
+      hephaestus = self.nixosConfigurations.hephaestus.config;
       runLint =
         name: tool: command:
         pkgs.runCommand "${name}-check" { nativeBuildInputs = [ tool ]; } ''
@@ -174,6 +175,11 @@
         theme-recolor = themeRecolor;
         theme-recolor-ruff = themeRecolor.lints.ruff;
         theme-recolor-mypy = themeRecolor.lints.mypy;
+        service-exposure = pkgs.callPackage ./tools/service-exposure.nix {
+          systemd = hephaestus.systemd.package;
+          units = hephaestus.environment.etc."systemd/system".source;
+          thresholds = hephaestus.custom.hardening.serviceExposure;
+        };
       }
       // nixpkgs.lib.mapAttrs' (name: nixpkgs.lib.nameValuePair "drill-${name}") drills;
 
