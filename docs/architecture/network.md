@@ -41,6 +41,20 @@ would hide `/dev/rfkill`. The exposure went from 6.0 to 2.9; switching the radio
 completes a full handshake. The `wiphy_estimate_data_rate() failed` lines in its log come from
 the driver and predate the confinement.
 
+NetworkManager parses the DHCP answers of the network with its internal client, as root. Its unit
+adds no new privileges, a read-only `/usr`, `/boot` and `/etc` except the connection profiles, no
+kernel modules (which drops `CAP_SYS_MODULE`), no `chroot`, no namespaces, a native system call
+filter that answers `EPERM` instead of killing the daemon, and the address families of D-Bus,
+netlink, the DHCP raw socket and the Internet. It keeps writing kernel network parameters under
+`/proc/sys/net` and its runtime files under `/run`, so `ProtectKernelTunables` and a read-only
+`/run` are left out. Its dispatcher only runs the chrony script, which tells chronyd through
+`/run/chrony` that the network went up or down: it has no network, no device, a read-only system
+except that directory, and `CAP_DAC_OVERRIDE` as its only capability, to enter `/run/chrony`,
+which belongs to the `chrony` user. A dispatcher script added later that needs the network or
+other paths must widen that confinement. The exposures went from 6.8 to 3.7 and from 9.4 to 1.5;
+a profile change is still saved, and switching the radio off and on still takes the chrony
+sources offline and back online.
+
 ### DNS
 
 systemd-resolved is the only resolver. Its global servers are the four Quad9 addresses, each with
