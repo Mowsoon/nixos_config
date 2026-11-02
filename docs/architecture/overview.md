@@ -264,13 +264,13 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | Output | Content |
 | --- | --- |
 | `nixosConfigurations.vm-test` | Minimal QEMU machine |
-| `nixosConfigurations.kernel-test` | `vm-test` with root logged in on the console and `~/src/kernel` shared on `/src` |
+| `nixosConfigurations.kernel-test` | `vm-test` with root logged in on the console, `~/src/kernel` shared writable on `/src`, and the command of `systemd.run=` started at boot |
 | `nixosConfigurations.hephaestus` | Workstation |
 | `nixosConfigurations.hephaestus-rehearsal` | Workstation retargeted at the virtual disk of the rehearsal |
 | `nixosConfigurations.installer` | Live image used to install the workstation |
 | `apps.x86_64-linux.hephaestus-vm` | Boots the workstation VM from a blank firmware and TPM |
 | `apps.x86_64-linux.rehearsal` | Boots the installer image against a blank disk |
-| `apps.x86_64-linux.kernel-vm` | Boots a kernel build directory in the `kernel-test` VM |
+| `apps.x86_64-linux.kernel-vm` | Boots a kernel build directory in the `kernel-test` VM, optionally runs a script there and powers off |
 | `packages.x86_64-linux.rgb-effects` | Keyboard lighting effects daemon, built with its tests |
 | `packages.x86_64-linux.theme-recolor` | Theme recolouring tool, built with its tests |
 | `packages.x86_64-linux.kernel-vm-modules` | `lsmod` of the `kernel-test` VM on the NixOS kernel, input of `localyesconfig` |

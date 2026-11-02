@@ -48,6 +48,26 @@ free through a pointer one byte past an allocation, also trip kmemleak, which th
 itself. The kmemleak sample that leaks on purpose exists only as a module, which the VM build
 cannot load, so it is left out.
 
+A test run needs no typing in the VM. Given a script as second argument, `kernel-vm` copies it to
+`~/src/kernel/build/vm/run` and adds three parameters to the kernel command line:
+`systemd.run=` makes systemd run it at boot, `systemd.setenv=KERNEL_BUILD=` hands it the path of
+the build directory inside the VM, and `systemd.run_success_action=poweroff` with its failure
+counterpart power the VM off afterwards. On NixOS `default.target` is an alias of
+`multi-user.target`, through which the generated unit is not started, so `kernel-test` pulls it
+in from `multi-user.target`; without `systemd.run=` that unit does not exist and nothing happens.
+The script writes its results into the build directory, which is why the tree is shared writable.
+
+The kselftests of a subsystem declare the options they need in a `config` fragment next to them.
+A selftests build merges those fragments into the VM configuration and turns every remaining
+module into a built-in with `mod2yesconfig`. The kselftest build skips `bpf` and `sched_ext`
+unless `SKIP_TARGETS` is emptied. Two subsystems cannot be tested in this VM: `cpufreq` and
+`amd-pstate` need a CPU frequency driver and a real AMD processor, which QEMU does not expose, so
+they belong to the hardware steps. Suspend and hibernation are exercised through
+`/sys/power/pm_test`, which walks the sleep path up to a chosen level and returns without
+sleeping; only the `freezer` level passes here, because virtiofs, which carries the Nix store and
+`/src`, cannot suspend or freeze its devices (`virtio_pci_freeze returns -95`). Testing the deeper
+levels needs a VM whose store lives on a disk image.
+
 ## How to set up the source tree
 
 Blast radius: none outside `~/src/kernel`.
@@ -196,6 +216,42 @@ entry of the subsystem, line `T:`.
 
    The line reports `fail:0` when every deliberate fault was caught.
 
+## How to run kselftests in the VM
+
+1. In the kernel shell, configure a selftests build: the VM configuration, the `config` fragments
+   of the selected tests, then every module built in.
+
+   ```bash
+   mkdir -p ../build/<tree>-selftests
+   cp ../build/<tree>-vm/.config ../build/<tree>-selftests/.config
+   scripts/kconfig/merge_config.sh -m -O ../build/<tree>-selftests ../build/<tree>-selftests/.config tools/testing/selftests/sched_ext/config
+   make O=../build/<tree>-selftests olddefconfig
+   make O=../build/<tree>-selftests mod2yesconfig
+   make O=../build/<tree>-selftests -j"$(nproc)"
+   ```
+
+2. Build and install the tests into the build directory.
+
+   ```bash
+   make O=../build/<tree>-selftests -j"$(nproc)" SKIP_TARGETS= TARGETS="<targets>" kselftest-install
+   ```
+
+   `<targets>` lists selftest directories, such as `sched_ext rtc`.
+
+3. Run them in the VM with the script of this repository, which also walks the `pm_test` levels.
+   The VM powers itself off when the script ends.
+
+   ```bash
+   nix run ~/.config/nixos#kernel-vm -- ~/src/kernel/build/<tree>-selftests ~/.config/nixos/kernel/run-selftests.sh
+   ```
+
+4. Read the results in the build directory.
+
+   ```bash
+   grep -E '^(ok|not ok)|# Totals' ~/src/kernel/build/<tree>-selftests/kselftest.log
+   cat ~/src/kernel/build/<tree>-selftests/pm-test.log
+   ```
+
 ## Reference
 
 | Path | Content |
@@ -208,6 +264,9 @@ entry of the subsystem, line `T:`.
 | `~/src/kernel/build/<tree>-vm` | VM build: modules of the VM built in, all others disabled |
 | `~/src/kernel/build/<tree>-debug` | VM build with the debug fragment |
 | `~/src/kernel/build/vm` | Disk image of the `kernel-test` VM |
+| `~/src/kernel/build/<tree>-selftests` | VM build with the selftest fragments, the installed tests and their logs |
+| `~/src/kernel/build/vm/run` | Copy of the last script run by `kernel-vm` |
+| `kernel/run-selftests.sh` | Runs the installed kselftests and the `pm_test` levels, results in the build directory |
 | `kernel/debug.config` | Debug fragment: KASAN, lockdep, atomic sleep check, kmemleak and their self-tests |
 | `hosts/kernel-test/default.nix` | VM booted on the build |
 | `tools/kernel-vm.nix` | `kernel-vm` launcher |
@@ -223,4 +282,7 @@ entry of the subsystem, line `T:`.
 | VM boot on the VM build | `uname -r` gives `7.4.0-rc1`, the system is `running` with no failed unit |
 | Debug build from the VM build | 398 s, then 111 s after a change of the fragment; 5.7 GiB |
 | Debug boot | lockdep: all 395 testcases passed; kmemleak scan without unreferenced object |
+| Selftests build, `sched_ext` and `bpf` fragments | Kernel 341 s; tests `sched_ext` and `rtc` in 70 s |
+| Selftests run in the VM, 324 s | `rtc` 8 of 8; `sched_ext` 38 passed, 2 skipped (lazy preemption, `nohz_full`), 0 failed |
+| `pm_test`, `freeze` and `disk` | `freezer` passes; `devices` and beyond fail on virtiofs (`-95`) |
 | Debug boot with `kunit.enable=1` | `# kasan: pass:60 fail:0 skip:16 total:76`, 164 KASAN reports |
