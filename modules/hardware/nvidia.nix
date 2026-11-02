@@ -21,7 +21,7 @@ in
       ];
       hardening.serviceExposure = {
         acpid = "9.4";
-        nvidia-powerd = "9.4";
+        nvidia-powerd = "1.8";
       };
     };
 
@@ -57,6 +57,48 @@ in
     };
 
     systemd.services = {
+      nvidia-powerd.serviceConfig = {
+        NoNewPrivileges = true;
+        ProtectSystem = "strict";
+        ReadWritePaths = [
+          "/run"
+          "/sys/devices/system/cpu"
+        ];
+        ProtectHome = true;
+        PrivateTmp = true;
+        PrivateNetwork = true;
+        DevicePolicy = "closed";
+        DeviceAllow = [
+          "char-nvidia rw"
+          "char-nvidia-caps r"
+          "char-cpu/msr rw"
+        ];
+        ProtectKernelTunables = true;
+        ProtectKernelModules = true;
+        ProtectKernelLogs = true;
+        ProtectControlGroups = true;
+        ProtectClock = true;
+        ProtectHostname = true;
+        ProtectProc = "invisible";
+        RestrictNamespaces = true;
+        RestrictRealtime = true;
+        RestrictSUIDSGID = true;
+        LockPersonality = true;
+        MemoryDenyWriteExecute = true;
+        SystemCallArchitectures = "native";
+        SystemCallFilter = [ "@system-service" ];
+        SystemCallErrorNumber = "EPERM";
+        RestrictAddressFamilies = [
+          "AF_UNIX"
+          "AF_NETLINK"
+        ];
+        CapabilityBoundingSet = [
+          "CAP_SYS_ADMIN"
+          "CAP_SYS_RAWIO"
+        ];
+        UMask = "0077";
+      };
+
       nvidia-suspend-then-hibernate = {
         description = "NVIDIA system suspend-then-hibernate actions";
         path = [ pkgs.kbd ];

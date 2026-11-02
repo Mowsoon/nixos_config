@@ -57,6 +57,17 @@ management settings are the result of two incidents:
 The driver reads its options only when it is loaded: a change to them takes effect after
 `nixos-rebuild boot` and a real reboot, never after a resume from hibernation.
 
+Dynamic Boost is run by `nvidia-powerd`, a closed-source root daemon. While it works, the current
+power limit reported by `nvidia-smi -q -d POWER` rises above the default 100 W, up to 140 W on
+mains; when it fails, the limit stays at 100 W and the daemon logs `QBoost is not created`. Its
+unit is confined to what a test of each protection on its own showed it needs: the GPU devices,
+the CPU model-specific registers (`/dev/cpu/*/msr`) read and written to set the CPU power,
+`/run` for its PID file `/run/nvtopps.pid`, `/sys/devices/system/cpu` to lower the CPU frequency
+limit while the GPU takes the power, and the capabilities `CAP_SYS_ADMIN` and `CAP_SYS_RAWIO`.
+It has no network and a system call filter that answers `EPERM`, since the calls of a closed
+binary are not known in advance. The exposure went from 9.4 to 1.8. The `disable Dynamic Boost DC
+controller` line at every start comes from the firmware, which turns Dynamic Boost off on battery.
+
 The `nvidia`, `nvidia_modeset` and `nvidia_drm` modules load in the initrd, so the boot splash
 draws on the NVIDIA framebuffer from the first frame and the display does not switch drivers on
 its way to the login screen. The initrd then carries the GSP firmware of the driver and the same

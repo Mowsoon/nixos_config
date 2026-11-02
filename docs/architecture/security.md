@@ -223,7 +223,7 @@ Scores of `systemd-analyze security`, offline, on 2026-11-02. The threshold is t
 | `NetworkManager` | `network/manager.nix` | DHCP answers of the network | 3.7, from 6.8 |
 | `NetworkManager-dispatcher` | `network/manager.nix` | Connection events of NetworkManager | 1.5, from 9.4 |
 | `smartd` | `hardware/disk-health.nix` | Disk firmware data | 1.9, from 9.4 |
-| `nvidia-powerd` | `hardware/nvidia.nix` | GPU driver; closed-source root daemon | 9.4 |
+| `nvidia-powerd` | `hardware/nvidia.nix` | GPU driver; closed-source root daemon | 1.8, from 9.4 |
 | `acpid` | `hardware/nvidia.nix` | ACPI events; enabled by the NixOS NVIDIA module | 9.4 |
 | `nscd` | `security/hardening.nix` | Name and user lookups of every process | 8.2 |
 | `chronyd` | `network/time.nix` | NTS-authenticated time servers | 3.3 |
