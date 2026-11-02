@@ -219,6 +219,15 @@ and installs it ahead of the in-tree modules
 smartd monitors every detected disk and sends a desktop notification through the system bus when
 an attribute crosses its failure threshold.
 
+It runs as root and sends raw NVMe and SCSI commands to the disks, so its unit is confined to
+that: no network, a read-only system and no home, no namespaces, a native system call filter,
+local sockets only, and the capabilities `CAP_SYS_ADMIN` and `CAP_SYS_RAWIO` for the commands
+plus `CAP_DAC_OVERRIDE` for `wall`. Devices are allowed by class, so a disk plugged in later is
+still covered: NVMe controllers (`char-nvme`), SCSI and USB disks (`block-sd`), and the terminals
+that `wall` writes the alert to (`char-pts`, `char-tty`). The exposure went from 9.4 to 1.9. With
+`services.smartd.notifications.test` set, smartd sends one test alert per monitored disk at start,
+which checks the whole alert chain, D-Bus and `wall` included.
+
 ## How to check the graphics driver state
 
 1. Check that the discrete GPU is active and see its power state.
