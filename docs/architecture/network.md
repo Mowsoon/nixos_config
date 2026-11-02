@@ -30,6 +30,17 @@ recognising the machine. With the iwd backend, the MAC address options of Networ
 ignored; a profile that pins `mac-address` or `interface-name` no longer matches the randomised
 interface.
 
+iwd parses the frames of every access point in range as root, so its unit adds to the confinement
+shipped by the package (bounded capabilities, read-only system, `/dev/rfkill` as the only device)
+the kernel log, clock and hostname protections, no namespaces, no realtime, no SUID files, a
+native system call filter (`@system-service`, which includes the kernel keyring iwd uses) and
+the address families it needs: `AF_PACKET` for the EAPOL frames of the WPA handshake,
+`AF_NETLINK` for nl80211, `AF_UNIX` for D-Bus, the Internet families, and `AF_ALG`, the kernel
+crypto interface through which iwd computes WPA keys. `PrivateDevices` is left out because it
+would hide `/dev/rfkill`. The exposure went from 6.0 to 2.9; switching the radio off and on still
+completes a full handshake. The `wiphy_estimate_data_rate() failed` lines in its log come from
+the driver and predate the confinement.
+
 ### DNS
 
 systemd-resolved is the only resolver. Its global servers are the four Quad9 addresses, each with
