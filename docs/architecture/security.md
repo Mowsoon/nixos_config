@@ -218,7 +218,7 @@ Scores of `systemd-analyze security`, offline, on 2026-11-02. The threshold is t
 
 | Service | Owner module | Input from | Threshold |
 | --- | --- | --- | --- |
-| `opensnitchd` | `network/opensnitch.nix` | Every outbound connection and DNS answer | 9.4 |
+| `opensnitchd` | `network/opensnitch.nix` | Every outbound connection and DNS answer | 3.7, from 9.4 |
 | `iwd` | `network/manager.nix` | 802.11 frames of any access point in range | 6.0 |
 | `NetworkManager` | `network/manager.nix` | DHCP answers of the network | 6.8 |
 | `NetworkManager-dispatcher` | `network/manager.nix` | Connection events of NetworkManager | 9.4 |

@@ -82,6 +82,15 @@ The NixOS module writes declared rules as symbolic links to the Nix store in
 as a regular file. The directory is persisted, so UI rules accumulate until they are moved into
 the configuration and deleted.
 
+The daemon runs as root and sees every connection, so its unit is confined to what the job needs:
+a read-only system except `/tmp`, where it connects to the UI socket `/tmp/osui.sock`, which also
+rules out `PrivateTmp`; a read-only home, no new privileges, no device but the standard ones, a
+system call filter that adds `bpf` and `perf_event_open`, and a capability set bounded to network
+administration, raw sockets, BPF and performance monitoring, `ptrace` and file permission
+overrides, which attributing a connection to an executable requires. The queue bypasses the
+daemon when it is not running, so a confinement that broke it would let every connection through
+without a prompt: after a change, a program without any rule must raise the prompt again.
+
 ### Time
 
 chrony synchronises the clock with Network Time Security (NTS) against four public servers. NTS
@@ -223,6 +232,7 @@ second off (`makestep 1 -1`), and a timer resets the resolver's servers after ev
 | `DefaultDuration` | `once` |
 | `InterceptUnknown` | `false` |
 | Rule directory | `/var/lib/opensnitch/rules`, persisted |
+| Exposure of the unit | 3.7, from 9.4 before confinement (`systemd-analyze security`) |
 
 ### Resolver settings
 

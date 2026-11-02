@@ -90,8 +90,50 @@ in
       rules = lib.listToAttrs (baseRules ++ executableRules ++ patternRules);
     };
 
+    systemd.services.opensnitchd.serviceConfig = {
+      NoNewPrivileges = true;
+      ProtectSystem = "strict";
+      ReadWritePaths = [ "/tmp" ];
+      ProtectHome = "read-only";
+      PrivateDevices = true;
+      ProtectKernelModules = true;
+      ProtectKernelLogs = true;
+      ProtectControlGroups = true;
+      ProtectClock = true;
+      ProtectHostname = true;
+      RestrictNamespaces = true;
+      RestrictRealtime = true;
+      RestrictSUIDSGID = true;
+      LockPersonality = true;
+      MemoryDenyWriteExecute = true;
+      SystemCallArchitectures = "native";
+      UMask = "0077";
+      SystemCallFilter = [
+        "@system-service"
+        "bpf"
+        "perf_event_open"
+      ];
+      RestrictAddressFamilies = [
+        "AF_UNIX"
+        "AF_NETLINK"
+        "AF_INET"
+        "AF_INET6"
+      ];
+      CapabilityBoundingSet = [
+        "CAP_NET_ADMIN"
+        "CAP_NET_RAW"
+        "CAP_BPF"
+        "CAP_PERFMON"
+        "CAP_SYS_ADMIN"
+        "CAP_SYS_PTRACE"
+        "CAP_SYS_RESOURCE"
+        "CAP_DAC_OVERRIDE"
+        "CAP_DAC_READ_SEARCH"
+      ];
+    };
+
     custom = {
-      hardening.serviceExposure.opensnitchd = "9.4";
+      hardening.serviceExposure.opensnitchd = "3.7";
       network.opensnitch = {
         allowedExecutables = lib.optionalAttrs config.services.timesyncd.enable {
           systemd-timesyncd = "${config.systemd.package}/lib/systemd/systemd-timesyncd";
