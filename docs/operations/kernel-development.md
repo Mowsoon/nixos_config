@@ -36,6 +36,18 @@ turns every module that the VM loads on the NixOS kernel into a built-in and dis
 others. The list of those modules is the `kernel-vm-modules` package of the flake, the `lsmod` of
 `kernel-test` recorded by a NixOS test, so it follows the VM configuration and nixpkgs.
 
+Bugs that corrupt memory or locks rarely crash where they happen. A debug build adds the kernel
+checkers that catch them at the faulty access, at the cost of speed and memory, so it is used
+only in the VM. The fragment `kernel/debug.config` of this repository turns on KASAN (every memory
+access checked against a shadow map), lockdep (every lock order checked against the orders seen
+so far), the atomic sleep check and kmemleak (a scan for allocations nothing points to any more),
+with their self-tests. The lockdep self-tests run at every boot. The KASAN KUnit suite makes one
+deliberate invalid access per case and passes only when KASAN reports it; it is built in but runs
+only with `kunit.enable=1` on the kernel command line, because its deliberate faults, such as a
+free through a pointer one byte past an allocation, also trip kmemleak, which then disables
+itself. The kmemleak sample that leaks on purpose exists only as a module, which the VM build
+cannot load, so it is left out.
+
 ## How to set up the source tree
 
 Blast radius: none outside `~/src/kernel`.
@@ -134,6 +146,56 @@ entry of the subsystem, line `T:`.
    poweroff
    ```
 
+## How to boot a debug build in the VM
+
+1. In the kernel shell, start from the VM configuration of the tree and merge the fragment.
+   `merge_config.sh -m` merges without running the configurator, and `olddefconfig` resolves the
+   new dependencies.
+
+   ```bash
+   mkdir -p ../build/<tree>-debug
+   cp ../build/<tree>-vm/.config ../build/<tree>-debug/.config
+   scripts/kconfig/merge_config.sh -m -O ../build/<tree>-debug ../build/<tree>-debug/.config ~/.config/nixos/kernel/debug.config
+   make O=../build/<tree>-debug olddefconfig
+   make O=../build/<tree>-debug -j"$(nproc)"
+   ```
+
+2. Boot it.
+
+   ```bash
+   nix run ~/.config/nixos#kernel-vm -- ~/src/kernel/build/<tree>-debug
+   ```
+
+   `QEMU_KERNEL_PARAMS` adds parameters to the kernel command line: `log_buf_len=16M` enlarges
+   the kernel log, so the early self-test results are not pushed out by later reports.
+
+   ```bash
+   QEMU_KERNEL_PARAMS="log_buf_len=16M" nix run ~/.config/nixos#kernel-vm -- ~/src/kernel/build/<tree>-debug
+   ```
+
+3. In the VM, read the lockdep self-test result and run one kmemleak scan.
+
+   ```bash
+   dmesg | grep -E 'testcases passed|kmemleak: Kernel'
+   echo scan > /sys/kernel/debug/kmemleak
+   cat /sys/kernel/debug/kmemleak
+   ```
+
+   `cat` lists the unreferenced objects found by the scan, if any.
+
+4. To prove KASAN, boot again with the KUnit suites enabled and read the summary of the suite.
+   Each `BUG: KASAN` report in the log is one of its deliberate faults.
+
+   ```bash
+   QEMU_KERNEL_PARAMS="log_buf_len=16M kunit.enable=1" nix run ~/.config/nixos#kernel-vm -- ~/src/kernel/build/<tree>-debug
+   ```
+
+   ```bash
+   dmesg | grep '# kasan: pass'
+   ```
+
+   The line reports `fail:0` when every deliberate fault was caught.
+
 ## Reference
 
 | Path | Content |
@@ -144,7 +206,9 @@ entry of the subsystem, line `T:`.
 | `tools/kernel-shell.nix` | The `kernel` development shell |
 | `home/mowsoon/dev/kernel.nix` | tmpfiles rule of the build subvolume |
 | `~/src/kernel/build/<tree>-vm` | VM build: modules of the VM built in, all others disabled |
+| `~/src/kernel/build/<tree>-debug` | VM build with the debug fragment |
 | `~/src/kernel/build/vm` | Disk image of the `kernel-test` VM |
+| `kernel/debug.config` | Debug fragment: KASAN, lockdep, atomic sleep check, kmemleak and their self-tests |
 | `hosts/kernel-test/default.nix` | VM booted on the build |
 | `tools/kernel-vm.nix` | `kernel-vm` launcher |
 | `tools/kernel-vm-modules.nix` | NixOS test that records the `lsmod` of the VM |
@@ -157,3 +221,6 @@ entry of the subsystem, line `T:`.
 | Rebuild after touching one driver | 27 to 36 s |
 | VM build with `localyesconfig`, `-j32` | 290 s, no module, 4.6 GiB |
 | VM boot on the VM build | `uname -r` gives `7.4.0-rc1`, the system is `running` with no failed unit |
+| Debug build from the VM build | 398 s, then 111 s after a change of the fragment; 5.7 GiB |
+| Debug boot | lockdep: all 395 testcases passed; kmemleak scan without unreferenced object |
+| Debug boot with `kunit.enable=1` | `# kasan: pass:60 fail:0 skip:16 total:76`, 164 KASAN reports |
