@@ -7,6 +7,7 @@
   bpftools,
   clang,
   gitFull,
+  libbpf,
   lld,
   llvm,
   ncurses,
@@ -26,6 +27,7 @@ mkShell {
     bpftools
     clang
     gitFull
+    libbpf
     lld
     llvm
     ncurses

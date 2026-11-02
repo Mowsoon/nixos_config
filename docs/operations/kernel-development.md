@@ -73,6 +73,17 @@ only the `freezer` level passes here, because virtiofs, which carries the Nix st
 cannot suspend or freeze its devices (`virtio_pci_freeze returns -95`). Testing the deeper levels
 needs a VM whose store lives on a disk image.
 
+A BPF program written for CO-RE (compile once, run everywhere) includes `vmlinux.h`, a header
+that declares every type of a kernel, dumped from its BTF. The `vmlinux-h` package of the flake
+dumps it from the `vmlinux` of the kernel that hephaestus builds, so it follows the kernel of the
+configuration, patches included; on 2026-11-02 it was byte for byte the header dumped from
+`/sys/kernel/btf/vmlinux` of the running kernel. Recent kernels embed tagged anonymous structures,
+such as `struct slock_owned;` inside another structure, which C reads as a declaration that
+declares nothing, so their fields would vanish: a program that includes the header is compiled
+with `-fms-extensions`, which reads them as anonymous members, and `-Wno-microsoft-anon-tag`, as
+the sched_ext build does. The kernel shell carries `libbpf` for the `bpf_helpers.h`,
+`bpf_core_read.h` and `bpf_tracing.h` headers.
+
 ## How to set up the source tree
 
 Blast radius: none outside `~/src/kernel`.
@@ -265,6 +276,32 @@ entry of the subsystem, line `T:`.
    cat ~/src/kernel/build/<tree>-selftests/pm-test.log
    ```
 
+## How to generate vmlinux.h
+
+1. Build the header of the hephaestus kernel.
+
+   ```bash
+   nix build ~/.config/nixos#vmlinux-h
+   ```
+
+   The header is `result/include/vmlinux.h`.
+
+2. For a kernel of the source tree, dump it from the `vmlinux` of the build directory.
+
+   ```bash
+   bpftool btf dump file ~/src/kernel/build/<tree>-vm/vmlinux format c > vmlinux.h
+   ```
+
+3. Compile a BPF program against the header, in the kernel shell.
+
+   ```bash
+   "$CLANG" -target bpf -O2 -g -fms-extensions -Wno-microsoft-anon-tag -I <include directory> -c <program>.bpf.c -o <program>.bpf.o
+   ```
+
+   `<include directory>` holds `vmlinux.h`, such as `result/include`. The wrapper of clang warns
+   that `-target bpf` is not a target it was designed for; the object is correct, with its
+   `.BTF` and `.BTF.ext` sections.
+
 ## Reference
 
 | Path | Content |
@@ -283,6 +320,7 @@ entry of the subsystem, line `T:`.
 | `kernel/debug.config` | Debug fragment: KASAN, lockdep, atomic sleep check, kmemleak and their self-tests |
 | `hosts/kernel-test/default.nix` | VM booted on the build |
 | `tools/kernel-vm.nix` | `kernel-vm` launcher |
+| `tools/vmlinux-h.nix` | `vmlinux.h` of the hephaestus kernel, dumped with `bpftool` |
 | `tools/kernel-vm-modules.nix` | NixOS test that records the `lsmod` of the VM |
 
 | Measure, 2026-11-01, mainline `7.4-rc1`, zen `7.2.9` configuration | Value |
@@ -300,5 +338,6 @@ entry of the subsystem, line `T:`.
 | BPF selftests build | 1072 s for the first build of the BPF objects; 1.2 GiB installed |
 | BPF run in the VM, 806 s | `test_verifier` 792 passed, 0 failed; `test_maps` OK; `test_progs` 808 tests passed, 20 failed (37 subtests), many subtests skipped |
 | `test_progs` failures, baseline before any patch | `attach_probe`, `build_id`, `stacktrace_build_id`, `stacktrace_build_id_nmi`, `uprobe`, `uprobe_autoattach`, `uprobe_syscall`, `usdt` (uprobes); `signed_loader`, `verify_pkcs7_sig` (signature keys); `cgroup_attach_multi`, `cgroup_link`, `test_local_storage`; `test_ima`; `tunnel`, `xdp_bonding`, `xdp_do_redirect`, `xdp_synproxy`, `xdp_vlan_change`, `xdp_vlan_remove` (network) |
+| `vmlinux.h` of zen `7.2.9` | 141 309 lines, identical to the dump of the running kernel; a CO-RE `tp_btf/sched_switch` program compiles without warning |
 | `pm_test`, `freeze` and `disk` | `freezer` passes; `devices` and beyond fail on virtiofs (`-95`) |
 | Debug boot with `kunit.enable=1` | `# kasan: pass:60 fail:0 skip:16 total:76`, 164 KASAN reports |

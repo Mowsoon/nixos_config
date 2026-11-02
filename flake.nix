@@ -157,6 +157,9 @@
         rgb-effects = rgbEffects;
         theme-recolor = themeRecolor;
         kernel-vm-modules = pkgs.callPackage ./tools/kernel-vm-modules.nix { };
+        vmlinux-h = pkgs.callPackage ./tools/vmlinux-h.nix {
+          inherit (self.nixosConfigurations.hephaestus.config.boot.kernelPackages) kernel;
+        };
       };
 
       formatter.${system} = pkgs.nixfmt-tree;
