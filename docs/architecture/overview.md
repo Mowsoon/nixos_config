@@ -76,9 +76,8 @@ to the user, not to root: the flake is evaluated as the user, and only the activ
 elevated privileges, as described in [How to apply a change to the
 workstation](#how-to-apply-a-change-to-the-workstation).
 
-A second private repository, `DublinLife`, is a flake input of its own, `dublinlife`: a personal
-site whose package and Home Manager module the user environment imports, described in [User
-environment](user-environment.md#dublinlife). It is fetched over SSH with the same key.
+A second private repository, `DublinLife`, is a flake input of its own, `dublinlife`, whose Home
+Manager module the user environment imports. It is fetched over SSH with the same key.
 
 A fork has no access to these repositories. It must provide its own source tree with the same
 layout, either by changing the URL of the input or by overriding it at each command, as described
@@ -294,7 +293,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `stylix` | Palette and fonts applied to Plasma and GTK, NixOS module with its Home Manager module |
 | `nix-index-database` | Prebuilt nix-index database, for the command-not-found handler and comma |
 | `nixos-private` | Private repository over SSH, `flake = false`: personal data imported by modules |
-| `dublinlife` | Private repository over SSH: the DublinLife site package and its Home Manager module |
+| `dublinlife` | Private repository over SSH: a Home Manager module imported by the user environment |
 
 ### Private input layout
 
@@ -338,6 +337,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `custom.rootRollback` | `core/root-rollback.nix` | Empty root subvolume at every cold boot |
 | `custom.snapshots` | `core/snapshots.nix` | snapper timelines |
 | `custom.memory` | `core/memory.nix` | zram, swap tuning, systemd-oomd |
+| `custom.fhsCompat` | `core/fhs-compat.nix` | envfs: `/bin` and `/usr/bin` resolved from the caller's `PATH` |
 | `custom.nixMaintenance` | `core/nix-maintenance.nix` | Build priority, store deduplication, garbage collection |
 | `custom.unfreePackages` | `core/unfree.nix` | Allowlist of unfree packages |
 | `custom.windowsVolume` | `core/windows-volume.nix` | Read-only access to the BitLocker volume |

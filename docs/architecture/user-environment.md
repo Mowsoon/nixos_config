@@ -192,6 +192,13 @@ shell survives a garbage collection until the project changes. direnv announces 
 hides the list of changed variables (`hide_env_diff`), which runs to dozens of lines for a Nix
 shell.
 
+Upstream scripts often start with `#!/bin/bash` or `#!/usr/bin/python3`, paths that NixOS does not
+provide. envfs (`custom.fhsCompat`) mounts a FUSE filesystem on `/usr/bin`, bind-mounted on
+`/bin`, that answers each name with the executable of that name found in the `PATH` of the
+process asking, and falls back to `/bin/sh` and `/usr/bin/env`. A script therefore runs with the
+interpreter of the shell it was started from, such as the kernel development shell. `nix-ld`
+plays the same role for the dynamic loader of generic binaries.
+
 Source code lives under `~/src`, in the persisted `/home`: the root is erased at every boot, so the
 FHS locations `/usr/src` and `/opt` would not survive. The kernel work of
 [kernel development](../operations/kernel-development.md) uses `~/src/kernel`, whose `build`
@@ -219,25 +226,6 @@ holds it as EasyEffects exports it, Home Manager links it into `~/.local/share/e
 and the service loads it at start through the EasyEffects socket. The preset is read-only; a setting
 changed in the EasyEffects window is lost at the next start unless it is exported back into the
 repository. The chain and its tuning are described in [Hardware](hardware.md).
-
-### DublinLife
-
-DublinLife is a personal reference site for everyday life in Dublin: recipes, products and where
-to buy them, appliance guides, routines, local procedures and notes. Its code and content live in
-a private repository of their own, consumed as the `dublinlife` flake input; its flake exports
-the package and a Home Manager module, which `home/mowsoon/services/dublinlife.nix` enables.
-
-The module declares a user socket on `127.0.0.1:8420` and a service started by that socket. No
-process runs until the first request; the server exits after ten minutes without requests, and
-systemd starts it again on the next one. Browsers resolve every `*.localhost` name to the loopback
-address, so the site is reached at `http://dublinlife.localhost:8420`; the server refuses any
-other host name, which blocks DNS rebinding from other sites.
-
-The server reads its Markdown content from the working copy in `~/Projects/DublinLife/content` on
-every request, so an edited sheet shows on the next refresh, without a rebuild. A change to the
-code reaches the workstation only through `flake.lock`, as described in [How to update
-DublinLife](#how-to-update-dublinlife). The socket listens on loopback only, so the firewall stays
-closed, and the server opens no outbound connection, so it needs no OpenSnitch rule.
 
 ### Default applications
 
@@ -341,27 +329,6 @@ into its database once; `~/.zsh_history` is read, not changed.
 
 3. Copy the printed hash into `sha256`, then apply the configuration.
 
-## How to update DublinLife
-
-1. Commit and push the change in `~/Projects/DublinLife`.
-2. Move the input to the pushed commit, as the user:
-
-   ```bash
-   nix flake update dublinlife
-   ```
-
-3. Apply the generation with `nixos-rebuild test`, then `switch`, as described in
-   [Overview](overview.md#how-to-apply-a-change-to-the-workstation).
-4. Stop the running server so that the next request starts the new one:
-
-   ```bash
-   systemctl --user stop dublinlife.service
-   ```
-
-   The socket stays active and keeps listening.
-
-An edit under `content/` needs none of these steps: refresh the page.
-
 ## Reference
 
 ### Files under `home/mowsoon/`
@@ -393,7 +360,6 @@ Each directory is one domain; its `default.nix` imports the files of the domain.
 | `editor/cores/` | Options, key mappings, commands, colour scheme |
 | `editor/plugins/` | Plugins grouped in `dev`, `ui` and `utils` |
 | `services/` | User services, one file each, imported from `services/default.nix` |
-| `services/dublinlife.nix` | DublinLife site, started by its systemd user socket |
 
 ### Shell aliases
 
@@ -513,6 +479,7 @@ Each directory is one domain; its `default.nix` imports the files of the domain.
 | --- | --- | --- |
 | `custom.docker.enable` | `false` | Docker daemon, socket activation, weekly prune, NVIDIA CDI |
 | `custom.claudeDesktop.enable` | `false` | Claude desktop application, Cowork paths, `nix-ld` |
+| `custom.fhsCompat.enable` | `false` | envfs on `/usr/bin` and `/bin` |
 
 ### Upstream documentation
 
@@ -524,6 +491,8 @@ Each directory is one domain; its `default.nix` imports the files of the domain.
 | nix-direnv | <https://github.com/nix-community/nix-direnv> |
 | NVIDIA CDI | <https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/cdi-support.html> |
 | nix-ld | <https://github.com/nix-community/nix-ld> |
+| envfs | <https://github.com/Mic92/envfs> |
+| `services.envfs` | <https://search.nixos.org/options?channel=unstable&query=services.envfs> |
 | `virtualisation.docker` | <https://search.nixos.org/options?channel=unstable&query=virtualisation.docker> |
 | `programs.nix-ld` | <https://search.nixos.org/options?channel=unstable&query=programs.nix-ld> |
 | `services.easyeffects` | <https://nix-community.github.io/home-manager/options.xhtml#opt-services.easyeffects.enable> |
