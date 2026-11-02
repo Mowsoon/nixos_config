@@ -20,9 +20,12 @@ the gigabytes of objects of a build stay out of the hourly snapshots of `/home`,
 stay in them.
 
 The `kernel` development shell carries the toolchain of the zen kernel package (compilers, Rust,
-`pahole` for BTF), clang and llvm for the BPF selftests, `bpftool`, QEMU, b4 and git with
-`send-email`. It exports `KERNEL_BASE_CONFIG`, the configuration of the zen kernel that hephaestus
-runs, so a build starts from the options the workstation actually uses.
+`pahole` for BTF), clang, llvm and lld for the BPF selftests, `bpftool`, QEMU, b4 and git with
+`send-email`. The clang of nixpkgs is a wrapper that adds the system headers and always passes
+`--gcc-toolchain`, which a BPF target ignores; the BPF selftests build with `-Werror`, so the shell
+sets `CLANG` to `clang-bpf`, the same wrapper with that one warning turned off. It exports
+`KERNEL_BASE_CONFIG`, the configuration of the zen kernel that hephaestus runs, so a build starts
+from the options the workstation actually uses.
 
 A build is tested in `kernel-test`, a variant of `vm-test` where root is logged in on the serial
 console and `~/src/kernel` is shared on `/src` through virtiofs. `nix run .#kernel-vm` boots its
@@ -57,16 +60,18 @@ counterpart power the VM off afterwards. On NixOS `default.target` is an alias o
 in from `multi-user.target`; without `systemd.run=` that unit does not exist and nothing happens.
 The script writes its results into the build directory, which is why the tree is shared writable.
 
-The kselftests of a subsystem declare the options they need in a `config` fragment next to them.
-A selftests build merges those fragments into the VM configuration and turns every remaining
-module into a built-in with `mod2yesconfig`. The kselftest build skips `bpf` and `sched_ext`
-unless `SKIP_TARGETS` is emptied. Two subsystems cannot be tested in this VM: `cpufreq` and
-`amd-pstate` need a CPU frequency driver and a real AMD processor, which QEMU does not expose, so
-they belong to the hardware steps. Suspend and hibernation are exercised through
-`/sys/power/pm_test`, which walks the sleep path up to a chosen level and returns without
-sleeping; only the `freezer` level passes here, because virtiofs, which carries the Nix store and
-`/src`, cannot suspend or freeze its devices (`virtio_pci_freeze returns -95`). Testing the deeper
-levels needs a VM whose store lives on a disk image.
+The kselftests of a subsystem declare the options they need in a `config` fragment next to them. A
+selftests build merges those fragments into the VM configuration and turns every remaining module
+into a built-in with `mod2yesconfig`. The kselftest build skips `bpf` and `sched_ext` unless
+`SKIP_TARGETS` is emptied, and the BPF man pages need `rst2man`, skipped with `SKIP_DOCS=1`. Many
+selftest scripts start with `#!/bin/bash`, which envfs (`custom.fhsCompat`) resolves on hephaestus,
+for the build, and in `kernel-test`, for the run. Two subsystems cannot be tested in this VM:
+`cpufreq` and `amd-pstate` need a CPU frequency driver and a real AMD processor, which QEMU does not
+expose, so they belong to the hardware steps. Suspend and hibernation are exercised through
+`/sys/power/pm_test`, which walks the sleep path up to a chosen level and returns without sleeping;
+only the `freezer` level passes here, because virtiofs, which carries the Nix store and `/src`,
+cannot suspend or freeze its devices (`virtio_pci_freeze returns -95`). Testing the deeper levels
+needs a VM whose store lives on a disk image.
 
 ## How to set up the source tree
 
@@ -233,19 +238,27 @@ entry of the subsystem, line `T:`.
 2. Build and install the tests into the build directory.
 
    ```bash
-   make O=../build/<tree>-selftests -j"$(nproc)" SKIP_TARGETS= TARGETS="<targets>" kselftest-install
+   make O=../build/<tree>-selftests -j"$(nproc)" SKIP_TARGETS= SKIP_DOCS=1 TARGETS="<targets>" kselftest-install
    ```
 
-   `<targets>` lists selftest directories, such as `sched_ext rtc`.
+   `<targets>` lists selftest directories, such as `bpf sched_ext rtc`. For `bpf`, also merge
+   `tools/testing/selftests/bpf/config`, `config.vm` and `config.x86_64` in step 1.
 
-3. Run them in the VM with the script of this repository, which also walks the `pm_test` levels.
+3. Optionally select the tests to run. Without this file, every installed test runs; the BPF
+   collection alone takes over an hour, because `test_progs` comes in three variants.
+
+   ```bash
+   echo "-t bpf:test_verifier -t bpf:test_maps -t bpf:test_progs" > ~/src/kernel/build/<tree>-selftests/kselftest.args
+   ```
+
+4. Run them in the VM with the script of this repository, which also walks the `pm_test` levels.
    The VM powers itself off when the script ends.
 
    ```bash
    nix run ~/.config/nixos#kernel-vm -- ~/src/kernel/build/<tree>-selftests ~/.config/nixos/kernel/run-selftests.sh
    ```
 
-4. Read the results in the build directory.
+5. Read the results in the build directory.
 
    ```bash
    grep -E '^(ok|not ok)|# Totals' ~/src/kernel/build/<tree>-selftests/kselftest.log
@@ -266,7 +279,7 @@ entry of the subsystem, line `T:`.
 | `~/src/kernel/build/vm` | Disk image of the `kernel-test` VM |
 | `~/src/kernel/build/<tree>-selftests` | VM build with the selftest fragments, the installed tests and their logs |
 | `~/src/kernel/build/vm/run` | Copy of the last script run by `kernel-vm` |
-| `kernel/run-selftests.sh` | Runs the installed kselftests and the `pm_test` levels, results in the build directory |
+| `kernel/run-selftests.sh` | Runs the installed kselftests, or those of `kselftest.args`, and the `pm_test` levels; results in the build directory |
 | `kernel/debug.config` | Debug fragment: KASAN, lockdep, atomic sleep check, kmemleak and their self-tests |
 | `hosts/kernel-test/default.nix` | VM booted on the build |
 | `tools/kernel-vm.nix` | `kernel-vm` launcher |
@@ -284,5 +297,8 @@ entry of the subsystem, line `T:`.
 | Debug boot | lockdep: all 395 testcases passed; kmemleak scan without unreferenced object |
 | Selftests build, `sched_ext` and `bpf` fragments | Kernel 341 s; tests `sched_ext` and `rtc` in 70 s |
 | Selftests run in the VM, 324 s | `rtc` 8 of 8; `sched_ext` 38 passed, 2 skipped (lazy preemption, `nohz_full`), 0 failed |
+| BPF selftests build | 1072 s for the first build of the BPF objects; 1.2 GiB installed |
+| BPF run in the VM, 806 s | `test_verifier` 792 passed, 0 failed; `test_maps` OK; `test_progs` 808 tests passed, 20 failed (37 subtests), many subtests skipped |
+| `test_progs` failures, baseline before any patch | `attach_probe`, `build_id`, `stacktrace_build_id`, `stacktrace_build_id_nmi`, `uprobe`, `uprobe_autoattach`, `uprobe_syscall`, `usdt` (uprobes); `signed_loader`, `verify_pkcs7_sig` (signature keys); `cgroup_attach_multi`, `cgroup_link`, `test_local_storage`; `test_ima`; `tunnel`, `xdp_bonding`, `xdp_do_redirect`, `xdp_synproxy`, `xdp_vlan_change`, `xdp_vlan_remove` (network) |
 | `pm_test`, `freeze` and `disk` | `freezer` passes; `devices` and beyond fail on virtiofs (`-95`) |
 | Debug boot with `kunit.enable=1` | `# kasan: pass:60 fail:0 skip:16 total:76`, 164 KASAN reports |

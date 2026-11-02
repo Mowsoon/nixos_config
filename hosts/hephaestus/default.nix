@@ -16,6 +16,7 @@ in
     ../../modules/core/windows-volume.nix
     ../../modules/core/nix-maintenance.nix
     ../../modules/core/memory.nix
+    ../../modules/core/fhs-compat.nix
     ../../modules/virtualisation/docker.nix
     ../../modules/desktop/boot-splash.nix
     ../../modules/desktop/claude-desktop.nix
@@ -70,6 +71,8 @@ in
     nixMaintenance.enable = true;
 
     memory.enable = true;
+
+    fhsCompat.enable = true;
 
     rootRollback = {
       enable = true;

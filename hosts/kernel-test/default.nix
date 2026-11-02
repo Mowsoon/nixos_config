@@ -1,6 +1,11 @@
 { lib, ... }:
 {
-  imports = [ ../vm-test ];
+  imports = [
+    ../vm-test
+    ../../modules/core/fhs-compat.nix
+  ];
+
+  custom.fhsCompat.enable = true;
 
   networking.hostName = lib.mkForce "kernel-test";
 

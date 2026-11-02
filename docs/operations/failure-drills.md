@@ -9,9 +9,10 @@ the serial console and asserts every step. A drill passes when its build succeed
 
 The drill machine is not the full workstation. It imports the modules of the boot chain only: the
 disko layout of `hephaestus`, Secure Boot through lanzaboote, the LUKS2 container with its TPM2
-unlock, the root rollback and the persistence, plus `tpm2-tools`, `efitools` and `openssl` to
-break the TPM and the firmware databases. Desktop, NVIDIA and Home Manager are left out, so the
-disk image stays small and a drill does not rebuild the KWin graft. The VM settings it shares with
+unlock, the root rollback, the persistence and envfs, whose initrd rule keeps `/usr` valid on the
+empty root, plus `tpm2-tools`, `efitools` and `openssl` to break the TPM and the firmware
+databases. Desktop, NVIDIA and Home Manager are left out, so the disk image stays small and a
+drill does not rebuild the KWin graft. The VM settings it shares with
 `hephaestus-vm` live in `hosts/hephaestus/vm.nix`: OVMF firmware with Secure Boot support, an
 emulated TPM (swtpm), and Secure Boot keys generated at first boot and enrolled by systemd-boot.
 

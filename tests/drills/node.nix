@@ -25,6 +25,7 @@ in
     ../../hosts/hephaestus/vm.nix
     ../../modules/core/root-rollback.nix
     ../../modules/core/persistence.nix
+    ../../modules/core/fhs-compat.nix
     ../../modules/security/secure-boot.nix
     ../../modules/security/luks.nix
   ];
@@ -35,6 +36,8 @@ in
     secureBoot.enable = true;
 
     luks.tpm2Unlock = true;
+
+    fhsCompat.enable = true;
 
     rootRollback = {
       enable = true;

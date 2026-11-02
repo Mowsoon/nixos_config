@@ -1,7 +1,11 @@
 #!/bin/sh
 export PATH=/run/current-system/sw/bin:$PATH
 cd "$KERNEL_BUILD/kselftest/kselftest_install" || exit 1
-./run_kselftest.sh > "$KERNEL_BUILD/kselftest.log" 2>&1
+set --
+if [ -f "$KERNEL_BUILD/kselftest.args" ]; then
+  set -- $(cat "$KERNEL_BUILD/kselftest.args")
+fi
+./run_kselftest.sh "$@" > "$KERNEL_BUILD/kselftest.log" 2>&1
 {
   for state in freeze disk; do
     for level in freezer devices platform processors core; do
