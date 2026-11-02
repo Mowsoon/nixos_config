@@ -309,6 +309,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `themes/look-and-feel/<name>/` | `modules/desktop/theme.nix` | Look-and-feel package holding a splash screen |
 | `wallpapers/desktop.png` | `modules/desktop/theme.nix` | Image of the desktop and of the lock screen |
 | `avatars/mowsoon.png` | `modules/desktop/theme.nix` | Picture of the account |
+| `home/mowsoon/kernel-identity.nix` | `home/mowsoon/dev/kernel.nix` | Attribute set of strings: `name`, `email`, the identity that signs kernel patches |
 
 | Attribute | Content | Used as |
 | --- | --- | --- |

@@ -84,6 +84,15 @@ with `-fms-extensions`, which reads them as anonymous members, and `-Wno-microso
 the sched_ext build does. The kernel shell carries `libbpf` for the `bpf_helpers.h`,
 `bpf_core_read.h` and `bpf_tracing.h` headers.
 
+A patch leaves as an e-mail. In `~/src/kernel` git signs with the real name of the private input,
+which the kernel requires in `Signed-off-by`, and b4 prepares the series: it tracks it on a
+`b4/<name>` branch with a cover letter, finds the recipients with `scripts/get_maintainer.pl`,
+runs `scripts/checkpatch.pl`, and sends through the web submission endpoint of kernel.org, which
+it also picks by default in a kernel tree when no SMTP server is set. The endpoint accepts only
+patches signed with a patatt key, so the first real submission generates that key and registers
+the address (`b4 send --web-auth-new`), which sends a confirmation e-mail. Until then, every send
+is a rehearsal that writes the messages to a directory.
+
 ## How to set up the source tree
 
 Blast radius: none outside `~/src/kernel`.
@@ -302,6 +311,56 @@ entry of the subsystem, line `T:`.
    that `-target bpf` is not a target it was designed for; the object is correct, with its
    `.BTF` and `.BTF.ext` sections.
 
+## How to prepare and rehearse a patch
+
+Blast radius: none; nothing leaves the machine.
+
+1. In the kernel shell, start a series on its own branch, forked from the current branch.
+
+   ```bash
+   b4 prep -n <name> -f <base>
+   ```
+
+   `<name>` names the series; `<base>` is the branch the patch applies to, such as `master`.
+
+2. Commit the change with a sign-off and check it.
+
+   ```bash
+   git commit -s
+   scripts/checkpatch.pl --strict -g HEAD
+   ```
+
+3. Fill the recipients from `MAINTAINERS` and edit the cover letter if the series has several
+   patches.
+
+   ```bash
+   b4 prep --auto-to-cc
+   b4 prep --edit-cover
+   ```
+
+4. Rehearse the send: the messages are written to `<directory>`, unsigned. b4 refuses unsigned
+   messages for the web endpoint, so the placeholder SMTP server makes it take the SMTP path,
+   which `-o` never opens.
+
+   ```bash
+   GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=sendemail.smtpserver GIT_CONFIG_VALUE_0=localhost.invalid b4 send -o <directory> --no-sign
+   ```
+
+5. Without b4, the same patch goes through `git format-patch` and a dry run of `git send-email`,
+   which prints the message instead of sending it.
+
+   ```bash
+   git format-patch -1 -o <directory>
+   git send-email --dry-run --confirm=never --to=<address> <directory>/*.patch
+   ```
+
+6. Leave the rehearsal branch.
+
+   ```bash
+   git switch <base>
+   git branch -D b4/<name>
+   ```
+
 ## Reference
 
 | Path | Content |
@@ -339,5 +398,6 @@ entry of the subsystem, line `T:`.
 | BPF run in the VM, 806 s | `test_verifier` 792 passed, 0 failed; `test_maps` OK; `test_progs` 808 tests passed, 20 failed (37 subtests), many subtests skipped |
 | `test_progs` failures, baseline before any patch | `attach_probe`, `build_id`, `stacktrace_build_id`, `stacktrace_build_id_nmi`, `uprobe`, `uprobe_autoattach`, `uprobe_syscall`, `usdt` (uprobes); `signed_loader`, `verify_pkcs7_sig` (signature keys); `cgroup_attach_multi`, `cgroup_link`, `test_local_storage`; `test_ima`; `tunnel`, `xdp_bonding`, `xdp_do_redirect`, `xdp_synproxy`, `xdp_vlan_change`, `xdp_vlan_remove` (network) |
 | `vmlinux.h` of zen `7.2.9` | 141 309 lines, identical to the dump of the running kernel; a CO-RE `tp_btf/sched_switch` program compiles without warning |
+| Patch rehearsal, `asus-armoury` wording fix | `checkpatch.pl --strict`: 0 errors, 0 warnings, 0 checks; `get_maintainer.pl`: the ASUS WMI and x86 platform maintainers, `platform-driver-x86` and `linux-kernel`; `git send-email --dry-run`: `Dry-OK`; `b4 send -o`: one message written, nothing sent |
 | `pm_test`, `freeze` and `disk` | `freezer` passes; `devices` and beyond fail on virtiofs (`-95`) |
 | Debug boot with `kunit.enable=1` | `# kasan: pass:60 fail:0 skip:16 total:76`, 164 KASAN reports |
