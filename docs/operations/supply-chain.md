@@ -46,6 +46,26 @@ and kept after the closure is collected. A candidate that is later activated kee
 report. The scan is written in the same directory and rewritten at every run, since the databases
 change.
 
+### Comparing two closures
+
+The `diff` command compares the running system with a candidate, by default
+`/run/current-system` and `./result`. It scans both closures in the same run, so that both reports
+come from the same state of the databases: a vulnerability published between two scans would
+otherwise read as introduced by the candidate. It prints three parts:
+
+- the packages added, removed and upgraded, with the size change of each, from
+  `nix store diff-closures`;
+- the vulnerabilities fixed, found in the running system and not in the candidate, and the
+  vulnerabilities introduced, found only in the candidate, compared by identifier and package and
+  without the whitelisted ones;
+- an alert listing the introduced vulnerabilities with a CVSS score of 9.0 or more, set by
+  `alertScore` in `flake.nix`.
+
+The result is informative: `diff` exits with success whatever it finds, alert included, because
+false positives would make a blocking gate a burden. Two events call for it: after a
+`nix flake update`, the main case, and after a configuration change, which mostly brings
+transitive dependencies into the closure.
+
 ### Triage and whitelist
 
 Most findings are not vulnerabilities of the installed code. The matching produces three kinds of
@@ -165,6 +185,27 @@ by package and reason, with an expiry six months after the triage.
 4. When the finding is a false positive, add it to `tools/supply-chain/whitelist.nix` with its
    reason and an expiry date, then scan again: the line shows `True` in the `whitelist` column.
 
+## How to review an update before activating it
+
+1. Update the inputs and build the candidate without activating it.
+
+   ```bash
+   nix flake update
+   nix run .#supply-chain -- build
+   ```
+
+2. Compare it with the running system.
+
+   ```bash
+   nix run .#supply-chain -- diff | less
+   ```
+
+3. Triage each introduced vulnerability as in the previous procedure, alert first.
+   Then apply the update with `nixos-rebuild test`, or restore `flake.lock` with
+   `git restore flake.lock` to leave it out.
+
+After a configuration change, run steps 1 and 2 without `nix flake update`.
+
 ## Reference
 
 | Command | Effect |
@@ -172,6 +213,7 @@ by package and reason, with an expiry six months after the triage.
 | `supply-chain build [<flake directory>]` | Builds the `hephaestus` toplevel of the flake into `<flake directory>/result`, default `.`, and prints its store path |
 | `supply-chain sbom [<system>]` | Writes the SBOMs of a closure, default `/run/current-system`, and prints the report directory |
 | `supply-chain scan [<system>]` | Writes the SBOMs if missing, scans the closure and prints the path of the report |
+| `supply-chain diff [<old system>] [<new system>]` | Scans both closures, default `/run/current-system` and `./result`, and prints the packages and vulnerabilities that changed, with an alert on the critical ones introduced |
 
 | File in the report directory | Content |
 | --- | --- |
@@ -198,6 +240,7 @@ by package and reason, with an expiry six months after the triage.
 | Later `scan` | 35 s |
 | Findings of the first scan | 340 on 102 packages: 207 found by one scanner, 101 by grype and vulnix together, none by OSV with another scanner |
 | After triage | 38 whitelisted; 302 left, of which 14 with a CVSS score of 9 or more and 204 published in 2026, after the pinned nixpkgs revision |
+| `diff` of a generation of 2026-10-29 against the running system, same nixpkgs | 62 s; 2 vulnerabilities introduced by the packages added since, both name collisions, whitelisted |
 
 | Tool | Link |
 | --- | --- |

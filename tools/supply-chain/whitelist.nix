@@ -96,3 +96,12 @@ group "mujs"
     [
       "CVE-2021-4048"
     ]
+++
+  group "oh-my-zsh"
+    "NVD bound is the commit 72928432 of 2021, which grype compares with a version named by date"
+    [
+      "CVE-2021-3727"
+    ]
+++ group "obsidian" "NVD CPE is Plesk Obsidian, not the Obsidian note application" [
+  "CVE-2023-24044"
+]

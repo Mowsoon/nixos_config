@@ -145,11 +145,12 @@
 
         supply-chain = {
           type = "app";
-          meta.description = "Build the hephaestus candidate without activating it, inventory a system closure and scan it for known vulnerabilities";
+          meta.description = "Build the hephaestus candidate without activating it, inventory and scan a system closure, and diff two closures";
           program = nixpkgs.lib.getExe (
             self.nixosConfigurations.hephaestus.pkgs.callPackage ./tools/supply-chain {
               nix = hephaestus.nix.package;
               host = "hephaestus";
+              alertScore = "9.0";
             }
           );
         };
