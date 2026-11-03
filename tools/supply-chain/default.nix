@@ -50,6 +50,8 @@ writeShellApplication {
       echo "       supply-chain sbom [<system>]" >&2
       echo "       supply-chain scan [<system>]" >&2
       echo "       supply-chain diff [<old system>] [<new system>]" >&2
+      echo "       supply-chain summary [<system>]" >&2
+      echo "       supply-chain provenance [<system>]" >&2
       exit 2
     }
 
@@ -143,11 +145,53 @@ writeShellApplication {
       fi
     }
 
+    summary() {
+      local system report open critical expired
+      system=$(realpath "''${1:-/run/current-system}")
+      report="$state/$(basename "$system")"
+      if [ ! -e "$report/vulns.csv" ]; then
+        echo "no scan of $system yet: run supply-chain scan" >&2
+        exit 1
+      fi
+      open=$(open_vulns "$report/vulns.csv" | wc -l)
+      critical=$(open_vulns "$report/vulns.csv" \
+        | awk -F, -v threshold=${alertScore} '$3 != "" && $3 >= threshold' | wc -l)
+      expired=$(jq --arg today "$(date -I)" '[.[] | select(.until < $today)] | length' ${whitelist})
+      echo "$open open vulnerabilities, $critical with a CVSS score of ${alertScore} or more"
+      if [ "$expired" -gt 0 ]; then
+        echo "$expired whitelist entries to triage again"
+      fi
+    }
+
+    provenance() {
+      local system report drv finished
+      system=$(realpath "''${1:-/run/current-system}")
+      report=$(sbom "$system")
+      if [ ! -e "$report/provenance.json" ]; then
+        drv=$(nix-store --query --deriver "$system")
+        if [ ! -e "$drv" ]; then
+          echo "the derivation of $system is not in the store: build it from the flake first" >&2
+          exit 1
+        fi
+        finished=$(nix path-info --json-format 1 --json "$system" | jq -r '.[].registrationTime')
+        PROVENANCE_BUILD_TYPE="https://nix.dev/manual/nix/latest/store/derivation/" \
+          PROVENANCE_BUILDER_ID="nix-daemon on ${host}" \
+          PROVENANCE_TIMESTAMP_FINISHED="$finished" \
+          PROVENANCE_EXTERNAL_PARAMS=$(jq -cn --arg configuration "${host}" --arg version "$(cat "$system/nixos-version")" \
+            '{nixosConfiguration: $configuration, nixosVersion: $version}') \
+          command provenance --recursive "$drv" --out "$report/provenance.json.tmp" >&2
+        mv "$report/provenance.json.tmp" "$report/provenance.json"
+      fi
+      echo "$report/provenance.json"
+    }
+
     case "''${1:-}" in
       build) shift; build "$@" ;;
       sbom) shift; sbom "$@" ;;
       scan) shift; scan "$@" ;;
       diff) shift; compare "$@" ;;
+      summary) shift; summary "$@" ;;
+      provenance) shift; provenance "$@" ;;
       *) usage ;;
     esac
   '';

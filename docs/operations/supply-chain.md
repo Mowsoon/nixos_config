@@ -68,12 +68,50 @@ otherwise read as introduced by the candidate. It prints three parts:
   vulnerabilities introduced, found only in the candidate, compared by identifier and package and
   without the whitelisted ones;
 - an alert listing the introduced vulnerabilities with a CVSS score of 9.0 or more, set by
-  `alertScore` in `flake.nix`.
+  `custom.supplyChain.alertScore`.
 
 The result is informative: `diff` exits with success whatever it finds, alert included, because
 false positives would make a blocking gate a burden. Two events call for it: after a
 `nix flake update`, the main case, and after a configuration change, which mostly brings
 transitive dependencies into the closure.
+
+### Weekly scan
+
+The module `modules/security/supply-chain.nix` builds the application for the host, with the Nix
+of the system, and the flake app and check reuse that package. It also runs the scan without a
+diff, once a week. A laptop is not on at a fixed hour, and a scan needs mains power and the
+network, so the schedule is a due date rather than an appointment: a systemd user timer starts
+`supply-chain-scan` every hour, and at the next session after a missed hour (`Persistent`). The
+service exits at once while the last successful scan, recorded by the date of
+`~/.local/state/supply-chain/last-scan`, is less than seven days old, and also on battery
+(`ConditionACPower`) or without a connection (`nm-online`). The scan therefore runs in the first
+hour, once the week is over, with the machine on mains power and online; a skipped hour costs
+nothing and is tried again an hour later. A timer on a weekly date alone would fire once at the
+next session and lose the week when that session starts on battery or offline. The scan runs at
+the lowest CPU and I/O priority, since it keeps several cores busy for a minute or more, and not
+for the system users such as the greeter of SDDM. It ends with a desktop notification, as smartd
+does: the summary of the report, the number of open vulnerabilities and of those with a CVSS
+score of at least the alert score, and the whitelist entries that expired; or, when the scan
+failed, an urgent notification that points to the journal, and the date of the last scan is not
+moved, so the next hour tries again. The module owns the OpenSnitch rule of grype, which downloads
+its database; the queries of OSV and the NVD feeds of vulnix go through the `python3` rule.
+
+### Provenance
+
+The `provenance` command writes the SLSA v1.0 provenance of a closure with the `provenance` tool of
+sbomnix: an in-toto statement whose subject is the store path and its SHA-256 digest, and whose
+resolved dependencies are every derivation of the build, recursively, each with its digest. The
+build is local, so the builder fields that a hosted builder would fill are set by the command: the
+builder is the Nix daemon of the host, the external parameters are the NixOS configuration and the
+NixOS version, which carries the date and the revision of nixpkgs, and the end time is the
+registration time of the store path. The derivation of the closure must be in the store, which is
+true for a closure built on the machine and for the candidate.
+
+This reaches SLSA Build L1 at most: the provenance exists and describes the build, but the machine
+that built the closure also writes and could edit the provenance, and nothing signs it. Build L2
+and L3 need a hosted builder that signs its provenance, which would need the private input and
+build the unfree packages. The provenance is still useful locally: it lists the exact inputs of a
+generation, and two provenances can be compared.
 
 ### Triage and whitelist
 
@@ -203,6 +241,52 @@ by package and reason, with an expiry six months after the triage.
 4. When the finding is a false positive, add it to `tools/supply-chain/whitelist.nix` with its
    reason and an expiry date, then scan again: the line shows `True` in the `whitelist` column.
 
+## How to read the weekly scan
+
+1. Check when the last scan succeeded. A missing file means no scan has succeeded yet.
+
+   ```bash
+   date -r ~/.local/state/supply-chain/last-scan
+   ```
+
+2. Check when the timer checks next.
+
+   ```bash
+   systemctl --user list-timers supply-chain-scan.timer
+   ```
+
+3. Read the log of the last run, or force a scan now by removing the date of the last one.
+
+   ```bash
+   journalctl --user -u supply-chain-scan -n 20
+   rm ~/.local/state/supply-chain/last-scan
+   systemctl --user start supply-chain-scan.service
+   ```
+
+   On battery, the start is skipped: `ConditionACPower` is not met.
+
+4. Print the summary again, or list the findings with the procedure above.
+
+   ```bash
+   nix run .#supply-chain -- summary
+   ```
+
+## How to write the provenance of a closure
+
+1. Write the provenance of the running system, or of a candidate with `./result` as argument.
+
+   ```bash
+   nix run .#supply-chain -- provenance
+   ```
+
+2. Read the subject, the builder fields and the number of build dependencies.
+
+   ```bash
+   jq '{subject: .subject[0].uri, builder: .predicate.runDetails.builder.id, parameters: .predicate.buildDefinition.externalParameters, dependencies: (.predicate.buildDefinition.resolvedDependencies | length)}' <file>
+   ```
+
+   `<file>` is the path printed by step 1.
+
 ## How to review an update before activating it
 
 1. Update the inputs and build the candidate without activating it.
@@ -232,6 +316,8 @@ After a configuration change, run steps 1 and 2 without `nix flake update`.
 | `supply-chain sbom [<system>]` | Writes the SBOMs of a closure, default `/run/current-system`, and prints the report directory |
 | `supply-chain scan [<system>]` | Writes the SBOMs if missing, scans the closure and prints the path of the report |
 | `supply-chain diff [<old system>] [<new system>]` | Scans both closures, default `/run/current-system` and `./result`, and prints the packages and vulnerabilities that changed, with an alert on the critical ones introduced |
+| `supply-chain summary [<system>]` | Prints the open and critical vulnerabilities of the last scan of a closure, and the expired whitelist entries |
+| `supply-chain provenance [<system>]` | Writes the SLSA v1.0 provenance of a closure whose derivation is in the store, and prints its path |
 
 | File in the report directory | Content |
 | --- | --- |
@@ -241,10 +327,13 @@ After a configuration change, run steps 1 and 2 without `nix flake update`.
 | `no-deriver.txt` | Paths of the closure recorded without a deriver, missing from the SBOMs |
 | `whitelist.csv` | Whitelist entries still valid at the last scan, in the format of vulnxscan |
 | `vulns.csv` | Findings of the last scan: identifier, package, version, CVSS score, scanners, whitelist decision and reason |
+| `provenance.json` | SLSA v1.0 provenance of the closure |
 
 | Path | Content |
 | --- | --- |
 | `tools/supply-chain/default.nix` | The `supply-chain` application |
+| `modules/security/supply-chain.nix` | Package of the host, weekly scan and its notification, OpenSnitch rule of grype |
+| `~/.local/state/supply-chain/last-scan` | Its date is the end of the last successful weekly scan |
 | `tools/supply-chain/whitelist.nix` | Triaged false positives, each with its reason and expiry |
 | `~/.cache/vulnix` | NVD feeds parsed by vulnix |
 | `~/.cache/grype` | Database of grype |
@@ -257,6 +346,7 @@ After a configuration change, run steps 1 and 2 without `nix flake update`.
 | Report size | 10 MB |
 | First `scan`, empty caches | 368 s, 1.7 GB of memory |
 | Later `scan` | 35 s |
+| `provenance`, recursive, generation of 2026-11-01 | 112 s; 23918 build dependencies; 6.9 MB |
 | Findings of the first scan | 340 on 102 packages: 207 found by one scanner, 101 by grype and vulnix together, none by OSV with another scanner |
 | After triage | 38 whitelisted; 302 left, of which 14 with a CVSS score of 9 or more and 204 published in 2026, after the pinned nixpkgs revision |
 | `diff` of a generation of 2026-10-29 against the running system, same nixpkgs | 62 s; 2 vulnerabilities introduced by the packages added since, both name collisions, whitelisted |

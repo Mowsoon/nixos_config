@@ -349,6 +349,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `custom.secureBoot` | `security/secure-boot.nix` | lanzaboote signing |
 | `custom.luks` | `security/luks.nix` | TPM2 unlock of the root container |
 | `custom.hardening` | `security/hardening.nix` | Kernel and privilege hardening |
+| `custom.supplyChain` | `security/supply-chain.nix` | Supply chain application of the host, weekly vulnerability scan |
 | `custom.nvidia` | `hardware/nvidia.nix` | NVIDIA driver |
 | `custom.asus` | `hardware/asus.nix` | asusd and battery charge limit |
 | `custom.audio` | `hardware/audio.nix` | PipeWire |

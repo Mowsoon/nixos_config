@@ -27,6 +27,7 @@ in
     ../../modules/security/secure-boot.nix
     ../../modules/security/luks.nix
     ../../modules/security/hardening.nix
+    ../../modules/security/supply-chain.nix
   ];
 
   nixpkgs.hostPlatform = "x86_64-linux";
@@ -46,6 +47,8 @@ in
     luks.tpm2Unlock = true;
 
     hardening.enable = true;
+
+    supplyChain.enable = true;
 
     docker.enable = true;
 

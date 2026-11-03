@@ -15,7 +15,6 @@
       clusterctl = "${pkgs.clusterctl}/bin/clusterctl";
       kind = "${pkgs.kind}/bin/kind";
       trivy = "${pkgs.trivy}/bin/trivy";
-      grype = "${pkgs.grype}/bin/grype";
       tealdeer = "${pkgs.tealdeer}/bin/tldr";
       spotify = "${pkgs.spotify}/share/spotify/.spotify-wrapped";
       libreoffice = "${pkgs.libreoffice-qt.unwrapped}/lib/libreoffice/program/soffice.bin";

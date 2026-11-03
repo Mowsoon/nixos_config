@@ -127,8 +127,9 @@ build locally.
 Every flake input is pinned by `flake.lock`. Updating it is an explicit commit. Before the new
 closure is activated, it can be built as a candidate, inventoried component by component and
 scanned for published vulnerabilities, with the procedure of
-[Supply chain](../operations/supply-chain.md). The scan informs and never blocks an update; its
-limits are written there.
+[Supply chain](../operations/supply-chain.md). The running system is scanned once a week, and each
+closure can carry an SLSA provenance of its build. The scan informs and never blocks an update;
+its limits are written there.
 
 ### Secrets
 
@@ -225,6 +226,9 @@ audit or test artefact cannot be committed by accident.
 | --- | --- | --- |
 | `custom.hardening.enable` | `false` | AppArmor, audit, sysctls, wheel-only sudo and Nix daemon |
 | `custom.hardening.serviceExposure` | `{ }` | Highest accepted exposure score of each system service, set by its owner module |
+| `custom.supplyChain.enable` | `false` | Vulnerability scan of the running system once a week, at the first hour on mains power and online, with a desktop notification |
+| `custom.supplyChain.alertScore` | `"9.0"` | Lowest CVSS score singled out by the diff of two closures and the summary of a scan |
+| `custom.supplyChain.package` | read only | The `supply-chain` application built for the host |
 | `custom.unfreePackages` | `[ ]` | Names of the unfree packages allowed to build |
 
 ### Service exposure

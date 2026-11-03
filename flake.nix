@@ -85,11 +85,7 @@
         ./hosts/hephaestus
       ];
       hephaestus = self.nixosConfigurations.hephaestus.config;
-      supplyChain = self.nixosConfigurations.hephaestus.pkgs.callPackage ./tools/supply-chain {
-        nix = hephaestus.nix.package;
-        host = "hephaestus";
-        alertScore = "9.0";
-      };
+      supplyChain = hephaestus.custom.supplyChain.package;
       runLint =
         name: tool: command:
         pkgs.runCommand "${name}-check" { nativeBuildInputs = [ tool ]; } ''

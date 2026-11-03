@@ -73,6 +73,7 @@ The machine reaches a login prompt in the terminal. Press `Ctrl+A` then `X` to s
 | `nix run .#supply-chain -- sbom [<system>]` | Writes the SBOMs of a closure, by default the running system, as described in [supply chain](docs/operations/supply-chain.md) |
 | `nix run .#supply-chain -- scan [<system>]` | Scans a closure, by default the running system, for published vulnerabilities |
 | `nix run .#supply-chain -- diff` | Compares the running system with the candidate in `./result`: packages and vulnerabilities changed |
+| `nix run .#supply-chain -- provenance [<system>]` | Writes the SLSA provenance of a closure built on the machine |
 | `nix build .#nixosConfigurations.installer.config.system.build.isoImage` | Builds the installer image |
 | `nixos-rebuild test --flake .#hephaestus --elevate sudo` | Runs a new generation on the workstation until the next reboot |
 | `nixos-rebuild switch --flake .#hephaestus --elevate sudo` | Runs a new generation and makes it the boot default |
