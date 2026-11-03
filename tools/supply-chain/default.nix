@@ -8,11 +8,20 @@
   gnused,
   jq,
   nix,
+  python3,
   sbomnix,
   host,
   alertScore,
 }:
 let
+  python = python3.override {
+    self = python;
+    packageOverrides =
+      _: prev:
+      lib.genAttrs [ "sqliteschema" "simplesqlite" ] (
+        name: prev.${name}.overridePythonAttrs { pythonRelaxDeps = [ "typepy" ]; }
+      );
+  };
   complete = entry: entry ? vuln && entry ? reason && entry ? until;
   whitelist = writeText "whitelist.json" (
     builtins.toJSON (
@@ -31,7 +40,7 @@ writeShellApplication {
     gnused
     jq
     nix
-    sbomnix
+    (sbomnix.override { python3 = python; })
   ];
   text = ''
     state="''${XDG_STATE_HOME:-$HOME/.local/state}/supply-chain"

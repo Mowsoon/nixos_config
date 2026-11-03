@@ -8,7 +8,6 @@
     clusterctl
     kind
     terraform
-    azure-cli
     ansible
     trivy
     postgresql

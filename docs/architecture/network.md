@@ -47,10 +47,13 @@ kernel modules (which drops `CAP_SYS_MODULE`), no `chroot`, no namespaces, a nat
 filter that answers `EPERM` instead of killing the daemon, and the address families of D-Bus,
 netlink, the DHCP raw socket and the Internet. It keeps writing kernel network parameters under
 `/proc/sys/net` and its runtime files under `/run`, so `ProtectKernelTunables` and a read-only
-`/run` are left out. Its dispatcher only runs the chrony script, which tells chronyd through
-`/run/chrony` that the network went up or down: it has no network, no device, a read-only system
-except that directory, and `CAP_DAC_OVERRIDE` as its only capability, to enter `/run/chrony`,
-which belongs to the `chrony` user. A dispatcher script added later that needs the network or
+`/run` are left out. Since 2026-11, the NixOS module grants `CAP_CHOWN` for the dnsmasq DHCP
+server of a shared connection, a hotspot; no profile here shares its network, so the unit drops it
+again. Sharing a connection needs it back, with the exposure threshold that goes with it. Its
+dispatcher only runs the chrony script, which tells chronyd through `/run/chrony` that the network
+went up or down: it has no network, no device, a read-only system except that directory, and
+`CAP_DAC_OVERRIDE` as its only capability, to enter `/run/chrony`, which belongs to the `chrony`
+user. A dispatcher script added later that needs the network or
 other paths must widen that confinement. The exposures went from 6.8 to 3.7 and from 9.4 to 1.5;
 a profile change is still saved, and switching the radio off and on still takes the chrony
 sources offline and back online.

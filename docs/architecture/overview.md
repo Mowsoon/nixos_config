@@ -277,7 +277,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `packages.x86_64-linux.theme-recolor` | Theme recolouring tool, built with its tests |
 | `packages.x86_64-linux.vmlinux-h` | `vmlinux.h` of the hephaestus kernel, for CO-RE BPF programs |
 | `packages.x86_64-linux.kernel-vm-modules` | `lsmod` of the `kernel-test` VM on the NixOS kernel, input of `localyesconfig` |
-| `checks.x86_64-linux` | `nixfmt`, `statix`, `deadnix`, `rgb-effects`, `rgb-effects-ruff`, `rgb-effects-mypy`, `theme-recolor`, `theme-recolor-ruff`, `theme-recolor-mypy`, `service-exposure`, one `drill-<name>` per failure drill |
+| `checks.x86_64-linux` | `nixfmt`, `statix`, `deadnix`, `rgb-effects`, `rgb-effects-ruff`, `rgb-effects-mypy`, `theme-recolor`, `theme-recolor-ruff`, `theme-recolor-mypy`, `service-exposure`, `supply-chain`, one `drill-<name>` per failure drill |
 | `formatter.x86_64-linux` | `nixfmt-tree` |
 | `devShells.x86_64-linux.default` | `nixfmt-tree`, `statix`, `deadnix`, `mkpasswd` |
 | `devShells.x86_64-linux.kernel` | Toolchain of the zen kernel, clang, llvm and lld, pahole, bpftool, libbpf, QEMU, b4, git with `send-email`, the zen configuration as `KERNEL_BASE_CONFIG`, and `CLANG` set to `clang-bpf` for the BPF selftests |

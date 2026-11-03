@@ -43,13 +43,21 @@ level:
 
 | Patch | Case moved to debug |
 | --- | --- |
-| `0001-workspace-don-t-log-a-critical-error-while-the-sessi.patch` | `updateOutputConfiguration()` ends on `NotActive` |
-| `0002-backends-drm-don-t-warn-about-commits-rejected-after.patch` | An atomic commit fails with `EACCES`, which only means the caller is not the DRM master |
+| `0001-workspace-don-t-log-a-critical-error-while-the-sessi.patch` | `updateOutputConfiguration()` ends on `NotActive`, or on `NoPermission` since KWin 6.8 |
+| `0002-backends-drm-don-t-warn-about-commits-rejected-after.patch` | An atomic commit fails with `EACCES` (`NoPermission` since KWin 6.8), which only means the caller is not the DRM master |
 
 `modules/desktop/plasma.nix` builds KWin with the patches and substitutes it in the system closure
 through `system.replaceDependencies`. Only KWin is compiled: the packages that depend on it keep
 their cached builds, and their references to KWin are rewritten to the patched build. The patches
 carry no `Signed-off-by` line; KDE does not require one.
+
+KWin 6.8 reworked both code paths: output errors carry an `OutputErrorCode` and a message, so the
+two lines read `Applying output configuration failed: <message>` and
+`Atomic commit failed: EACCESS`, and `EACCES` is reported as `NoPermission`. On 2026-11-03 the
+patches were ported to KWin 6.8.2 with the update of `nixos-unstable`. The first boot on 6.8.2
+showed a third case: at login, the compositor of the SDDM greeter applies a last output
+configuration after logind gave the GPUs to the user session, and the backend answers
+`NoPermission` (`EACCESS`) instead of `NotActive`. The first patch covers both codes.
 
 `KWIN_DRM_DEVICES` is left unset. Restricting KWin to the NVIDIA GPU would remove the race at
 resume, but not the shutdown case, and would hide the integrated GPU from the compositor.
@@ -71,7 +79,7 @@ resume, but not the shutdown case, and would hide the integrated GPU from the co
 3. Confirm neither message was logged since the boot. The command must print nothing.
 
    ```bash
-   journalctl -b 0 | grep -E 'Applying output configuration failed|atomic commit failed: Permission denied'
+   journalctl -b 0 | grep -iE 'Applying output configuration failed|atomic commit failed'
    ```
 
 If the output configuration message still appears after a resume, the failure was not `NotActive`
@@ -87,7 +95,7 @@ Run this after a Plasma update.
    nix build ~/.config/nixos#nixosConfigurations.hephaestus.config.system.build.toplevel
    ```
 
-2. If the new KWin source already logs `NotActive` and `EACCES` at debug level, remove the
+2. If the new KWin source already logs these cases at debug level, remove the
    patches from `modules/desktop/plasma.nix` and delete `pkgs/kwin/`. Otherwise port them to the
    new source and regenerate them with `git format-patch`.
 

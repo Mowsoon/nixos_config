@@ -46,6 +46,15 @@ and kept after the closure is collected. A candidate that is later activated kee
 report. The scan is written in the same directory and rewritten at every run, since the databases
 change.
 
+The application is also the `supply-chain` flake check: `nix flake check` only evaluates the
+apps of a flake, so without the check a dependency broken by an update would show only at the
+next scan. The update of 2026-11-01 brought sbomnix 1.9.0, whose cache libraries sqliteschema and
+SimpleSQLite require `typepy<2` while nixpkgs ships typepy 2.0.0. The application builds sbomnix
+with a Python package set where both accept typepy 2 (`pythonRelaxDeps`); the interpreter keeps
+its store path, so the `python3` rule of OpenSnitch still covers it. A scan of the running system
+passed with it. The override goes once nixpkgs builds sbomnix again: check it with
+`nix build .#nixosConfigurations.hephaestus.pkgs.sbomnix`.
+
 ### Comparing two closures
 
 The `diff` command compares the running system with a candidate, by default

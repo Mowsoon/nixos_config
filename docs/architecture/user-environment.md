@@ -180,8 +180,10 @@ The key mappings are listed in [Editor key mappings](editor-keymaps.md).
 ### Command-line tools and toolchains
 
 Monitoring, network and file tools, bat, eza, ouch, jq, yq and tealdeer, the infrastructure
-clients (`kubectl`, `helm`, `flux`, `clusterctl`, `kind`, `terraform`, `azure-cli`, `ansible`), Go
-and Python are installed globally for the user. `~/go/bin` is on the `PATH` for tools installed
+clients (`kubectl`, `helm`, `flux`, `clusterctl`, `kind`, `terraform`, `ansible`), Go and Python
+are installed globally for the user. `azure-cli` is left out while its `fabric` dependency is
+broken in nixpkgs, as described in
+[Azure CLI blocked by fabric](../incidents/azure-cli-fabric-broken.md). `~/go/bin` is on the `PATH` for tools installed
 with `go install`. kubectx and kubens switch the current cluster context and the default
 namespace, through fzf when called without an argument. terraform ships no zsh completion: zsh
 asks `terraform` itself for completions through its bash completion layer (`bashcompinit`).

@@ -39,7 +39,7 @@ in
           "AF_INET"
           "AF_INET6"
         ];
-        CapabilityBoundingSet = [ "~CAP_SYS_MODULE CAP_SYS_CHROOT" ];
+        CapabilityBoundingSet = [ "~CAP_SYS_MODULE CAP_SYS_CHROOT CAP_CHOWN" ];
       };
 
       NetworkManager-dispatcher.serviceConfig = {

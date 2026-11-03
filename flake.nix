@@ -85,6 +85,11 @@
         ./hosts/hephaestus
       ];
       hephaestus = self.nixosConfigurations.hephaestus.config;
+      supplyChain = self.nixosConfigurations.hephaestus.pkgs.callPackage ./tools/supply-chain {
+        nix = hephaestus.nix.package;
+        host = "hephaestus";
+        alertScore = "9.0";
+      };
       runLint =
         name: tool: command:
         pkgs.runCommand "${name}-check" { nativeBuildInputs = [ tool ]; } ''
@@ -146,13 +151,7 @@
         supply-chain = {
           type = "app";
           meta.description = "Build the hephaestus candidate without activating it, inventory and scan a system closure, and diff two closures";
-          program = nixpkgs.lib.getExe (
-            self.nixosConfigurations.hephaestus.pkgs.callPackage ./tools/supply-chain {
-              nix = hephaestus.nix.package;
-              host = "hephaestus";
-              alertScore = "9.0";
-            }
-          );
+          program = nixpkgs.lib.getExe supplyChain;
         };
 
         rehearsal = {
@@ -187,6 +186,7 @@
         theme-recolor = themeRecolor;
         theme-recolor-ruff = themeRecolor.lints.ruff;
         theme-recolor-mypy = themeRecolor.lints.mypy;
+        supply-chain = supplyChain;
         service-exposure = pkgs.callPackage ./tools/service-exposure.nix {
           systemd = hephaestus.systemd.package;
           units = hephaestus.environment.etc."systemd/system".source;
