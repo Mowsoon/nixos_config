@@ -1,0 +1,85 @@
+{
+  lib,
+  writeShellApplication,
+  writeText,
+  coreutils,
+  gnugrep,
+  jq,
+  nix,
+  sbomnix,
+  host,
+}:
+let
+  complete = entry: entry ? vuln && entry ? reason && entry ? until;
+  whitelist = writeText "whitelist.json" (
+    builtins.toJSON (
+      map (entry: lib.throwIfNot (complete entry) "whitelist entries need vuln, reason and until" entry) (
+        import ./whitelist.nix
+      )
+    )
+  );
+in
+writeShellApplication {
+  name = "supply-chain";
+  runtimeInputs = [
+    coreutils
+    gnugrep
+    jq
+    nix
+    sbomnix
+  ];
+  text = ''
+    state="''${XDG_STATE_HOME:-$HOME/.local/state}/supply-chain"
+
+    usage() {
+      echo "usage: supply-chain build [<flake directory>]" >&2
+      echo "       supply-chain sbom [<system>]" >&2
+      echo "       supply-chain scan [<system>]" >&2
+      exit 2
+    }
+
+    build() {
+      flake=$(realpath "''${1:-.}")
+      nix build "$flake#nixosConfigurations.${host}.config.system.build.toplevel" \
+        --out-link "$flake/result" --print-out-paths
+    }
+
+    sbom() {
+      system=$(realpath "''${1:-/run/current-system}")
+      report="$state/$(basename "$system")"
+      if [ ! -e "$report/sbom.cdx.json" ]; then
+        mkdir -p "$state"
+        work=$(mktemp -d "$state/.work.XXXXXX")
+        (cd "$work" && sbomnix "$system" --csv sbom.csv --cdx sbom.cdx.json --spdx sbom.spdx.json) >&2
+        rm -rf "$report"
+        mv "$work" "$report"
+      fi
+      echo "$report"
+    }
+
+    scan() {
+      system=$(realpath "''${1:-/run/current-system}")
+      report=$(sbom "$system")
+      today=$(date -I)
+      jq -r --arg today "$today" '.[] | select(.until < $today)
+        | "expired whitelist entry, triage again: \(.vuln) \(.package // "") until \(.until)"' \
+        ${whitelist} >&2
+      jq -r --arg today "$today" '["vuln_id", "package", "comment"],
+        (.[] | select(.until >= $today) | [.vuln, .package // "", "\(.reason) (until \(.until))"])
+        | @csv' ${whitelist} > "$report/whitelist.csv"
+      (cd "$report" && vulnxscan "$system" --out vulns.csv --whitelist whitelist.csv) >&2
+      if ! head -n 1 "$report/vulns.csv" | grep -q '"vulnix"'; then
+        echo "vulnix produced no result, the report is incomplete: scan again" >&2
+        exit 1
+      fi
+      echo "$report/vulns.csv"
+    }
+
+    case "''${1:-}" in
+      build) shift; build "$@" ;;
+      sbom) shift; sbom "$@" ;;
+      scan) shift; scan "$@" ;;
+      *) usage ;;
+    esac
+  '';
+}

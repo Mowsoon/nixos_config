@@ -145,9 +145,9 @@
 
         supply-chain = {
           type = "app";
-          meta.description = "Build the hephaestus candidate without activating it, and inventory a system closure";
+          meta.description = "Build the hephaestus candidate without activating it, inventory a system closure and scan it for known vulnerabilities";
           program = nixpkgs.lib.getExe (
-            pkgs.callPackage ./tools/supply-chain.nix {
+            self.nixosConfigurations.hephaestus.pkgs.callPackage ./tools/supply-chain {
               nix = hephaestus.nix.package;
               host = "hephaestus";
             }

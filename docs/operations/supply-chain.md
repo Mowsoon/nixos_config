@@ -2,10 +2,11 @@
 
 ## Overview
 
-Each system closure of hephaestus gets an inventory of what it contains, so that an update or a
-configuration change can be read as a list of packages before it is activated. The tool is the
-`supply-chain` application of the flake, not a flake check: its later stages query vulnerability
-databases that change over time and need the network, which the build sandbox does not have.
+Each system closure of hephaestus gets an inventory of what it contains and a report of the
+published vulnerabilities that match it, so that an update or a configuration change can be read
+before it is activated. The tool is the `supply-chain` application of the flake, not a flake
+check: the scan queries vulnerability databases that change over time and need the network,
+which the build sandbox does not have. The report informs; it never blocks an update.
 
 The candidate is the system that the flake would activate, built without activating it. The
 `build` command builds it into `./result` of the flake directory, an indirect garbage collector
@@ -25,10 +26,62 @@ licences and descriptions of nixpkgs, at six times the time and 1.9 GB of memory
 flake that built the closure, which an older generation no longer has. The SBOMs therefore carry
 no licence.
 
-A closure is immutable, so its report is written once, under
+The `scan` command runs vulnxscan, which combines three scanners and reports, per vulnerability
+and package, which of them found it:
+
+| Scanner | Source | Match |
+| --- | --- | --- |
+| grype | Its own database, built from NVD and the distribution advisories | CPE and package URL of the SBOM against the CPE ranges of NVD |
+| OSV | `api.osv.dev`, queried for every component with a version | Name and version against the Git tags of the OSV records, mostly OSS-Fuzz crashes |
+| vulnix | The NVD feeds, cached in `~/.cache/vulnix` | Name and version of each store path against the NVD ranges |
+
+vulnxscan drops a vulnerability when a patch applied by nixpkgs carries its identifier in its file
+name. It ignores the errors of vulnix: a vulnix run that fails leaves a report without its column,
+which a later comparison would read as fixed vulnerabilities, so `scan` fails when the `vulnix`
+column is missing.
+
+A closure is immutable, so its SBOMs are written once, under
 `~/.local/state/supply-chain/<closure>/`, where `<closure>` is the base name of its store path,
 and kept after the closure is collected. A candidate that is later activated keeps the same
-report.
+report. The scan is written in the same directory and rewritten at every run, since the databases
+change.
+
+### Triage and whitelist
+
+Most findings are not vulnerabilities of the installed code. The matching produces three kinds of
+false positives, met on the first scan:
+
+- an NVD range that a scanner cannot compare with the version: a bound given as a date or a Git
+  commit, or no bound at all, matches every release, such as 2016 mujs vulnerabilities reported
+  against mujs 1.3.6;
+- a CPE of another product with the same name, or limited to another platform: knplabs/snappy, a
+  PHP library, reported against the snappy compression library, an OpenVPN vulnerability of the
+  Windows client;
+- a fix that nixpkgs applies under a file name without the identifier, such as the FreePG patch
+  of GnuPG for CVE-2022-3219.
+
+A false positive is verified before it is whitelisted: the CPE and the range of the NVD record,
+given by `grype db search --vuln <identifier>`, the patches of the package, given by the CSV of
+the SBOM and its derivation in nixpkgs, and the references of the record, which link the upstream
+issue or merge request that a patch carries. A finding that matches the installed version, or
+that cannot be decided, stays in the report.
+
+The whitelist is declared in `tools/supply-chain/whitelist.nix`. Each entry names a vulnerability,
+a package, the reason of the decision and an expiry date; evaluation fails when one is missing. At
+every scan, the entries whose date has passed are printed as to be triaged again and no longer
+hide anything, so a decision cannot outlive the version it was made for. The entries are grouped
+by package and reason, with an expiry six months after the triage.
+
+### Limits
+
+- The scan sees only published vulnerabilities: a flaw fixed silently upstream, or not yet
+  disclosed, is not reported.
+- Every scanner matches by name and version. A fix backported by a nixpkgs patch is still
+  reported unless the patch name carries the identifier, and a package that nixpkgs names
+  differently from its upstream project is missed or matched to another product.
+- OSV records of OSS-Fuzz without a fixing commit mark every later release as affected.
+- A source compromised upstream, such as a tampered release archive, matches no record: only
+  provenance of the build inputs addresses it.
 
 ## How to inventory the running system
 
@@ -64,18 +117,76 @@ report.
    nix run .#supply-chain -- sbom ./result
    ```
 
+## How to scan a closure
+
+1. Scan the running system, or a candidate with `./result` as argument. The first run downloads
+   the grype database and the NVD feeds, about six minutes; later runs take about half a minute.
+   The command prints the path of the report.
+
+   ```bash
+   nix run .#supply-chain -- scan
+   ```
+
+2. List the findings that are not whitelisted, by severity.
+
+   ```bash
+   tr -d '"' < <report> | grep -v ',True,' | sort -t, -k5,5 -rn | less
+   ```
+
+   `<report>` is the path printed by step 1. `tr` removes the quotes so that `sort` reads the CVSS
+   score of the fifth column as a number. The columns `grype`, `osv` and `vulnix` hold 1 for the
+   scanners that found the line.
+
+## How to triage a finding
+
+1. Read the NVD record as grype holds it: the CPE names the product, the constraint its affected
+   versions.
+
+   ```bash
+   nix run .#nixosConfigurations.hephaestus.pkgs.grype -- db search --vuln <identifier>
+   ```
+
+   `<identifier>` is the `vuln_id` of the finding, such as `CVE-2022-3219`.
+
+2. Read the references of the record, which link the upstream issue and the fixing change.
+
+   ```bash
+   nix run .#nixosConfigurations.hephaestus.pkgs.grype -- db search --vuln <identifier> -o json | jq -r '.[].vulnerability.refs[]?.url' | sort -u
+   ```
+
+3. List the patches that nixpkgs applies to the package, and compare them with the fixing change.
+
+   ```bash
+   grep '^"<package>-' <directory>/sbom.csv | cut -d, -f1,4
+   ```
+
+   `<package>` is the package name of the finding; `<directory>` is the report directory.
+
+4. When the finding is a false positive, add it to `tools/supply-chain/whitelist.nix` with its
+   reason and an expiry date, then scan again: the line shows `True` in the `whitelist` column.
+
 ## Reference
 
 | Command | Effect |
 | --- | --- |
 | `supply-chain build [<flake directory>]` | Builds the `hephaestus` toplevel of the flake into `<flake directory>/result`, default `.`, and prints its store path |
 | `supply-chain sbom [<system>]` | Writes the SBOMs of a closure, default `/run/current-system`, and prints the report directory |
+| `supply-chain scan [<system>]` | Writes the SBOMs if missing, scans the closure and prints the path of the report |
 
 | File in the report directory | Content |
 | --- | --- |
 | `sbom.cdx.json` | CycloneDX SBOM |
 | `sbom.spdx.json` | SPDX SBOM |
 | `sbom.csv` | Same components, one line each: name, version, patches, store paths, CPE, package URL |
+| `whitelist.csv` | Whitelist entries still valid at the last scan, in the format of vulnxscan |
+| `vulns.csv` | Findings of the last scan: identifier, package, version, CVSS score, scanners, whitelist decision and reason |
+
+| Path | Content |
+| --- | --- |
+| `tools/supply-chain/default.nix` | The `supply-chain` application |
+| `tools/supply-chain/whitelist.nix` | Triaged false positives, each with its reason and expiry |
+| `~/.cache/vulnix` | NVD feeds parsed by vulnix |
+| `~/.cache/grype` | Database of grype |
 
 | Measure, 2026-11-03, generation of `nixos-unstable` 2026-10-06 | Value |
 | --- | --- |
@@ -83,9 +194,16 @@ report.
 | `sbom` on the store path | 4 s, 150 MB of memory |
 | `sbom` on the flake reference, for comparison | 24 s, 1.9 GB of memory; 1132 components gain a licence |
 | Report size | 10 MB |
+| First `scan`, empty caches | 368 s, 1.7 GB of memory |
+| Later `scan` | 35 s |
+| Findings of the first scan | 340 on 102 packages: 207 found by one scanner, 101 by grype and vulnix together, none by OSV with another scanner |
+| After triage | 38 whitelisted; 302 left, of which 14 with a CVSS score of 9 or more and 204 published in 2026, after the pinned nixpkgs revision |
 
 | Tool | Link |
 | --- | --- |
-| sbomnix | <https://github.com/tiiuae/sbomnix> |
+| sbomnix and vulnxscan | <https://github.com/tiiuae/sbomnix> |
+| grype | <https://github.com/anchore/grype> |
+| vulnix | <https://github.com/nix-community/vulnix> |
+| OSV | <https://osv.dev/> |
 | CycloneDX | <https://cyclonedx.org/specification/overview/> |
 | SPDX | <https://spdx.dev/> |
