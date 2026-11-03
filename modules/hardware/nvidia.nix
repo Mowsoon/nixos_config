@@ -20,12 +20,16 @@ in
         "nvidia-settings"
       ];
       hardening.serviceExposure = {
-        acpid = "9.4";
         nvidia-powerd = "1.8";
       };
     };
 
-    services.xserver.videoDrivers = [ "nvidia" ];
+    boot.kernelModules = [ "msr" ];
+
+    services = {
+      xserver.videoDrivers = [ "nvidia" ];
+      acpid.enable = lib.mkForce false;
+    };
 
     hardware = {
       graphics = {

@@ -65,8 +65,17 @@ the CPU model-specific registers (`/dev/cpu/*/msr`) read and written to set the 
 `/run` for its PID file `/run/nvtopps.pid`, `/sys/devices/system/cpu` to lower the CPU frequency
 limit while the GPU takes the power, and the capabilities `CAP_SYS_ADMIN` and `CAP_SYS_RAWIO`.
 It has no network and a system call filter that answers `EPERM`, since the calls of a closed
-binary are not known in advance. The exposure went from 9.4 to 1.8. The `disable Dynamic Boost DC
-controller` line at every start comes from the firmware, which turns Dynamic Boost off on battery.
+binary are not known in advance. The exposure went from 9.4 to 1.8. The MSR device exists only
+once the `msr` module is loaded, which the confined daemon can no longer do itself, so the module
+loads at boot ([incident](../incidents/nvidia-powerd-msr-at-boot.md)). The `disable Dynamic Boost
+DC controller` line at every start comes from the firmware, which turns Dynamic Boost off on
+battery.
+
+The NixOS NVIDIA module also enables `acpid`, which relays ACPI events on `/run/acpid.socket` to
+the NVIDIA X driver. Under Wayland that driver is not loaded, the event handlers are empty and no
+program connects to the socket, so `acpid` is disabled: a root daemon without any client is
+surface without use. The lid and power buttons reach logind through their own input devices, and
+Dynamic Boost works without it.
 
 The driver is not loaded in the initrd. The initrd restores the hibernation image, and before
 handing over to it, the kernel freezes every device of the boot it is running. A driver loaded at
