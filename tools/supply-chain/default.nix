@@ -57,8 +57,13 @@ writeShellApplication {
         mkdir -p "$state"
         work=$(mktemp -d "$state/.work.XXXXXX")
         (cd "$work" && sbomnix "$system" --csv sbom.csv --cdx sbom.cdx.json --spdx sbom.spdx.json) >&2
+        nix path-info --json-format 1 --json --recursive "$system" \
+          | jq -r 'to_entries[] | select(.value.deriver == null) | .key' > "$work/no-deriver.txt"
         rm -rf "$report"
         mv "$work" "$report"
+      fi
+      if [ -s "$report/no-deriver.txt" ]; then
+        echo "$(wc -l < "$report/no-deriver.txt") paths of $system have no recorded deriver and are missing from its SBOM" >&2
       fi
       echo "$report"
     }
@@ -114,6 +119,13 @@ writeShellApplication {
       echo
       echo "Vulnerabilities introduced: $(wc -l < "$work/introduced")"
       sed 's/^/  /' "$work/introduced"
+      for side in "$old_vulns" "$new_vulns"; do
+        missing="$(dirname "$side")/no-deriver.txt"
+        if [ -s "$missing" ]; then
+          echo
+          echo "Note: $(wc -l < "$missing") paths of $(basename "$(dirname "$side")") are missing from its inventory, listed in $missing; their vulnerabilities read as fixed or introduced."
+        fi
+      done
       critical=$(wc -l < "$work/critical")
       if [ "$critical" -gt 0 ]; then
         echo

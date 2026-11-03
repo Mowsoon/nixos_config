@@ -102,6 +102,15 @@ by package and reason, with an expiry six months after the triage.
 - OSV records of OSS-Fuzz without a fixing commit mark every later release as affected.
 - A source compromised upstream, such as a tampered release archive, matches no record: only
   provenance of the build inputs addresses it.
+- sbomnix reads each component from the derivation that the store database records for the path,
+  and leaves out a path recorded without one. The paths that `nixos-install` copied from the
+  installer image carry no deriver, so a closure that still shares them with the installation has
+  holes in its SBOM: openssh, busybox and cpio, among 457 paths of the generation of 2026-10-06. A
+  path built or substituted later records its deriver. `sbom` lists those paths in
+  `no-deriver.txt` and warns, and `diff` notes them: their vulnerabilities read as fixed or
+  introduced although the package did not change.
+- The databases change within hours: NVD publishes new records several times a day. Only two
+  reports of the same `diff` run are comparable.
 
 ## How to inventory the running system
 
@@ -220,6 +229,7 @@ After a configuration change, run steps 1 and 2 without `nix flake update`.
 | `sbom.cdx.json` | CycloneDX SBOM |
 | `sbom.spdx.json` | SPDX SBOM |
 | `sbom.csv` | Same components, one line each: name, version, patches, store paths, CPE, package URL |
+| `no-deriver.txt` | Paths of the closure recorded without a deriver, missing from the SBOMs |
 | `whitelist.csv` | Whitelist entries still valid at the last scan, in the format of vulnxscan |
 | `vulns.csv` | Findings of the last scan: identifier, package, version, CVSS score, scanners, whitelist decision and reason |
 
@@ -241,6 +251,8 @@ After a configuration change, run steps 1 and 2 without `nix flake update`.
 | Findings of the first scan | 340 on 102 packages: 207 found by one scanner, 101 by grype and vulnix together, none by OSV with another scanner |
 | After triage | 38 whitelisted; 302 left, of which 14 with a CVSS score of 9 or more and 204 published in 2026, after the pinned nixpkgs revision |
 | `diff` of a generation of 2026-10-29 against the running system, same nixpkgs | 62 s; 2 vulnerabilities introduced by the packages added since, both name collisions, whitelisted |
+| Update of `nixos-unstable` from 2026-10-06 to 2026-11-01, built in a Git worktree | Candidate built in 484 s once three failures were fixed in the worktree: a removed option, a package broken upstream, KWin patches to rebase |
+| `diff` of that update | 182 s; 156 vulnerabilities fixed, 15 introduced, no alert; the 15 are on packages already in the running system but missing from its SBOM for lack of a deriver |
 
 | Tool | Link |
 | --- | --- |
