@@ -2,7 +2,7 @@
 
 ## Overview
 
-The repository is a Nix flake pinned to `nixos-unstable`. It builds five NixOS systems and three
+The repository is a Nix flake pinned to `nixos-unstable`. It builds five NixOS systems and four
 helper applications from the same set of modules. `hephaestus` is the physical workstation; the
 other systems exist to validate it before a change reaches the hardware.
 
@@ -22,6 +22,7 @@ flowchart LR
   installer --> iso[ISO image]
   iso --> app[nix run .#rehearsal]
   heph --> vm[nix run .#hephaestus-vm]
+  heph --> supply[nix run .#supply-chain]
 ```
 
 ### Modules and hosts
@@ -270,6 +271,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `nixosConfigurations.installer` | Live image used to install the workstation |
 | `apps.x86_64-linux.hephaestus-vm` | Boots the workstation VM from a blank firmware and TPM |
 | `apps.x86_64-linux.rehearsal` | Boots the installer image against a blank disk |
+| `apps.x86_64-linux.supply-chain` | Builds the workstation candidate without activating it, and writes the SBOMs of a system closure |
 | `apps.x86_64-linux.kernel-vm` | Boots a kernel build directory in the `kernel-test` VM, optionally runs a script there and powers off |
 | `packages.x86_64-linux.rgb-effects` | Keyboard lighting effects daemon, built with its tests |
 | `packages.x86_64-linux.theme-recolor` | Theme recolouring tool, built with its tests |

@@ -124,7 +124,9 @@ Unfree packages are allowed one by one: each module that needs one adds its name
 package. `allowUnfree = true` is never set. Unfree packages are not in the public binary cache and
 build locally.
 
-Every flake input is pinned by `flake.lock`. Updating it is an explicit commit.
+Every flake input is pinned by `flake.lock`. Updating it is an explicit commit. Before the new
+closure is activated, it can be built as a candidate and inventoried, component by component, with
+the procedure of [Supply chain](../operations/supply-chain.md).
 
 ### Secrets
 

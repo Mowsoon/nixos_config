@@ -69,6 +69,8 @@ The machine reaches a login prompt in the terminal. Press `Ctrl+A` then `X` to s
 | `nix run .#hephaestus-vm` | Builds the `hephaestus` disko VM and boots it from a blank firmware and TPM |
 | `nix build -L .#checks.x86_64-linux.drill-<name>` | Runs one failure drill of the boot chain in a VM |
 | `nix run .#rehearsal` | Boots the installer image against a blank disk to rehearse the installation |
+| `nix run .#supply-chain -- build` | Builds the `hephaestus` candidate into `./result` without activating it |
+| `nix run .#supply-chain -- sbom [<system>]` | Writes the SBOMs of a closure, by default the running system, as described in [supply chain](docs/operations/supply-chain.md) |
 | `nix build .#nixosConfigurations.installer.config.system.build.isoImage` | Builds the installer image |
 | `nixos-rebuild test --flake .#hephaestus --elevate sudo` | Runs a new generation on the workstation until the next reboot |
 | `nixos-rebuild switch --flake .#hephaestus --elevate sudo` | Runs a new generation and makes it the boot default |

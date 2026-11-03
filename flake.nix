@@ -143,6 +143,17 @@
           );
         };
 
+        supply-chain = {
+          type = "app";
+          meta.description = "Build the hephaestus candidate without activating it, and inventory a system closure";
+          program = nixpkgs.lib.getExe (
+            pkgs.callPackage ./tools/supply-chain.nix {
+              nix = hephaestus.nix.package;
+              host = "hephaestus";
+            }
+          );
+        };
+
         rehearsal = {
           type = "app";
           meta.description = "Boot the installer ISO against a blank NVMe disk, Secure Boot firmware in setup mode and a TPM";
