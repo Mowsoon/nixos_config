@@ -68,12 +68,12 @@ It has no network and a system call filter that answers `EPERM`, since the calls
 binary are not known in advance. The exposure went from 9.4 to 1.8. The `disable Dynamic Boost DC
 controller` line at every start comes from the firmware, which turns Dynamic Boost off on battery.
 
-The `nvidia`, `nvidia_modeset` and `nvidia_drm` modules load in the initrd, so the boot splash
-draws on the NVIDIA framebuffer from the first frame and the display does not switch drivers on
-its way to the login screen. The initrd then carries the GSP firmware of the driver and the same
-module options as the running system, and grows from about 31 MB to about 124 MB compressed; the
-4 GiB ESP holds ten generations of it. The driver is loaded before the hibernation image is
-resumed, so a hibernation and resume cycle is part of validating any change to it.
+The driver is not loaded in the initrd. The initrd restores the hibernation image, and before
+handing over to it, the kernel freezes every device of the boot it is running. A driver loaded at
+that point has not been prepared through `/proc/driver/nvidia/suspend`, so it refuses the freeze
+and the image is dropped ([incident](../incidents/nvidia-initrd-resume.md)). The boot splash
+starts on `simpledrm`, the framebuffer set up by the firmware, and moves to `nvidia-drm` once the
+driver loads after the initrd.
 
 Video decoding goes through `nvidia-vaapi-driver`, which translates VA-API, the decoding interface
 Firefox and most players use, to NVDEC, the decoder of the GPU. It uses its `direct` backend,
@@ -390,7 +390,6 @@ which checks the whole alert chain, D-Bus and `wall` included.
 | `hardware.nvidia.open` | `true` |
 | `hardware.nvidia.package` | `nvidiaPackages.stable` of the running kernel |
 | `hardware.nvidia.modesetting.enable` | `true` |
-| `boot.initrd.kernelModules` | `nvidia`, `nvidia_modeset`, `nvidia_drm` |
 | `hardware.nvidia.powerManagement.enable` | `true` |
 | `hardware.nvidia.powerManagement.kernelSuspendNotifier` | `false` |
 | Suspend-then-hibernate unit and hook | `nvidia-suspend-then-hibernate`, `/etc/systemd/system-sleep/nvidia` |

@@ -27,12 +27,6 @@ in
 
     services.xserver.videoDrivers = [ "nvidia" ];
 
-    boot.initrd.kernelModules = [
-      "nvidia"
-      "nvidia_modeset"
-      "nvidia_drm"
-    ];
-
     hardware = {
       graphics = {
         enable = true;
