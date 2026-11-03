@@ -26,7 +26,30 @@ in
 
     nix.settings.allowed-users = [ "@wheel" ];
 
-    custom.hardening.serviceExposure.nscd = "8.2";
+    custom.hardening.serviceExposure.nscd = "1.8";
+
+    systemd.services.nscd.serviceConfig = {
+      PrivateDevices = true;
+      ProtectKernelTunables = true;
+      ProtectKernelModules = true;
+      ProtectKernelLogs = true;
+      ProtectControlGroups = true;
+      ProtectClock = true;
+      ProtectHostname = true;
+      RestrictNamespaces = true;
+      RestrictRealtime = true;
+      LockPersonality = true;
+      MemoryDenyWriteExecute = true;
+      SystemCallArchitectures = "native";
+      SystemCallFilter = [ "@system-service" ];
+      RestrictAddressFamilies = [
+        "AF_UNIX"
+        "AF_NETLINK"
+        "AF_INET"
+        "AF_INET6"
+      ];
+      CapabilityBoundingSet = [ "" ];
+    };
 
     boot.kernel.sysctl = {
       "kernel.kptr_restrict" = 2;

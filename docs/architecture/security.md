@@ -97,6 +97,18 @@ security --offline` on the unit files of the built generation, drop-ins included
 service rises above its threshold. It needs no VM: it reads only the unit directory of the
 generation, inside `bubblewrap`, which provides the `/run` the analyzer insists on creating.
 
+Each hardened service keeps the access its function needs, found by testing the full function
+after the change and, for the closed-source `nvidia-powerd`, by adding one protection at a time
+to an unconfined unit. What stays exposed is described with each service: OpenSnitch, iwd and
+NetworkManager in [Network](network.md), smartd and `nvidia-powerd` in [Hardware](hardware.md).
+`acpid`, which the NixOS NVIDIA module enables for the NVIDIA X driver, had no client and is
+disabled. nsncd, the name service cache that answers the name and user lookups of every process,
+already ran as its own user; it gains no capability, no devices, the kernel and namespace
+protections, a native system call filter and the address families of its NSS modules: local
+sockets for systemd, netlink for `myhostname` and the Internet families for the `dns` fallback.
+`UMask` is left out, since it could narrow the permissions of the socket every process connects
+to. Lookups still connect to `/run/nscd/socket` and get their answer from it.
+
 Services left out of the audit, and why:
 
 | Services | Reason |
@@ -225,7 +237,7 @@ Scores of `systemd-analyze security`, offline, on 2026-11-02. The threshold is t
 | `smartd` | `hardware/disk-health.nix` | Disk firmware data | 1.9, from 9.4 |
 | `nvidia-powerd` | `hardware/nvidia.nix` | GPU driver; closed-source root daemon | 1.8, from 9.4 |
 | `acpid` | `hardware/nvidia.nix` | ACPI events; enabled by the NixOS NVIDIA module | Disabled: no client of its socket |
-| `nscd` | `security/hardening.nix` | Name and user lookups of every process | 8.2 |
+| `nscd` | `security/hardening.nix` | Name and user lookups of every process | 1.8, from 8.2 |
 | `chronyd` | `network/time.nix` | NTS-authenticated time servers | 3.3 |
 | `systemd-resolved` | `network/dns.nix` | DNS answers over TLS | 2.2 |
 | `asusd` | `hardware/asus.nix` | Platform firmware attributes | 1.8 |
