@@ -26,6 +26,7 @@ in
     ../../modules/desktop/theme.nix
     ../../modules/security/secure-boot.nix
     ../../modules/security/luks.nix
+    ../../modules/security/pcrlock.nix
     ../../modules/security/hardening.nix
     ../../modules/security/supply-chain.nix
   ];
@@ -45,6 +46,8 @@ in
     secureBoot.enable = true;
 
     luks.tpm2Unlock = true;
+
+    pcrlock.enable = true;
 
     hardening.enable = true;
 

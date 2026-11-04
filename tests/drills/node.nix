@@ -14,6 +14,13 @@ let
       }
     ];
   };
+  otherFirmware = extendModules {
+    modules = [
+      {
+        virtualisation.efi.OVMF = pkgs.OVMFFull.override { httpSupport = false; };
+      }
+    ];
+  };
 in
 {
   imports = [
@@ -28,6 +35,8 @@ in
     ../../modules/core/fhs-compat.nix
     ../../modules/security/secure-boot.nix
     ../../modules/security/luks.nix
+    ../../modules/security/pcrlock.nix
+    ../../modules/security/hardening.nix
   ];
 
   boot.kernelPackages = pkgs.linuxPackages_zen;
@@ -36,6 +45,8 @@ in
     secureBoot.enable = true;
 
     luks.tpm2Unlock = true;
+
+    pcrlock.enable = true;
 
     fhsCompat.enable = true;
 
@@ -60,7 +71,10 @@ in
 
   system = {
     switch.enable = true;
-    build.drillNextGeneration = nextGeneration.config.system.build.toplevel;
+    build = {
+      drillNextGeneration = nextGeneration.config.system.build.toplevel;
+      drillOtherFirmwareVm = otherFirmware.config.system.build.vm;
+    };
     extraDependencies = [ nextGeneration.config.system.build.toplevel ];
   };
 

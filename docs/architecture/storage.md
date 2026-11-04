@@ -224,6 +224,7 @@ does not grant access to Windows.
 | `/var/lib/nixos` | `core/persistence.nix` | Identity, stable user and group IDs |
 | `/var/lib/systemd` | `core/persistence.nix` | Learned state: timers, random seed, coredumps |
 | `/var/lib/sbctl` | `security/secure-boot.nix` | Secret |
+| `/var/lib/pcrlock.d` | `security/pcrlock.nix` | Learned state: firmware code measurements |
 | `/etc/NetworkManager/system-connections` | `network/manager.nix` | Secret, mode `0700` |
 | `/var/lib/NetworkManager` | `network/manager.nix` | Learned state |
 | `/var/lib/iwd` | `network/manager.nix` | Secret, mode `0700` |

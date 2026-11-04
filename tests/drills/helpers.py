@@ -29,6 +29,7 @@ BOOT_DONE = "Reached target Multi-User System"
 SYSTEM_PROFILE = "/nix/var/nix/profiles/system"
 LOADER_GUID = "4a67b082-0a4c-41cf-b6c7-440b29bb8c4f"
 POWER_CUT_TIMEOUT = dt.timedelta(minutes=5)
+PCRLOCK_POLICY = "/var/lib/systemd/pcrlock.json"
 RECOVERY_KEY = re.compile(r"[cbdefghijklnrtuv]{8}(?:-[cbdefghijklnrtuv]{8}){7}")
 
 
@@ -80,6 +81,22 @@ def enroll_tpm2() -> None:
     )
 
 
+def create_pcrlock_policy() -> str:
+    machine.wait_for_unit("systemd-pcrlock-firmware-code.service")
+    output = machine.succeed("pcrlock-make-policy --recovery-pin=show 2>&1")
+    print(output)
+    match = RECOVERY_KEY.search(output)
+    assert match is not None, f"No recovery PIN in: {output}"
+    return match.group(0)
+
+
+def enroll_tpm2_pcrlock() -> None:
+    machine.succeed(
+        f"PASSWORD={TEST_PASSPHRASE} systemd-cryptenroll {LUKS_DEVICE}"
+        f" --tpm2-device=auto --tpm2-pcrlock={PCRLOCK_POLICY} --tpm2-pcrs=7"
+    )
+
+
 def luks_tokens() -> list[dict]:
     metadata = json.loads(
         machine.succeed(f"cryptsetup luksDump --dump-json-metadata {LUKS_DEVICE}")
@@ -119,8 +136,12 @@ def reenroll_tpm2(recovery_key: str) -> None:
     assert_one_tpm2_token_on_pcr7()
 
 
+def pcr(index: int) -> str:
+    return machine.succeed(f"cat /sys/class/tpm/tpm0/pcr-sha256/{index}").strip()
+
+
 def pcr7() -> str:
-    return machine.succeed("cat /sys/class/tpm/tpm0/pcr-sha256/7").strip()
+    return pcr(7)
 
 
 def power_cut_when(condition: str) -> None:

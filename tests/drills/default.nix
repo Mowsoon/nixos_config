@@ -12,6 +12,7 @@ let
           disko_image = "${nodes.machine.system.build.diskoImages}/main.qcow2"
           qemu_img = "${nodes.machine.virtualisation.qemu.package}/bin/qemu-img"
           next_system = "${nodes.machine.system.build.drillNextGeneration}"
+          other_firmware_vm = "${nodes.machine.system.build.drillOtherFirmwareVm}/bin/run-machine-vm"
         ''
         + builtins.readFile ./helpers.py
         + builtins.readFile ./${name}.py;
@@ -21,6 +22,7 @@ pkgs.lib.genAttrs [
   "boot"
   "dbx-update"
   "enrollment"
+  "firmware-update"
   "rebuild-power-loss"
   "tpm-clear"
 ] mkDrill

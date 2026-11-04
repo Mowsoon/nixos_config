@@ -100,7 +100,8 @@ generation, inside `bubblewrap`, which provides the `/run` the analyzer insists 
 Each hardened service keeps the access its function needs, found by testing the full function
 after the change and, for the closed-source `nvidia-powerd`, by adding one protection at a time
 to an unconfined unit. What stays exposed is described with each service: OpenSnitch, iwd and
-NetworkManager in [Network](network.md), smartd and `nvidia-powerd` in [Hardware](hardware.md).
+NetworkManager in [Network](network.md), smartd and `nvidia-powerd` in [Hardware](hardware.md),
+the systemd-pcrlock units in [Boot chain](boot-chain.md#firmware-code-lock).
 `acpid`, which the NixOS NVIDIA module enables for the NVIDIA X driver, had no client and is
 disabled. nsncd, the name service cache that answers the name and user lookups of every process,
 already ran as its own user; it gains no capability, no devices, the kernel and namespace
@@ -252,6 +253,8 @@ Scores of `systemd-analyze security`, offline, on 2026-11-02. The threshold is t
 | `openrgb` | `hardware/rgb.nix` | Lighting clients on the local socket | 1.3 |
 | `power-profiles-daemon` | `hardware/power.nix` | Profile requests over D-Bus | 1.0 |
 | `rgb-keyreader` | `desktop/rgb-effects.nix` | Keyboard events | 0.6 |
+| `systemd-pcrlock-firmware-code` | `security/pcrlock.nix` | Firmware event log; upstream early-boot oneshot | 9.4, left unconfined |
+| `systemd-pcrlock-make-policy` | `security/pcrlock.nix` | `.pcrlock` files owned by root, firmware event log; upstream early-boot oneshot | 9.4, left unconfined |
 
 ### Upstream documentation
 
