@@ -16,7 +16,7 @@ sequenceDiagram
   FW->>SB: verify signature against db, load
   SB->>ST: pick a generation, verify signature, load
   ST->>IR: check kernel and initrd hashes, start kernel
-  IR->>IR: unlock cryptroot with the TPM2 (PCR 7)
+  IR->>IR: unlock cryptroot with the TPM2 (pcrlock PCR 0, PCR 7)
   IR->>IR: resume hibernation image if one exists
   IR->>IR: archive the root subvolume, create an empty one
   IR->>OS: mount, switch root, activate the generation
@@ -42,11 +42,13 @@ at installation, with `efibootmgr`.
 
 ### TPM2 unlock
 
-The root container is LUKS2. Its TPM2 key slot is sealed against PCR 7, which measures the Secure
-Boot state and the keys that verified each loaded image. The key unseals as long as Secure Boot
-stays enabled with the same key databases, whatever the generation, the kernel or the command
-line. PCR 7 is a deliberately light seal: unlock stability ranks above seal strength. A stronger
-policy is a Phase 8 subject of the migration roadmap.
+The root container is LUKS2. Its TPM2 key slot is bound to two policies at once. The literal
+value of PCR 7 measures the Secure Boot state and the keys that verified each loaded image. The
+systemd-pcrlock policy of a TPM2 NV index allows the firmware code measured in PCR 0, described in
+[Firmware code lock](#firmware-code-lock). The key unseals as long as the firmware is one the
+policy allows and Secure Boot stays enabled with the same key databases, whatever the
+generation, the kernel or the command line. The other PCRs join the seal one at a time, each only
+once its value survives the updates that change it.
 
 Every boot measures more than PCR 7. The firmware measures itself, its configuration, the boot
 entries and each PE image it starts; systemd-boot adds SMBIOS data and `loader.conf`; the
@@ -116,8 +118,8 @@ are copied into the initrd (`console.earlySetup`), so the passphrase and the rec
 with the French layout, and the emergency shell uses the same colours as the virtual consoles.
 
 Changing the splash, the initrd or the kernel command line changes the measurements of the boot
-images, never PCR 7, which records only the Secure Boot state and keys, so the TPM2 unlock is not
-affected.
+images, never PCR 0 or PCR 7, which record only the firmware code, the Secure Boot state and the
+keys, so the TPM2 unlock is not affected.
 
 ### Resume and root rollback
 
@@ -165,8 +167,10 @@ for its recovery key once, then reseal.
    sudo cryptsetup luksDump /dev/disk/by-partlabel/disk-main-luks
    ```
 
-   The `Tokens` section lists one `systemd-tpm2` token bound to PCR 7 and one
-   `systemd-recovery` token.
+   The `Tokens` section lists one `systemd-tpm2` token and one `systemd-recovery` token. The JSON
+   metadata of the TPM2 token, read as in
+   [LUKS enrollment](../operations/luks-enrollment.md#how-to-enroll-the-tpm2), shows
+   `"tpm2-pcrs": [ 7 ]` and `"tpm2_pcrlock": true`.
 
 ## How to boot a previous generation
 
@@ -201,8 +205,9 @@ Prerequisites: the LUKS recovery key and the BitLocker recovery key are availabl
 
 3. Reboot, enable Secure Boot in the firmware setup, and boot NixOS. Type the LUKS recovery key at
    the passphrase prompt.
-4. Seal the TPM2 slot again against the new PCR 7 value, following the failed unseal procedure of
-   [LUKS enrollment](../operations/luks-enrollment.md#how-to-recover-from-a-failed-tpm2-unseal).
+4. Replace the TPM2 slot, so that it binds the new PCR 7 value, following
+   [LUKS enrollment](../operations/luks-enrollment.md#how-to-replace-an-enrolled-tpm2-slot). The
+   pcrlock policy is unchanged: the firmware code is the same.
 5. Boot Windows once and type its BitLocker recovery key.
 
 ## Reference
@@ -237,7 +242,7 @@ entry token of the installation, the machine ID here.
 | Mapping | `/dev/mapper/cryptroot` |
 | Format | LUKS2, cryptsetup defaults, 4096-byte sectors |
 | Options | `allowDiscards`, `bypassWorkqueues`, `tpm2-device=auto` |
-| Key slots | Passphrase, recovery key, TPM2 sealed against PCR 7 |
+| Key slots | Passphrase, recovery key, TPM2 bound to the pcrlock policy and PCR 7 |
 | Header backup | Kept outside the machine |
 
 ### PCR measurements

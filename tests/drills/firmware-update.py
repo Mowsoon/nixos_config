@@ -1,6 +1,5 @@
 FIRMWARE_CODE_EARLY = "/var/lib/pcrlock.d/250-firmware-code-early.pcrlock.d"
 OTHER_FIRMWARE_LOCK = "/persist/other-firmware.pcrlock"
-MAKE_POLICY_UNIT = "systemd-pcrlock-make-policy.service"
 
 first_firmware = machine.start_command
 other_firmware = type(first_firmware)(other_firmware_vm)
@@ -23,16 +22,8 @@ def assert_policy_update_refused() -> None:
 
 
 with subtest("The TPM2 slot binds the pcrlock policy of PCR 0 and the literal PCR 7"):
-    first_boot()
-    recovery_key = enroll_recovery_key()
-    machine.fail(f"systemctl is-active {MAKE_POLICY_UNIT}")
-    recovery_pin = create_pcrlock_policy()
-    enroll_tpm2_pcrlock()
-    tpm2_tokens = [token for token in luks_tokens() if token["type"] == "systemd-tpm2"]
-    print(json.dumps(tpm2_tokens, indent=2))
-    t.assertEqual(1, len(tpm2_tokens))
-    t.assertEqual([7], tpm2_tokens[0]["tpm2-pcrs"])
-    t.assertTrue(tpm2_tokens[0]["tpm2_pcrlock"])
+    recovery_key, recovery_pin = provision()
+    assert_one_tpm2_token()
     print(machine.succeed("ls -l /boot/loader/credentials"))
     first_pcr0 = pcr(0)
     boot_on(first_firmware)

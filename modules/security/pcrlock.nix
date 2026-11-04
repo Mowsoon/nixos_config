@@ -9,8 +9,12 @@ let
   systemd = config.systemd.package;
   separator = "500-separator.pcrlock.d/300-0x00000000.pcrlock";
   policy = "/var/lib/systemd/pcrlock.json";
+  pcrlock = pkgs.runCommand "systemd-pcrlock" { } ''
+    mkdir -p $out/bin
+    ln -s ${systemd}/lib/systemd/systemd-pcrlock $out/bin/systemd-pcrlock
+  '';
   makePolicy = pkgs.writeShellScriptBin "pcrlock-make-policy" ''
-    exec ${systemd}/lib/systemd/systemd-pcrlock make-policy --location=770 --strict=true ${
+    exec ${lib.getExe' pcrlock "systemd-pcrlock"} make-policy --location=770 --strict=true ${
       lib.concatMapStringsSep " " (pcr: "--pcr=${toString pcr}") cfg.pcrs
     } "$@"
   '';
@@ -29,7 +33,10 @@ in
   config = lib.mkIf cfg.enable {
     environment = {
       etc."pcrlock.d/${separator}".source = "${systemd}/lib/pcrlock.d/${separator}";
-      systemPackages = [ makePolicy ];
+      systemPackages = [
+        pcrlock
+        makePolicy
+      ];
     };
 
     systemd = {

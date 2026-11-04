@@ -74,11 +74,7 @@ def enroll_recovery_key() -> str:
     return match.group(0)
 
 
-def enroll_tpm2() -> None:
-    machine.succeed(
-        f"PASSWORD={TEST_PASSPHRASE} systemd-cryptenroll {LUKS_DEVICE}"
-        " --tpm2-device=auto --tpm2-pcrs=7"
-    )
+MAKE_POLICY_UNIT = "systemd-pcrlock-make-policy.service"
 
 
 def create_pcrlock_policy() -> str:
@@ -90,9 +86,16 @@ def create_pcrlock_policy() -> str:
     return match.group(0)
 
 
-def enroll_tpm2_pcrlock() -> None:
+def recreate_pcrlock_policy() -> str:
+    print(machine.succeed(f"journalctl -b -o cat --unit {MAKE_POLICY_UNIT}"))
+    print(machine.execute("systemd-pcrlock remove-policy 2>&1")[1])
+    machine.fail(f"test -e {PCRLOCK_POLICY}")
+    return create_pcrlock_policy()
+
+
+def enroll_tpm2(secret: str = TEST_PASSPHRASE) -> None:
     machine.succeed(
-        f"PASSWORD={TEST_PASSPHRASE} systemd-cryptenroll {LUKS_DEVICE}"
+        f"PASSWORD={secret} systemd-cryptenroll {LUKS_DEVICE}"
         f" --tpm2-device=auto --tpm2-pcrlock={PCRLOCK_POLICY} --tpm2-pcrs=7"
     )
 
@@ -104,18 +107,20 @@ def luks_tokens() -> list[dict]:
     return list(metadata["tokens"].values())
 
 
-def assert_one_tpm2_token_on_pcr7() -> None:
-    pcrs = [
-        token["tpm2-pcrs"] for token in luks_tokens() if token["type"] == "systemd-tpm2"
-    ]
-    t.assertEqual([[7]], pcrs)
+def assert_one_tpm2_token() -> None:
+    tokens = [token for token in luks_tokens() if token["type"] == "systemd-tpm2"]
+    t.assertEqual(1, len(tokens))
+    t.assertEqual([7], tokens[0]["tpm2-pcrs"])
+    t.assertTrue(tokens[0]["tpm2_pcrlock"])
 
 
-def provision() -> str:
+def provision() -> tuple[str, str]:
     first_boot()
+    machine.fail(f"systemctl is-active {MAKE_POLICY_UNIT}")
     recovery_key = enroll_recovery_key()
+    recovery_pin = create_pcrlock_policy()
     enroll_tpm2()
-    return recovery_key
+    return recovery_key, recovery_pin
 
 
 def recover_with_key(recovery_key: str) -> None:
@@ -124,16 +129,15 @@ def recover_with_key(recovery_key: str) -> None:
     machine.send_console(f"{recovery_key}\n")
     machine.wait_for_unit("multi-user.target")
     assert_secure_boot_enabled()
+    print(machine.execute("journalctl -b -o cat --unit systemd-cryptsetup@cryptroot.service")[1])
+    print(machine.execute(f"journalctl -b -o cat --unit {MAKE_POLICY_UNIT}")[1])
 
 
 def reenroll_tpm2(recovery_key: str) -> None:
-    machine.succeed("systemd-analyze pcrs 7")
+    machine.succeed("systemd-analyze pcrs 0 7")
     machine.succeed(f"systemd-cryptenroll {LUKS_DEVICE} --wipe-slot=tpm2")
-    machine.succeed(
-        f"PASSWORD={recovery_key} systemd-cryptenroll {LUKS_DEVICE}"
-        " --tpm2-device=auto --tpm2-pcrs=7"
-    )
-    assert_one_tpm2_token_on_pcr7()
+    enroll_tpm2(recovery_key)
+    assert_one_tpm2_token()
 
 
 def pcr(index: int) -> str:

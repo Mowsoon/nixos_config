@@ -2,7 +2,7 @@ SBCTL_KEYS = "/var/lib/sbctl/keys"
 DBX_VARIABLE = "/sys/firmware/efi/efivars/dbx-d719b2cb-3d3a-4596-a3bc-dad00e67656f"
 
 with subtest("The machine is provisioned and a signed entry is appended to dbx"):
-    recovery_key = provision()
+    recovery_key, _ = provision()
     pcr7_before = pcr7()
     machine.succeed(
         "openssl req -new -x509 -newkey rsa:2048 -nodes -days 1"

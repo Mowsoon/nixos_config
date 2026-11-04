@@ -259,7 +259,7 @@ installation. Rollback path: none for Arch; the state worth keeping is in the ar
 
 5. Boot Windows once from the firmware boot menu, with the BitLocker recovery key at hand.
    BitLocker asks for it once after the key enrollment, then opens without it.
-6. Enroll the recovery key, the TPM2 slot and the header backup, following
+6. Enroll the recovery key, the pcrlock policy, the TPM2 slot and the header backup, following
    [LUKS enrollment](luks-enrollment.md).
 7. Run the hardware checks listed in the reference below.
 8. Delete the archive from the T7 disk.
