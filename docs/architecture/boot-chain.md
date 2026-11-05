@@ -48,7 +48,9 @@ systemd-pcrlock policy of a TPM2 NV index allows the firmware code measured in P
 [Firmware code lock](#firmware-code-lock). The key unseals as long as the firmware is one the
 policy allows and Secure Boot stays enabled with the same key databases, whatever the
 generation, the kernel or the command line. The other PCRs join the seal one at a time, each only
-once its value survives the updates that change it.
+once its value survives the updates that change it and only when it detects a change worth
+refusing the unlock for. PCR 1 stays out, for the reason given in
+[Platform configuration](#platform-configuration).
 
 Every boot measures more than PCR 7. The firmware measures itself, its configuration, the boot
 entries and each PE image it starts; systemd-boot adds SMBIOS data and `loader.conf`; the
@@ -117,6 +119,23 @@ policy changes.
 The two units are the upstream early-boot oneshots of systemd and stay unconfined: they read the
 firmware event log and files owned by root, and a firmware able to forge the log already
 controls every measurement. They run once per boot, before `sysinit.target`, without network.
+
+### Platform configuration
+
+PCR 1 is meant to hold the platform configuration, but this firmware records no setting in it:
+no `Setup` variable, no platform configuration flags, no ACPI table. It measures the SMBIOS
+table, `BootOrder` and each `Boot####` entry; systemd-boot adds the SMBIOS system, baseboard and
+OEM records. The SMBIOS table describes the hardware and the firmware version, with no field for
+the IOMMU, DMA protection, the TPM or Secure Boot, so turning off a protection in the setup menu
+leaves PCR 1 unchanged. A boot through another loader is already refused by PCR 7, which records
+the certificate that verified it.
+
+Sealing PCR 1 would therefore detect nothing worth refusing the unlock for, while it changes on
+events that are expected: a bootable USB drive present at boot (the firmware adds an entry), a
+Windows update that moves its boot manager first, a firmware update. Its SMBIOS digest cannot be
+predicted either: the firmware filters the table before hashing it in an undocumented way, and
+neither the table the system sees nor the reference EDK II filter reproduces it. PCR 1 stays out
+of the seal; PCR 3, which holds only the separator, adds nothing either.
 
 ### Boot splash
 
@@ -263,7 +282,7 @@ next value can be computed before the reboot.
 | PCR | Measured by | Content on hephaestus | Changes when | Predictable |
 | --- | --- | --- | --- | --- |
 | 0 | Firmware | S-CRTM version, firmware volume `FV_MAIN` | Firmware update | Yes, from the vendor capsule with `pcr0-predict` |
-| 1 | Firmware, systemd-boot | SMBIOS tables, `BootOrder` and `Boot####` variables, SMBIOS system, baseboard and OEM records | Boot order or boot entries change, firmware update | Partly: the firmware digests of `Boot####` do not match their content |
+| 1 | Firmware, systemd-boot | SMBIOS table, `BootOrder` and `Boot####` variables, SMBIOS system, baseboard and OEM records; no setup setting | Boot order or boot entries change, bootable USB drive at boot, firmware update | Partly: the variables yes, the firmware hashing the whole variable record with its name; the SMBIOS table no, filtered by the firmware before hashing |
 | 2 | Firmware | Separator only, no option ROM | A device with a UEFI option ROM is present at boot | Yes, constant |
 | 3 | Firmware | Separator only | Option ROM configuration | Yes, constant |
 | 4 | Firmware | Boot option action, Authenticode digests of systemd-boot and of the stub of the generation | Every generation, systemd-boot update | Yes, from the signed PE files |
