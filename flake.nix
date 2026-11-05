@@ -77,6 +77,7 @@
       pkgs = nixpkgs.legacyPackages.${system};
       rgbEffects = pkgs.callPackage ./pkgs/rgb-effects/package.nix { };
       themeRecolor = pkgs.callPackage ./pkgs/theme-recolor/package.nix { };
+      pcr0Predict = pkgs.callPackage ./pkgs/pcr0-predict/package.nix { };
       drills = import ./tests/drills { inherit pkgs inputs; };
       hephaestusModules = [
         disko.nixosModules.disko
@@ -164,6 +165,7 @@
       packages.${system} = {
         rgb-effects = rgbEffects;
         theme-recolor = themeRecolor;
+        pcr0-predict = pcr0Predict;
         kernel-vm-modules = pkgs.callPackage ./tools/kernel-vm-modules.nix { };
         vmlinux-h = pkgs.callPackage ./tools/vmlinux-h.nix {
           inherit (self.nixosConfigurations.hephaestus.config.boot.kernelPackages) kernel;
@@ -182,6 +184,9 @@
         theme-recolor = themeRecolor;
         theme-recolor-ruff = themeRecolor.lints.ruff;
         theme-recolor-mypy = themeRecolor.lints.mypy;
+        pcr0-predict = pcr0Predict;
+        pcr0-predict-ruff = pcr0Predict.lints.ruff;
+        pcr0-predict-mypy = pcr0Predict.lints.mypy;
         supply-chain = supplyChain;
         service-exposure = pkgs.callPackage ./tools/service-exposure.nix {
           systemd = hephaestus.systemd.package;

@@ -1,0 +1,44 @@
+[tool.poetry]
+name = "pcr0-predict"
+version = "0.1.0"
+description = "Predict the PCR 0 measurements of an AMI firmware capsule as a systemd-pcrlock variant"
+authors = []
+packages = [{ include = "pcr0_predict", from = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.16"
+mypy = "^2.1"
+pytest = "^8.0"
+
+[tool.poetry.scripts]
+pcr0-predict = "pcr0_predict.__main__:main"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "C4", "C90", "ANN", "G", "S", "UP", "ERA"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+
+[tool.mypy]
+strict = true
+files = ["src", "tests"]
+mypy_path = "src"
+
+[tool.pytest.ini_options]
+addopts = "-q --strict-markers --strict-config"
+testpaths = ["tests"]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

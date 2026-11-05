@@ -85,10 +85,20 @@ new one is locked.
 prediction changed. The PCR 0 separator component comes from systemd through `/etc/pcrlock.d`.
 `pcrlock-make-policy` holds the arguments of the policy, shared by the unit and the manual
 procedures: `--strict=true` makes it fail when PCR 0 cannot be predicted, instead of leaving PCR 0
-out of the policy, and the PCR list keeps the other PCRs out of it. A second variant placed next
-to `generated.pcrlock` before a firmware update makes the policy accept the current and the next
-firmware during the update boot; once the new firmware runs, removing the variant locks the policy
-to it alone.
+out of the policy, and the PCR list keeps the other PCRs out of it.
+
+A second variant placed next to `generated.pcrlock` before a firmware update makes the policy
+accept the current and the next firmware during the update boot. On the first boot of the new
+firmware, `generated.pcrlock` is rewritten from its event log, so the policy already allows the new
+firmware alone; the variant is removed afterwards, so that it never allows that version again
+after a later update. `pcr0-predict` writes the variant from the vendor capsule. On this firmware,
+PCR 0 extends three records: the S-CRTM version, a constant GUID that the AMI TCG modules
+`AmiTpm20PlatformPei` and `AmiTcgPlatformPeiAfterMem` store in their code; the SHA-256 of the
+`FV_MAIN` volume as it lies in the flash image, compressed; and the separator. The tool first
+recomputes the running PCR 0 from the capsule of the running version and refuses to predict
+unless it matches the event log and `generated.pcrlock`. It then finds the same modules and the
+volume of the same name in the new capsule, and refuses when the structure differs. The procedure
+is described in [Firmware update](../operations/firmware-update.md).
 
 Writing the NV index requires the current PCR state to satisfy the policy it holds, or the
 recovery PIN. The PIN is generated when the index is created and shown once; a copy is sealed to
@@ -252,7 +262,7 @@ next value can be computed before the reboot.
 
 | PCR | Measured by | Content on hephaestus | Changes when | Predictable |
 | --- | --- | --- | --- | --- |
-| 0 | Firmware | S-CRTM version, firmware volume `FV_MAIN` | Firmware update | No, only from the new firmware |
+| 0 | Firmware | S-CRTM version, firmware volume `FV_MAIN` | Firmware update | Yes, from the vendor capsule with `pcr0-predict` |
 | 1 | Firmware, systemd-boot | SMBIOS tables, `BootOrder` and `Boot####` variables, SMBIOS system, baseboard and OEM records | Boot order or boot entries change, firmware update | Partly: the firmware digests of `Boot####` do not match their content |
 | 2 | Firmware | Separator only, no option ROM | A device with a UEFI option ROM is present at boot | Yes, constant |
 | 3 | Firmware | Separator only | Option ROM configuration | Yes, constant |

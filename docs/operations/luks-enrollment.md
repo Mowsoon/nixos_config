@@ -178,6 +178,6 @@ prediction is unchanged: only the unseal message shows the clear.
 
 | Cause | Unseal message | Policy update | Fix |
 | --- | --- | --- | --- |
-| Firmware code changed (PCR 0) | `TPM policy does not match current system state`, ending with `Remote address changed` | Failed: `Failed to submit AuthorizeNV policy` | [Accept the running firmware](#how-to-accept-the-running-firmware), once the change is explained |
+| Firmware code changed (PCR 0) | `TPM policy does not match current system state`, ending with `Remote address changed` | Failed: `Failed to submit AuthorizeNV policy` | [Accept the running firmware](#how-to-accept-the-running-firmware), once the change is explained; a planned update is prepared as in [Firmware update](firmware-update.md) |
 | Secure Boot state or keys changed (PCR 7), such as a dbx update | `TPM policy does not match current system state`, ending with `Operation not permitted` | Succeeds: `Prediction is identical to current policy` | [Replace the TPM2 slot](#how-to-replace-an-enrolled-tpm2-slot) |
 | TPM cleared | `TPM key integrity check failed` | Succeeds: `Prediction is identical to current policy` | [Recreate the pcrlock policy](#how-to-recreate-the-pcrlock-policy-after-a-tpm-clear) |

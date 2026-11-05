@@ -9,6 +9,7 @@ let
   systemd = config.systemd.package;
   separator = "500-separator.pcrlock.d/300-0x00000000.pcrlock";
   policy = "/var/lib/systemd/pcrlock.json";
+  predictor = pkgs.callPackage ../../pkgs/pcr0-predict/package.nix { };
   pcrlock = pkgs.runCommand "systemd-pcrlock" { } ''
     mkdir -p $out/bin
     ln -s ${systemd}/lib/systemd/systemd-pcrlock $out/bin/systemd-pcrlock
@@ -36,6 +37,7 @@ in
       systemPackages = [
         pcrlock
         makePolicy
+        predictor
       ];
     };
 
