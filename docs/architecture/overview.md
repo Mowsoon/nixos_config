@@ -276,9 +276,10 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `packages.x86_64-linux.rgb-effects` | Keyboard lighting effects daemon, built with its tests |
 | `packages.x86_64-linux.theme-recolor` | Theme recolouring tool, built with its tests |
 | `packages.x86_64-linux.pcr0-predict` | PCR 0 predictor of firmware capsules, built with its tests |
+| `packages.x86_64-linux.pcr12` | PCR 12 check and TPM2 reseal tool, built with its tests |
 | `packages.x86_64-linux.vmlinux-h` | `vmlinux.h` of the hephaestus kernel, for CO-RE BPF programs |
 | `packages.x86_64-linux.kernel-vm-modules` | `lsmod` of the `kernel-test` VM on the NixOS kernel, input of `localyesconfig` |
-| `checks.x86_64-linux` | `nixfmt`, `statix`, `deadnix`, `rgb-effects`, `rgb-effects-ruff`, `rgb-effects-mypy`, `theme-recolor`, `theme-recolor-ruff`, `theme-recolor-mypy`, `pcr0-predict`, `pcr0-predict-ruff`, `pcr0-predict-mypy`, `service-exposure`, `supply-chain`, one `drill-<name>` per failure drill |
+| `checks.x86_64-linux` | `nixfmt`, `statix`, `deadnix`, `rgb-effects`, `rgb-effects-ruff`, `rgb-effects-mypy`, `theme-recolor`, `theme-recolor-ruff`, `theme-recolor-mypy`, `pcr0-predict`, `pcr0-predict-ruff`, `pcr0-predict-mypy`, `pcr12`, `pcr12-ruff`, `pcr12-mypy`, `service-exposure`, `supply-chain`, one `drill-<name>` per failure drill |
 | `formatter.x86_64-linux` | `nixfmt-tree` |
 | `devShells.x86_64-linux.default` | `nixfmt-tree`, `statix`, `deadnix`, `mkpasswd` |
 | `devShells.x86_64-linux.kernel` | Toolchain of the zen kernel, clang, llvm and lld, pahole, bpftool, libbpf, QEMU, b4, git with `send-email`, the zen configuration as `KERNEL_BASE_CONFIG`, and `CLANG` set to `clang-bpf` for the BPF selftests |
@@ -349,7 +350,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `custom.windowsVolume` | `core/windows-volume.nix` | Read-only access to the BitLocker volume |
 | `custom.secureBoot` | `security/secure-boot.nix` | lanzaboote signing |
 | `custom.luks` | `security/luks.nix` | TPM2 unlock of the root container |
-| `custom.pcrlock` | `security/pcrlock.nix` | systemd-pcrlock policy locked to the firmware code, PCR 0 predictor |
+| `custom.pcrlock` | `security/pcrlock.nix` | systemd-pcrlock policy locked to the firmware code, PCR 0 predictor, PCR 12 seal renewed after each policy change |
 | `custom.hardening` | `security/hardening.nix` | Kernel and privilege hardening |
 | `custom.supplyChain` | `security/supply-chain.nix` | Supply chain application of the host, weekly vulnerability scan |
 | `custom.nvidia` | `hardware/nvidia.nix` | NVIDIA driver |

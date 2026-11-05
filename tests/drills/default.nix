@@ -20,6 +20,7 @@ let
 in
 pkgs.lib.genAttrs [
   "boot"
+  "credential-injection"
   "dbx-update"
   "enrollment"
   "firmware-update"

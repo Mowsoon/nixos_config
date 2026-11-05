@@ -19,6 +19,7 @@ with subtest("The machine is provisioned and a signed entry is appended to dbx")
 with subtest("PCR 7 changes, the unseal fails and the recovery key opens the container"):
     recover_with_key(recovery_key)
     t.assertNotEqual(pcr7_before, pcr7())
+    assert_reseal_refused()
 
 with subtest("A new TPM2 enrollment restores the automatic unlock"):
     reenroll_tpm2(recovery_key)

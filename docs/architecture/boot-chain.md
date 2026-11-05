@@ -16,7 +16,7 @@ sequenceDiagram
   FW->>SB: verify signature against db, load
   SB->>ST: pick a generation, verify signature, load
   ST->>IR: check kernel and initrd hashes, start kernel
-  IR->>IR: unlock cryptroot with the TPM2 (pcrlock PCR 0, PCR 7)
+  IR->>IR: unlock cryptroot with the TPM2 (pcrlock PCR 0, PCR 7, PCR 12)
   IR->>IR: resume hibernation image if one exists
   IR->>IR: archive the root subvolume, create an empty one
   IR->>OS: mount, switch root, activate the generation
@@ -42,11 +42,13 @@ at installation, with `efibootmgr`.
 
 ### TPM2 unlock
 
-The root container is LUKS2. Its TPM2 key slot is bound to two policies at once. The literal
-value of PCR 7 measures the Secure Boot state and the keys that verified each loaded image. The
-systemd-pcrlock policy of a TPM2 NV index allows the firmware code measured in PCR 0, described in
-[Firmware code lock](#firmware-code-lock). The key unseals as long as the firmware is one the
-policy allows and Secure Boot stays enabled with the same key databases, whatever the
+The root container is LUKS2. Its TPM2 key slot is bound to three measurements at once. The
+literal value of PCR 7 measures the Secure Boot state and the keys that verified each loaded
+image. The systemd-pcrlock policy of a TPM2 NV index allows the firmware code measured in PCR 0,
+described in [Firmware code lock](#firmware-code-lock). The literal value of PCR 12 measures the
+credentials that the ESP hands to the initrd, described in [Credentials lock](#credentials-lock).
+The key unseals as long as the firmware is one the policy allows, Secure Boot stays enabled with
+the same key databases and the ESP holds no credential but the policy copy, whatever the
 generation, the kernel or the command line. The other PCRs join the seal one at a time, each only
 once its value survives the updates that change it and only when it detects a change worth
 refusing the unlock for. PCR 1 stays out, for the reason given in
@@ -114,11 +116,51 @@ exists, so the index and its PIN are created by hand.
 The policy file `/var/lib/systemd/pcrlock.json` holds the predicted values, the NV index handle
 and the sealed PIN. A copy is written to the ESP as a credential, since the initrd cannot read
 `/var` before the unlock; the stub measures it into PCR 12, which therefore changes whenever the
-policy changes.
+policy changes, as [Credentials lock](#credentials-lock) handles.
 
 The two units are the upstream early-boot oneshots of systemd and stay unconfined: they read the
 firmware event log and files owned by root, and a firmware able to forge the log already
 controls every measurement. They run once per boot, before `sysinit.target`, without network.
+
+### Credentials lock
+
+The lanzaboote stub packs every `.cred` file of `\loader\credentials` on the ESP into a cpio
+archive, hands it to the initrd and measures it into PCR 12; a `.extra.d` directory next to a stub
+would add a second archive. The ESP is not encrypted, and systemd routes these credentials to the
+services that import them: `systemd-tmpfiles`, `systemd-sysctl`, `systemd-resolved`, the
+journal, the gettys, the root `authorized_keys`. A credential sealed with the null key is
+refused here, since Secure Boot and the TPM are on, but anyone with physical access can boot
+another signed system, seal a credential to this TPM and drop it on the ESP, where it would run as
+root after an unattended unlock. Only PCR 12 sees it, so the TPM2 slot is sealed to its value.
+
+PCR 12 cannot join the pcrlock policy: it measures the copy of that policy, written with a random
+nonce each time the policy changes, so the prediction would have to contain its own hash. It is
+sealed as a literal value instead, and the slot is renewed after every policy change, before the
+next boot. The archive is rebuilt from the ESP files byte for byte, so the next value is known in
+advance. `pcr12` does both:
+
+- `pcr12-check`, before the policy update of every boot, rebuilds the archive from the ESP and
+  checks that it reproduces the PCR 12 records of the event log and the PCR itself. It proves the
+  model on this boot; without it, no slot is written.
+- `pcr12 reseal`, run by `pcrlock-make-policy` after each successful policy write, so at boot and
+  in every manual procedure, accepts only one credential on the ESP: the pcrlock policy copy,
+  whose decrypted content must be the current `/var/lib/systemd/pcrlock.json`. It then computes
+  the next PCR 12 and, when the slot does not already match it and the current PCR 7, enrolls a
+  new slot unlocked by the current one and wipes the old one. The enrolled values are kept in
+  `/var/lib/pcr12/enrollment.json`.
+
+A credential added offline changes PCR 12, so the unseal fails and the recovery prompt shows the
+intrusion; the reseal of that boot refuses the unknown file, so it is never sealed. A file
+written while the system runs needs root, which the seal does not protect against. When the
+current slot can no longer unlock, after a boot opened with the recovery key such as a PCR 7
+change, the reseal fails and asks for `pcr12 reseal --ask-key`, which takes the recovery key.
+Every failure of the check or of the policy update is appended to `/run/pcr12/alert`, which a user
+unit reports as a desktop notification at login or as soon as it changes. Before the first TPM2
+enrollment, the reseal does nothing.
+
+`pcr12-check` reads only the event log, the PCRs and the ESP, all owned by root, and runs without
+network, devices or capabilities. The reseal runs inside the policy update unit, which writes the
+NV index and the LUKS2 header.
 
 ### Platform configuration
 
@@ -250,7 +292,7 @@ Prerequisites: the LUKS recovery key and the BitLocker recovery key are availabl
 | `EFI/Linux/nixos-generation-<n>-<hash>.efi` | lanzaboote stub of generation `<n>` | Yes |
 | `EFI/nixos/` | Kernels and initrds shared between generations | No, hashed by the stubs |
 | `loader/loader.conf` | Menu timeout and default entry | No |
-| `loader/credentials/` | `nvpcr-anchor` credential used by systemd for NV-index PCRs, `pcrlock.<entry-token>.cred` copy of the pcrlock policy | No |
+| `loader/credentials/` | `pcrlock.<entry-token>.cred` copy of the pcrlock policy, the only credential `pcr12` accepts | No, measured in PCR 12 |
 
 `<n>` is the generation number. `<hash>` identifies the stub content. `<entry-token>` is the boot
 entry token of the installation, the machine ID here.
@@ -271,7 +313,7 @@ entry token of the installation, the machine ID here.
 | Mapping | `/dev/mapper/cryptroot` |
 | Format | LUKS2, cryptsetup defaults, 4096-byte sectors |
 | Options | `allowDiscards`, `bypassWorkqueues`, `tpm2-device=auto` |
-| Key slots | Passphrase, recovery key, TPM2 bound to the pcrlock policy and PCR 7 |
+| Key slots | Passphrase, recovery key, TPM2 bound to the pcrlock policy, PCR 7 and PCR 12 |
 | Header backup | Kept outside the machine |
 
 ### PCR measurements
@@ -293,12 +335,14 @@ next value can be computed before the reboot.
 | 9 | Kernel EFI stub | Command line in UTF-16 with its terminating null, initrd followed by the credential archive | Every generation, credential change | Yes, with the credential archive |
 | 10 | Kernel, IMA | `boot_aggregate` and the IMA log, kept apart from the firmware log | Every boot | No |
 | 11 | lanzaboote stub | Name and content of `.linux`, `.osrel`, `.cmdline`, `.initrd` | Every generation, even an identical system, through `.osrel` | Yes, verified: recomputed from the generation files |
-| 12 | lanzaboote stub | Archive of the global credentials: the `nvpcr-anchor` credential | Credential change | Yes, from the ESP |
+| 12 | lanzaboote stub | Archive of the global credentials: the pcrlock policy copy | Policy change, a credential added to the ESP | Yes, rebuilt from the ESP by `pcr12` |
 | 13 to 16, 23 | Nothing | Empty: no system extension, no shim, no system identity measurement | When such a feature is enabled | Yes, zero |
 
-The `nvpcr-anchor` credential dates from the installation. It is the anchor scheme of systemd
-before version 262, a secret sealed against PCR 11. The log holds no `nvpcr-init` event in PCR 9
-and no measurement from user space, so no NV-index PCR is initialized.
+The installation also left an `nvpcr-anchor` credential, the anchor scheme of systemd before
+version 262, a secret sealed against PCR 11. systemd 262 no longer uses it and its
+`systemd-tpm2-setup` tries to delete it; it was removed from the ESP when PCR 12 joined the seal.
+The log holds no `nvpcr-init` event in PCR 9 and no measurement from user space, so no NV-index
+PCR is initialized.
 
 ### Initrd ordering
 
@@ -319,6 +363,7 @@ and no measurement from user space, so no NV-index PCR is initialized.
 | `custom.luks.name` | `cryptroot` | Name of the LUKS mapping declared by disko |
 | `custom.pcrlock.enable` | `false` | Keeps the systemd-pcrlock policy locked to the firmware code at every boot, provides `pcrlock-make-policy` |
 | `custom.pcrlock.pcrs` | `[ 0 ]` | PCRs of the policy; the policy update fails when one cannot be predicted |
+| `custom.pcrlock.lockCredentials` | `false` | Seals the TPM2 slot to PCR 12 too, renews it after each policy change, provides `pcr12` and the failure notification |
 | `custom.bootSplash.enable` | `false` | Plymouth splash with the Stylix theme, quiet boot, console palette and keymap in the initrd |
 | `custom.rootRollback.enable` | `false` | Installs `rollback-root.service` in the initrd |
 | `custom.rootRollback.device` | None | Unlocked device holding the Btrfs filesystem |

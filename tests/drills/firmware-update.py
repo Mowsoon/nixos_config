@@ -21,7 +21,7 @@ def assert_policy_update_refused() -> None:
     print(machine.succeed(f"journalctl -b -o cat --unit {MAKE_POLICY_UNIT}"))
 
 
-with subtest("The TPM2 slot binds the pcrlock policy of PCR 0 and the literal PCR 7"):
+with subtest("The TPM2 slot binds the pcrlock policy of PCR 0 and the literal PCR 7 and PCR 12"):
     recovery_key, recovery_pin = provision()
     assert_one_tpm2_token()
     print(machine.succeed("ls -l /boot/loader/credentials"))

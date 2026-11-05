@@ -225,6 +225,7 @@ does not grant access to Windows.
 | `/var/lib/systemd` | `core/persistence.nix` | Learned state: timers, random seed, coredumps |
 | `/var/lib/sbctl` | `security/secure-boot.nix` | Secret |
 | `/var/lib/pcrlock.d` | `security/pcrlock.nix` | Learned state: firmware code measurements |
+| `/var/lib/pcr12` | `security/pcrlock.nix` | Learned state: PCR values of the enrolled TPM2 slot |
 | `/etc/NetworkManager/system-connections` | `network/manager.nix` | Secret, mode `0700` |
 | `/var/lib/NetworkManager` | `network/manager.nix` | Learned state |
 | `/var/lib/iwd` | `network/manager.nix` | Secret, mode `0700` |

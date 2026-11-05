@@ -77,10 +77,14 @@ def enroll_recovery_key() -> str:
 MAKE_POLICY_UNIT = "systemd-pcrlock-make-policy.service"
 
 
-def create_pcrlock_policy() -> str:
+def create_pcrlock_policy(unlocked_by_tpm2: bool = True) -> str:
     machine.wait_for_unit("systemd-pcrlock-firmware-code.service")
-    output = machine.succeed("pcrlock-make-policy --recovery-pin=show 2>&1")
+    status, output = machine.execute("pcrlock-make-policy --recovery-pin=show 2>&1")
     print(output)
+    if unlocked_by_tpm2:
+        t.assertEqual(0, status)
+    else:
+        t.assertIn("pcr12 reseal --ask-key", output)
     match = RECOVERY_KEY.search(output)
     assert match is not None, f"No recovery PIN in: {output}"
     return match.group(0)
@@ -90,14 +94,11 @@ def recreate_pcrlock_policy() -> str:
     print(machine.succeed(f"journalctl -b -o cat --unit {MAKE_POLICY_UNIT}"))
     print(machine.execute("systemd-pcrlock remove-policy 2>&1")[1])
     machine.fail(f"test -e {PCRLOCK_POLICY}")
-    return create_pcrlock_policy()
+    return create_pcrlock_policy(unlocked_by_tpm2=False)
 
 
 def enroll_tpm2(secret: str = TEST_PASSPHRASE) -> None:
-    machine.succeed(
-        f"PASSWORD={secret} systemd-cryptenroll {LUKS_DEVICE}"
-        f" --tpm2-device=auto --tpm2-pcrlock={PCRLOCK_POLICY} --tpm2-pcrs=7"
-    )
+    machine.succeed(f"PASSWORD={secret} pcr12 reseal --ask-key")
 
 
 def luks_tokens() -> list[dict]:
@@ -110,7 +111,7 @@ def luks_tokens() -> list[dict]:
 def assert_one_tpm2_token() -> None:
     tokens = [token for token in luks_tokens() if token["type"] == "systemd-tpm2"]
     t.assertEqual(1, len(tokens))
-    t.assertEqual([7], tokens[0]["tpm2-pcrs"])
+    t.assertEqual([7, 12], tokens[0]["tpm2-pcrs"])
     t.assertTrue(tokens[0]["tpm2_pcrlock"])
 
 
@@ -134,10 +135,18 @@ def recover_with_key(recovery_key: str) -> None:
 
 
 def reenroll_tpm2(recovery_key: str) -> None:
-    machine.succeed("systemd-analyze pcrs 0 7")
-    machine.succeed(f"systemd-cryptenroll {LUKS_DEVICE} --wipe-slot=tpm2")
+    machine.succeed("systemd-analyze pcrs 0 7 12")
     enroll_tpm2(recovery_key)
     assert_one_tpm2_token()
+
+
+PCR12_ALERT = "/run/pcr12/alert"
+
+
+def assert_reseal_refused() -> None:
+    machine.wait_until_succeeds(f"systemctl is-failed {MAKE_POLICY_UNIT}")
+    print(machine.succeed(f"journalctl -b -o cat --unit {MAKE_POLICY_UNIT}"))
+    t.assertIn(MAKE_POLICY_UNIT, machine.succeed(f"cat {PCR12_ALERT}"))
 
 
 def pcr(index: int) -> str:

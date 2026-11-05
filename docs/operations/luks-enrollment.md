@@ -8,11 +8,14 @@ a TPM2 object bound to one physical machine: the recovery key, the pcrlock
 policy and its recovery PIN, the TPM2-sealed key and the header backup. They run
 once, by hand, after installation and after the Secure Boot keys are final.
 
-The TPM2 slot is bound to two policies at once: the systemd-pcrlock policy of
-the NV index, which allows the firmware code measured in PCR 0, and the literal
-value of PCR 7, which measures the Secure Boot state and keys. The
+The TPM2 slot is bound to three measurements at once: the systemd-pcrlock
+policy of the NV index, which allows the firmware code measured in PCR 0, the
+literal value of PCR 7, which measures the Secure Boot state and keys, and the
+literal value of PCR 12, which measures the credentials of the ESP. The
 [firmware code lock](../architecture/boot-chain.md#firmware-code-lock) explains
-the pcrlock policy. Enrolling or replacing Secure Boot keys changes PCR 7, so
+the pcrlock policy, the
+[credentials lock](../architecture/boot-chain.md#credentials-lock) why every
+policy rewrite renews the slot by itself. Enrolling or replacing Secure Boot keys changes PCR 7, so
 the TPM2 slot is always enrolled last, after the pcrlock policy exists. The
 `tpm2-device=auto` crypttab option, declared in `modules/security/luks.nix`,
 makes the initrd try the TPM2 slot before asking for a passphrase.
@@ -72,14 +75,19 @@ firmware to trust, booted normally.
 ## How to enroll the TPM2
 
 Prerequisites: Secure Boot is enabled with its final keys, the recovery key is
-enrolled and the pcrlock policy exists.
+enrolled, the pcrlock policy exists, `custom.pcrlock.lockCredentials` is
+applied, and `/boot/loader/credentials` holds only the `pcrlock.*.cred` policy
+copy.
 
-1. Seal a new key against the pcrlock policy and PCR 7. The command asks for
-   the passphrase or the recovery key.
+1. Seal a new key against the pcrlock policy, PCR 7 and the next PCR 12. The
+   command asks for the passphrase or the recovery key.
 
    ```bash
-   sudo systemd-cryptenroll /dev/disk/by-partlabel/disk-main-luks --tpm2-device=auto --tpm2-pcrlock=/var/lib/systemd/pcrlock.json --tpm2-pcrs=7
+   sudo pcr12 reseal --ask-key
    ```
+
+   It refuses when the ESP holds another credential, or when `pcr12-check`
+   did not reproduce PCR 12 at this boot.
 
 2. Reboot. The container opens without a passphrase prompt.
 3. Verify the `systemd-tpm2` token. The plain `luksDump` output names the token
@@ -89,33 +97,33 @@ enrolled and the pcrlock policy exists.
    sudo cryptsetup luksDump --dump-json-metadata /dev/disk/by-partlabel/disk-main-luks | jq '.tokens'
    ```
 
-   The `systemd-tpm2` token shows `"tpm2-pcrs": [ 7 ]` and
+   The `systemd-tpm2` token shows `"tpm2-pcrs": [ 7, 12 ]` and
    `"tpm2_pcrlock": true`.
 
 ## How to replace an enrolled TPM2 slot
 
-Blast radius: the TPM2 slot is replaced; until the new one is enrolled, the
-container asks for the passphrase or the recovery key at boot. Rollback path:
-the passphrase and the recovery key still open the container, and the previous
-enrollment can be repeated.
+Blast radius: the TPM2 slot is replaced. Rollback path: the old slot is wiped
+only once the new one is written, and the passphrase and the recovery key still
+open the container.
 
-1. Remove the TPM2 slot. The passphrase and the recovery key slots stay.
+1. Enroll the new slot, unlocked with the recovery key. The command asks for it.
 
    ```bash
-   sudo systemd-cryptenroll /dev/disk/by-partlabel/disk-main-luks --wipe-slot=tpm2
+   sudo pcr12 reseal --ask-key
    ```
 
-2. Enroll the new slot as in [How to enroll the TPM2](#how-to-enroll-the-tpm2).
+2. Reboot. The container opens without a passphrase prompt.
 
-The two commands stay separate. Combined in one call, `systemd-cryptenroll`
-compares the requested policy with the existing slot; after a TPM clear the PCR
-values are unchanged, so it reports that the PCR set is already enrolled and
-does nothing, leaving a slot sealed to the old TPM.
+`systemd-cryptenroll` does nothing when the requested policy equals the
+enrolled one. A replacement is needed only after a change of PCR 7, or after a
+TPM clear whose new pcrlock policy changes the copy measured in PCR 12, so the
+requested policy always differs from the enrolled one.
 
 ## How to recover from a failed TPM2 unseal
 
 1. At the passphrase prompt, type the recovery key instead of the passphrase.
 2. Once booted, read why the unseal failed, and the state of the policy update.
+   A failed policy update or reseal also shows a desktop notification at login.
 
    ```bash
    journalctl -b -o cat --unit systemd-cryptsetup@cryptroot.service
@@ -134,7 +142,8 @@ Prerequisites: the firmware change is explained, for example by an update whose
 version `/sys/class/dmi/id/bios_version` shows and the vendor publishes. An
 unexplained change of PCR 0 is a firmware that nobody installed on purpose.
 
-1. Rewrite the policy with the recovery PIN. The command asks for it.
+1. Rewrite the policy with the recovery PIN. The command asks for it, then
+   renews the TPM2 slot for the new policy copy.
 
    ```bash
    sudo pcrlock-make-policy --recovery-pin=query
@@ -160,7 +169,9 @@ prediction is unchanged: only the unseal message shows the clear.
 
 2. Create a new policy as in
    [How to create the pcrlock policy](#how-to-create-the-pcrlock-policy). It has
-   a new recovery PIN; replace the old one in the password manager.
+   a new recovery PIN; replace the old one in the password manager. The command
+   ends with an error: the slot it tries to renew was sealed by the cleared TPM
+   and cannot unlock, so it asks for `pcr12 reseal --ask-key`.
 3. Replace the TPM2 slot as in
    [How to replace an enrolled TPM2 slot](#how-to-replace-an-enrolled-tpm2-slot).
 
@@ -172,12 +183,13 @@ prediction is unchanged: only the unseal message shows the clear.
 | --- | --- | --- |
 | Passphrase | Typed passphrase | disko at format time |
 | Recovery | 256-bit key printed once | `systemd-cryptenroll --recovery-key` |
-| TPM2 | Key sealed against the pcrlock policy and PCR 7 | `systemd-cryptenroll --tpm2-device=auto --tpm2-pcrlock=` |
+| TPM2 | Key sealed against the pcrlock policy, PCR 7 and PCR 12 | `pcr12 reseal`, after every policy change |
 
 ### Unseal failures
 
 | Cause | Unseal message | Policy update | Fix |
 | --- | --- | --- | --- |
 | Firmware code changed (PCR 0) | `TPM policy does not match current system state`, ending with `Remote address changed` | Failed: `Failed to submit AuthorizeNV policy` | [Accept the running firmware](#how-to-accept-the-running-firmware), once the change is explained; a planned update is prepared as in [Firmware update](firmware-update.md) |
-| Secure Boot state or keys changed (PCR 7), such as a dbx update | `TPM policy does not match current system state`, ending with `Operation not permitted` | Succeeds: `Prediction is identical to current policy` | [Replace the TPM2 slot](#how-to-replace-an-enrolled-tpm2-slot) |
+| Secure Boot state or keys changed (PCR 7), such as a dbx update | `TPM policy does not match current system state`, ending with `Operation not permitted` | Failed: the prediction is identical, but the reseal cannot unlock with the current slot and asks for `pcr12 reseal --ask-key` | [Replace the TPM2 slot](#how-to-replace-an-enrolled-tpm2-slot) |
+| Credential added to the ESP (PCR 12) | `TPM policy does not match current system state`, ending with `Operation not permitted` | Failed: `the ESP must hold only the pcrlock credential, found` and the file names | Find who wrote the extra file under `/boot/loader/credentials`, remove it, reboot: the slot was never resealed, so the unattended boot comes back |
 | TPM cleared | `TPM key integrity check failed` | Succeeds: `Prediction is identical to current policy` | [Recreate the pcrlock policy](#how-to-recreate-the-pcrlock-policy-after-a-tpm-clear) |

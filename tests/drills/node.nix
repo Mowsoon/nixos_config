@@ -46,7 +46,10 @@ in
 
     luks.tpm2Unlock = true;
 
-    pcrlock.enable = true;
+    pcrlock = {
+      enable = true;
+      lockCredentials = true;
+    };
 
     fhsCompat.enable = true;
 

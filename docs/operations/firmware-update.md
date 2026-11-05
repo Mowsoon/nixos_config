@@ -11,6 +11,11 @@ accepts the running and the next firmware during the update boot. Unprepared, th
 the new firmware asks for the recovery key, and the new firmware is accepted only with the
 recovery PIN.
 
+Each policy rewrite of the procedure also changes the policy copy on the ESP, measured in PCR 12.
+`pcrlock-make-policy` renews the TPM2 slot for it before returning, as described in
+[Credentials lock](../architecture/boot-chain.md#credentials-lock); its output ends with
+`sealed the TPM2 slot to PCR 7 and PCR 12`. No step of the procedure touches the slot by hand.
+
 `pcr0-predict` needs the capsule of the running version as well as the new one. With the running
 capsule it recomputes the current PCR 0 and compares it with the event log and with
 `generated.pcrlock`; a mismatch means the file is not the running firmware, or the firmware
@@ -54,7 +59,8 @@ a FAT32 USB stick.
    the check that failed; then either keep the running firmware, or flash and follow
    [How to recover from an unpredicted update](#how-to-recover-from-an-unpredicted-update).
 
-3. Rewrite the policy with both variants. The output reports that the NV index was updated.
+3. Rewrite the policy with both variants. The output reports that the NV index was updated and
+   that the TPM2 slot was sealed again.
 
    ```bash
    sudo pcrlock-make-policy
