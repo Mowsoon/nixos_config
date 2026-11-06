@@ -6,8 +6,8 @@ A recovery path that has never run is a hope, not a procedure. Each drill breaks
 a throwaway machine on purpose and asserts that the documented recovery brings it back. The drills
 are NixOS VM tests: Nix builds the machine, boots it in QEMU, and a Python script drives it through
 the serial console and asserts every step. A drill passes when its build succeeds. Kernel messages
-share the serial console with the passphrase prompt and can cut it in the middle of a word, so
-the drills recognize the prompt by its beginning or by its end.
+share the serial console with the passphrase prompt and can cut it in the middle of a word, more
+than once, so the drills recognize the prompt by any of three short pieces of it.
 
 The drill machine is not the full workstation. It imports the modules of the boot chain only: the
 disko layout of `hephaestus`, Secure Boot through lanzaboote, the LUKS2 container with its TPM2

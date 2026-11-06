@@ -28,6 +28,7 @@ def _prepare(tmp_path: Path) -> list[str]:
         f"--directory={tmp_path / 'pcrlock.d'}",
         "--pcrlock=/pcrlock",
         f"--sysfs={tmp_path / 'sys'}",
+        f"--efivars={tmp_path / 'efivars'}",
     ]
 
 

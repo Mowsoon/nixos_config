@@ -4,6 +4,7 @@ from pathlib import Path
 from pcrlock_esp import pe
 from pcrlock_esp.errors import InputError
 from pcrlock_esp.records import Record, generation_records
+from pcrlock_esp.selection import newest
 
 STUB_DIRECTORY = Path("EFI/Linux")
 LOADER_CONF = Path("loader/loader.conf")
@@ -14,7 +15,7 @@ STUB_SUFFIX = ".efi"
 class Esp:
     root: Path
 
-    def generations(self) -> dict[str, list[Record]]:
+    def stubs(self) -> list[Path]:
         stubs = sorted(
             path
             for path in (self.root / STUB_DIRECTORY).glob(f"*{STUB_SUFFIX}")
@@ -22,7 +23,13 @@ class Esp:
         )
         if not stubs:
             raise InputError(f"no generation stub under {self.root / STUB_DIRECTORY}")
-        return {stub.stem: generation_records(pe.sections(_read(stub))) for stub in stubs}
+        return stubs
+
+    def generations(self, booted: str | None) -> dict[str, list[Record]]:
+        return {
+            stub.stem: generation_records(pe.sections(_read(stub)))
+            for stub in newest(self.stubs(), booted)
+        }
 
     def loader_conf(self) -> bytes:
         return _read(self.root / LOADER_CONF)

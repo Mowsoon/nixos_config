@@ -21,7 +21,7 @@ def _esp(tmp_path: Path, stubs: list[str]) -> Esp:
 def test_generations_maps_each_stub_to_its_records(tmp_path: Path) -> None:
     esp = _esp(tmp_path, ["nixos-generation-81-a.efi", "nixos-generation-82-b.efi"])
     expected = generation_records(builders.stub_sections())
-    assert esp.generations() == {
+    assert esp.generations(None) == {
         "nixos-generation-81-a": expected,
         "nixos-generation-82-b": expected,
     }
@@ -29,12 +29,12 @@ def test_generations_maps_each_stub_to_its_records(tmp_path: Path) -> None:
 
 def test_generations_ignores_hidden_temporary_stubs(tmp_path: Path) -> None:
     esp = _esp(tmp_path, ["nixos-generation-82-b.efi", ".nixos-generation-83-c.efi"])
-    assert list(esp.generations()) == ["nixos-generation-82-b"]
+    assert list(esp.generations(None)) == ["nixos-generation-82-b"]
 
 
 def test_generations_raises_when_the_esp_holds_no_stub(tmp_path: Path) -> None:
     with pytest.raises(InputError):
-        _esp(tmp_path, []).generations()
+        _esp(tmp_path, []).generations(None)
 
 
 def test_loader_conf_reads_the_systemd_boot_configuration(tmp_path: Path) -> None:

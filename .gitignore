@@ -8,3 +8,4 @@ result-*
 .markdownlint.jsonc
 advanced-conf.md
 */.obsidian
+__pycache__/
