@@ -22,7 +22,7 @@ in
     boot.lanzaboote = {
       enable = true;
       inherit (cfg) pkiBundle;
-      configurationLimit = 10;
+      configurationLimit = 8;
     };
 
     custom.persistence.directories = [ cfg.pkiBundle ];

@@ -34,7 +34,7 @@ systemd-boot and writes one stub per generation into `EFI/Linux/`. A stub is a s
 Unified Kernel Image (UKI) that carries the kernel command line and the hashes of the kernel and
 the initrd, stored unsigned and shared between generations in `EFI/nixos/`. The firmware checks
 the signature of the stub; the stub checks the hashes before starting the kernel. A full UKI per
-generation would weigh more than 170 MiB; the stubs keep ten generations well inside the 4 GiB
+generation would weigh more than 170 MiB; the stubs keep eight generations well inside the 4 GiB
 EFI System Partition (ESP).
 
 lanzaboote never writes the firmware boot entries. The `Linux Boot Manager` entry is created once,
@@ -183,9 +183,14 @@ The pcrlock policy also covers six PCRs whose next value is known before the reb
   means one of them appeared.
 
 `pcrlock-esp` writes the components of PCRs 5 and 11 from the ESP, as the firmware and the stub
-measure them. For PCR 11, each stub on the ESP becomes one variant of
-`650-lanzaboote-generations.pcrlock.d`, so every generation of the boot menu unseals, the previous
-one included, and a generation removed from the ESP loses its variant. The signed stub carries
+measure them. For PCR 11, each stub becomes one variant of `650-lanzaboote-generations.pcrlock.d`,
+so the generations of the boot menu unseal, the previous one included, and a generation removed
+from the ESP loses its variant. pcrlock accepts at most eight values per PCR in a policy, so the
+component holds the eight most recent generations, and lanzaboote keeps eight on the ESP, so that
+every entry of the menu unseals. The generation that booted, named by the `LoaderEntrySelected`
+variable of systemd-boot, is always kept: an older one chosen by hand replaces the oldest of the
+eight, otherwise `--strict` would refuse the policy of that boot. PCR 5 has six values, two GPT
+variants by three `ExitBootServices` variants. The signed stub carries
 `.osrel` and `.cmdline` as sections and the SHA-256 of the kernel and of the initrd in its
 `.linuxh` and `.initrdh` sections, the digests that the stub checks the files against and then
 measures, so the prediction needs no file outside the ESP. For PCR 5, the component
@@ -407,7 +412,7 @@ PCR is initialized.
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `custom.secureBoot.enable` | `false` | Signs the boot chain with lanzaboote, keeps 10 generations |
+| `custom.secureBoot.enable` | `false` | Signs the boot chain with lanzaboote, keeps 8 generations, the most a PCR 11 policy can allow |
 | `custom.secureBoot.pkiBundle` | `/var/lib/sbctl` | Directory of the enrolled keys, persisted |
 | `custom.luks.tpm2Unlock` | `false` | Adds `tpm2-device=auto` to the crypttab entry of the container |
 | `custom.luks.name` | `cryptroot` | Name of the LUKS mapping declared by disko |
