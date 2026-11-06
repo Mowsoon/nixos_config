@@ -23,7 +23,9 @@ subprocess.run(
 os.environ["tmp"] = disk_dir
 
 LUKS_DEVICE = "/dev/disk/by-partlabel/disk-main-luks"
-LUKS_PROMPT = "Please enter passphrase (or recovery key )?for disk"
+LUKS_PROMPT = (
+    r"Please enter passphrase (or recovery key )?for disk|for disk disk-main-luks \(cryptroot\)"
+)
 TEST_PASSPHRASE = "disko"
 BOOT_DONE = "Reached target Multi-User System"
 SYSTEM_PROFILE = "/nix/var/nix/profiles/system"
