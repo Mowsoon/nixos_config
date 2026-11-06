@@ -49,6 +49,15 @@ in
 
     pcrlock = {
       enable = true;
+      pcrs = [
+        0
+        2
+        5
+        8
+        11
+        13
+        14
+      ];
       lockCredentials = true;
     };
 

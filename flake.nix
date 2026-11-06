@@ -79,6 +79,7 @@
       themeRecolor = pkgs.callPackage ./pkgs/theme-recolor/package.nix { };
       pcr0Predict = pkgs.callPackage ./pkgs/pcr0-predict/package.nix { };
       pcr12 = pkgs.callPackage ./pkgs/pcr12/package.nix { };
+      pcrlockEsp = pkgs.callPackage ./pkgs/pcrlock-esp/package.nix { };
       drills = import ./tests/drills { inherit pkgs inputs; };
       hephaestusModules = [
         disko.nixosModules.disko
@@ -168,6 +169,7 @@
         theme-recolor = themeRecolor;
         pcr0-predict = pcr0Predict;
         inherit pcr12;
+        pcrlock-esp = pcrlockEsp;
         kernel-vm-modules = pkgs.callPackage ./tools/kernel-vm-modules.nix { };
         vmlinux-h = pkgs.callPackage ./tools/vmlinux-h.nix {
           inherit (self.nixosConfigurations.hephaestus.config.boot.kernelPackages) kernel;
@@ -192,6 +194,9 @@
         inherit pcr12;
         pcr12-ruff = pcr12.lints.ruff;
         pcr12-mypy = pcr12.lints.mypy;
+        pcrlock-esp = pcrlockEsp;
+        pcrlock-esp-ruff = pcrlockEsp.lints.ruff;
+        pcrlock-esp-mypy = pcrlockEsp.lints.mypy;
         supply-chain = supplyChain;
         service-exposure = pkgs.callPackage ./tools/service-exposure.nix {
           systemd = hephaestus.systemd.package;

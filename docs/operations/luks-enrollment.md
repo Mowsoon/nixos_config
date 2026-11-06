@@ -140,7 +140,9 @@ running, and only it. Rollback path: none needed, the TPM2 slot is unchanged.
 
 Prerequisites: the firmware change is explained, for example by an update whose
 version `/sys/class/dmi/id/bios_version` shows and the vendor publishes. An
-unexplained change of PCR 0 is a firmware that nobody installed on purpose.
+unexplained change of PCR 0 is a firmware that nobody installed on purpose. The
+same procedure accepts a generation, an option ROM, a partition table or a
+`loader.conf` that the policy does not allow, once the change is explained.
 
 1. Rewrite the policy with the recovery PIN. The command asks for it, then
    renews the TPM2 slot for the new policy copy.
@@ -190,6 +192,8 @@ prediction is unchanged: only the unseal message shows the clear.
 | Cause | Unseal message | Policy update | Fix |
 | --- | --- | --- | --- |
 | Firmware code changed (PCR 0) | `TPM policy does not match current system state`, ending with `Remote address changed` | Failed: `Failed to submit AuthorizeNV policy` | [Accept the running firmware](#how-to-accept-the-running-firmware), once the change is explained; a planned update is prepared as in [Firmware update](firmware-update.md) |
+| Generation booted without its prediction (PCR 11): the install hook failed, or a stub was copied by hand | As for PCR 0 | Failed, as for PCR 0 | Check that the generation is the one built, then [accept the running state](#how-to-accept-the-running-firmware) with the recovery PIN, which also adds the generation |
+| Option ROM at boot, partition table or `loader.conf` changed (PCR 2 or 5) | As for PCR 0 | Failed, as for PCR 0 | Explain the change: a device attached at boot, a repartition, a new `boot.loader` setting; then [accept the running state](#how-to-accept-the-running-firmware) |
 | Secure Boot state or keys changed (PCR 7), such as a dbx update | `TPM policy does not match current system state`, ending with `Operation not permitted` | Failed: the prediction is identical, but the reseal cannot unlock with the current slot and asks for `pcr12 reseal --ask-key` | [Replace the TPM2 slot](#how-to-replace-an-enrolled-tpm2-slot) |
 | Credential added to the ESP (PCR 12) | `TPM policy does not match current system state`, ending with `Operation not permitted` | Failed: `the ESP must hold only the pcrlock credential, found` and the file names | Find who wrote the extra file under `/boot/loader/credentials`, remove it, reboot: the slot was never resealed, so the unattended boot comes back |
 | TPM cleared | `TPM key integrity check failed` | Succeeds: `Prediction is identical to current policy` | [Recreate the pcrlock policy](#how-to-recreate-the-pcrlock-policy-after-a-tpm-clear) |

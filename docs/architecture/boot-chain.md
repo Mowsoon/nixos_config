@@ -45,13 +45,16 @@ at installation, with `efibootmgr`.
 The root container is LUKS2. Its TPM2 key slot is bound to three measurements at once. The
 literal value of PCR 7 measures the Secure Boot state and the keys that verified each loaded
 image. The systemd-pcrlock policy of a TPM2 NV index allows the firmware code measured in PCR 0,
-described in [Firmware code lock](#firmware-code-lock). The literal value of PCR 12 measures the
-credentials that the ESP hands to the initrd, described in [Credentials lock](#credentials-lock).
-The key unseals as long as the firmware is one the policy allows, Secure Boot stays enabled with
-the same key databases and the ESP holds no credential but the policy copy, whatever the
-generation, the kernel or the command line. The other PCRs join the seal one at a time, each only
-once its value survives the updates that change it and only when it detects a change worth
-refusing the unlock for. PCR 1 stays out, for the reason given in
+described in [Firmware code lock](#firmware-code-lock), and the option ROMs, boot loader
+configuration and generations measured in PCRs 2, 5, 8, 11, 13 and 14, described in
+[Boot loader and generation lock](#boot-loader-and-generation-lock). The literal value of PCR 12
+measures the credentials that the ESP hands to the initrd, described in
+[Credentials lock](#credentials-lock). The key unseals as long as the firmware is one the policy
+allows, no option ROM runs before the boot loader, the GPT and `loader.conf` are unchanged, the
+generation booted is one installed on the ESP, Secure Boot stays enabled with the same key
+databases and the ESP holds no credential but the policy copy. A PCR joins the seal only once its
+value survives the updates that change it and only when it detects a change worth refusing the
+unlock for. PCR 1 stays out, for the reason given in
 [Platform configuration](#platform-configuration).
 
 Every boot measures more than PCR 7. The firmware measures itself, its configuration, the boot
@@ -161,6 +164,53 @@ enrollment, the reseal does nothing.
 `pcr12-check` reads only the event log, the PCRs and the ESP, all owned by root, and runs without
 network, devices or capabilities. The reseal runs inside the policy update unit, which writes the
 NV index and the LUKS2 header.
+
+### Boot loader and generation lock
+
+The pcrlock policy also covers six PCRs whose next value is known before the reboot:
+
+- PCR 2 holds only the separator: no option ROM runs. Its value changes when a device with a UEFI
+  option ROM is present at boot; since db holds the Microsoft certificates, such a ROM would run
+  unnoticed otherwise. The systemd separator component already predicts it.
+- PCR 5 holds the GPT header, `loader.conf` and the two `ExitBootServices` actions. The firmware
+  measures the GPT before each image it loads from the disk, so twice: before systemd-boot and
+  before the stub. A rewritten partition table or a changed `loader.conf`, such as the menu
+  editor or the timeout, changes it.
+- PCR 11 holds the generation that the stub started: the name and the content of `.linux`,
+  `.osrel`, `.cmdline` and `.initrd`. Without it, any generation signed by the Secure Boot key
+  unseals, including an old one that a later change hardened.
+- PCRs 8, 13 and 14 stay zero: no GRUB, no system extension, no shim. A value other than zero
+  means one of them appeared.
+
+`pcrlock-esp` writes the components of PCRs 5 and 11 from the ESP, as the firmware and the stub
+measure them. For PCR 11, each stub on the ESP becomes one variant of
+`650-lanzaboote-generations.pcrlock.d`, so every generation of the boot menu unseals, the previous
+one included, and a generation removed from the ESP loses its variant. The signed stub carries
+`.osrel` and `.cmdline` as sections and the SHA-256 of the kernel and of the initrd in its
+`.linuxh` and `.initrdh` sections, the digests that the stub checks the files against and then
+measures, so the prediction needs no file outside the ESP. For PCR 5, the component
+`600-boot-loader-config.pcrlock.d` holds the GPT digest computed by `systemd-pcrlock lock-gpt` on
+the disk of the ESP and the digest of `loader.conf`, in two variants: with the GPT measured again
+before the stub, as this firmware does, and with the GPT measured once, as OVMF does. The
+`ExitBootServices` component, declared by the module, has three variants: the call and its
+success; a failed call followed by a successful one, which the EFI stub of the kernel retries
+when the memory map changed in between and which OVMF shows on every boot; and no measurement.
+pcrlock tries the variants of a component in the order of their names and keeps the first that
+matches, so the names carry a number that puts the longest first. The separator and these
+variants form a store directory, linked to `/etc/pcrlock.d`, that `pcrlock-make-policy` reads
+with `--components`, next to `/var/lib/pcrlock.d`: during a `switch`, the install hook runs
+before the new `/etc` is activated.
+
+`pcrlock-make-policy` runs `pcrlock-esp` first, so the components are rewritten at every boot and
+in every manual procedure. The install hook of the boot loader runs it too: the module replaces
+the hook of lanzaboote with the same `lzbt install` call followed by `pcrlock-make-policy`, once
+the pcrlock policy exists. A `nixos-rebuild switch` or `boot` therefore writes the stub of the new
+generation, predicts its PCR 11 and rewrites the policy before the reboot; when the policy update
+fails, the rebuild ends with an error, and the next boot would ask for the recovery key.
+`--strict=true` refuses a policy that does not cover every record of the current boot, so a
+wrong prediction of the running generation, of the GPT or of `loader.conf` is caught before it is
+written. The stub of a generation that has never booted is predicted from the same sections, so
+its prediction is only proven at its first boot.
 
 ### Platform configuration
 
@@ -362,7 +412,7 @@ PCR is initialized.
 | `custom.luks.tpm2Unlock` | `false` | Adds `tpm2-device=auto` to the crypttab entry of the container |
 | `custom.luks.name` | `cryptroot` | Name of the LUKS mapping declared by disko |
 | `custom.pcrlock.enable` | `false` | Keeps the systemd-pcrlock policy locked to the firmware code at every boot, provides `pcrlock-make-policy` |
-| `custom.pcrlock.pcrs` | `[ 0 ]` | PCRs of the policy; the policy update fails when one cannot be predicted |
+| `custom.pcrlock.pcrs` | `[ 0 ]` | PCRs of the policy, `[ 0 2 5 8 11 13 14 ]` on hephaestus; the policy update fails when one cannot be predicted. With PCR 5 or 11, the update writes their components from the ESP first, and the install hook of the boot loader updates the policy |
 | `custom.pcrlock.lockCredentials` | `false` | Seals the TPM2 slot to PCR 12 too, renews it after each policy change, provides `pcr12` and the failure notification |
 | `custom.bootSplash.enable` | `false` | Plymouth splash with the Stylix theme, quiet boot, console palette and keymap in the initrd |
 | `custom.rootRollback.enable` | `false` | Installs `rollback-root.service` in the initrd |

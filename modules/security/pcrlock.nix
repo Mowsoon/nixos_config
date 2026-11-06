@@ -6,9 +6,43 @@
 }:
 let
   cfg = config.custom.pcrlock;
+  lanzaboote = config.boot.lanzaboote;
   systemd = config.systemd.package;
   esp = config.boot.loader.efi.efiSysMountPoint;
   separator = "500-separator.pcrlock.d/300-0x00000000.pcrlock";
+  exitBootServices = "700-action-efi-exit-boot-services.pcrlock.d";
+  bootLoaderConfigRecord = action: {
+    pcr = 5;
+    digests = [
+      {
+        hashAlg = "sha256";
+        digest = builtins.hashString "sha256" "Exit Boot Services ${action}";
+      }
+    ];
+  };
+  exitBootServicesVariants =
+    lib.mapAttrs (_: actions: builtins.toJSON { records = map bootLoaderConfigRecord actions; })
+      {
+        "400-success" = [
+          "Invocation"
+          "Returned with Success"
+        ];
+        "300-retried" = [
+          "Invocation"
+          "Returned with Failure"
+          "Invocation"
+          "Returned with Success"
+        ];
+        "600-absent" = [ ];
+      };
+  readsEsp = lib.elem 5 cfg.pcrs || lib.elem 11 cfg.pcrs;
+  componentWriter = pkgs.callPackage ../../pkgs/pcrlock-esp/package.nix { };
+  writeComponents = lib.escapeShellArgs [
+    (lib.getExe componentWriter)
+    "--esp=${esp}"
+    "--esp-device=${config.fileSystems.${esp}.device}"
+    "--pcrlock=${systemd}/lib/systemd/systemd-pcrlock"
+  ];
   policy = "/var/lib/systemd/pcrlock.json";
   alertFile = "/run/pcr12/alert";
   predictor = pkgs.callPackage ../../pkgs/pcr0-predict/package.nix { };
@@ -18,19 +52,53 @@ let
     mkdir -p $out/bin
     ln -s ${systemd}/lib/systemd/systemd-pcrlock $out/bin/systemd-pcrlock
   '';
-  makePolicyCommand = "${lib.getExe' pcrlock "systemd-pcrlock"} make-policy --location=770 --strict=true ${
+  staticComponents = pkgs.linkFarm "pcrlock.d" (
+    [
+      {
+        name = separator;
+        path = "${systemd}/lib/pcrlock.d/${separator}";
+      }
+    ]
+    ++ lib.optionals (lib.elem 5 cfg.pcrs) (
+      lib.mapAttrsToList (variant: text: {
+        name = "${exitBootServices}/${variant}.pcrlock";
+        path = pkgs.writeText "${variant}.pcrlock" text;
+      }) exitBootServicesVariants
+    )
+  );
+  makePolicyCommand = "${lib.getExe' pcrlock "systemd-pcrlock"} make-policy --location=770 --strict=true --components=${staticComponents} --components=/var/lib/pcrlock.d ${
     lib.concatMapStringsSep " " (pcr: "--pcr=${toString pcr}") cfg.pcrs
   }";
   makePolicy = pkgs.writeShellScriptBin "pcrlock-make-policy" (
-    if cfg.lockCredentials then
-      ''
-        ${makePolicyCommand} "$@" && exec ${pcr12} reseal
-      ''
-    else
-      ''
-        exec ${makePolicyCommand} "$@"
-      ''
+    lib.optionalString readsEsp ''
+      ${writeComponents} || exit
+    ''
+    + (
+      if cfg.lockCredentials then
+        ''
+          ${makePolicyCommand} "$@" && exec ${pcr12} reseal
+        ''
+      else
+        ''
+          exec ${makePolicyCommand} "$@"
+        ''
+    )
   );
+  installBootLoader = pkgs.writeShellScript "install-boot-loader" ''
+    set -e
+    PATH=${systemd}/lib/systemd:$PATH
+    ${lanzaboote.installCommand} \
+      ${
+        lib.escapeShellArgs [
+          "--public-key=${toString lanzaboote.publicKeyFile}"
+          "--private-key=${toString lanzaboote.privateKeyFile}"
+          esp
+        ]
+      } /nix/var/nix/profiles/system-*-link
+    if [ -e ${policy} ]; then
+      ${lib.getExe makePolicy}
+    fi
+  '';
   pcr12Command = pkgs.writeShellScriptBin "pcr12" ''
     exec ${pcr12} "$@"
   '';
@@ -63,8 +131,17 @@ in
   config = lib.mkIf cfg.enable (
     lib.mkMerge [
       {
+        assertions = [
+          {
+            assertion = !lanzaboote.measuredBoot.enable && lanzaboote.extraEfiSysMountPoints == [ ];
+            message = "custom.pcrlock replaces the install hook of lanzaboote, which then must use one ESP and no measured boot of its own";
+          }
+        ];
+
+        boot.loader.external.installHook = lib.mkForce "${installBootLoader}";
+
         environment = {
-          etc."pcrlock.d/${separator}".source = "${systemd}/lib/pcrlock.d/${separator}";
+          etc."pcrlock.d".source = staticComponents;
           systemPackages = [
             pcrlock
             makePolicy

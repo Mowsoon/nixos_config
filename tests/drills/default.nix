@@ -1,11 +1,23 @@
 { pkgs, inputs }:
 let
+  drillModules = {
+    generation-lock = [
+      {
+        boot.loader.timeout = 0;
+        custom.pcrlock.pcrs = [
+          0
+          5
+          11
+        ];
+      }
+    ];
+  };
   mkDrill =
     name:
     pkgs.testers.runNixOSTest {
       name = "drill-${name}";
       node.specialArgs = { inherit inputs; };
-      nodes.machine = ./node.nix;
+      nodes.machine.imports = [ ./node.nix ] ++ drillModules.${name} or [ ];
       testScript =
         { nodes, ... }:
         ''
@@ -24,6 +36,7 @@ pkgs.lib.genAttrs [
   "dbx-update"
   "enrollment"
   "firmware-update"
+  "generation-lock"
   "rebuild-power-loss"
   "tpm-clear"
 ] mkDrill
