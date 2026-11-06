@@ -23,9 +23,14 @@ measures differently than the tool expects, and nothing is predicted. Keep the c
 installed version until the next update.
 
 The update is flashed from the firmware setup with ASUS EZ Flash, never from Linux: AMD ROM Armor
-(`rom_armor_enforced` is `1`) leaves writes to the flash to the firmware. Windows Update and the
-ASUS applications can flash a new firmware on their own, without a prediction; the next NixOS boot
-then takes the recovery path below.
+(`rom_armor_enforced` is `1`) leaves writes to the flash to the firmware. Windows can flash a new
+firmware on its own, without a prediction, through two paths. Windows Update installs vendor
+firmware as a driver of the system firmware device, which the firmware publishes in its EFI System
+Resource Table (ESRT) under the hardware ID `UEFI\RES_{<firmware-class>}`; Windows hands the
+capsule to the firmware, which flashes it at the next restart. MyASUS and Armoury Crate offer BIOS
+updates through their own updater, which stages the same capsule. Windows is therefore told never
+to install a driver for that device, and the ASUS applications never to update the BIOS. A
+firmware flashed anyway is caught at the next NixOS boot, which takes the recovery path below.
 
 ## How to update the firmware
 
@@ -93,6 +98,49 @@ a FAT32 USB stick.
    ```bash
    sudo pcr0-predict check <new-capsule>
    ```
+
+## How to keep Windows from flashing the firmware
+
+Blast radius: Windows no longer installs any driver for the system firmware device, so it never
+offers a firmware update again; other drivers are not affected. Rollback path: delete the policy
+key of step 3 and restart Windows.
+
+1. On NixOS, read the firmware class of the system firmware entry of the ESRT. The entry whose
+   `fw_type` is `1` is the system firmware.
+
+   ```bash
+   sudo grep . /sys/firmware/efi/esrt/entries/*/fw_class /sys/firmware/efi/esrt/entries/*/fw_type
+   ```
+
+2. In Windows, open Device Manager, then Firmware, then the properties of System Firmware. On the
+   Details tab, the Hardware Ids property shows `UEFI\RES_{<firmware-class>}`, with the GUID of
+   step 1.
+3. In a terminal run as administrator, deny the installation of drivers for that hardware ID.
+   The keys are those of the Group Policy "Prevent installation of devices that match any of these
+   device IDs", which Windows Home lacks as a console but honours in the registry.
+
+   ```bat
+   reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceInstall\Restrictions" /v DenyDeviceIDs /t REG_DWORD /d 1 /f
+   reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceInstall\Restrictions" /v DenyDeviceIDsRetroactive /t REG_DWORD /d 0 /f
+   reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceInstall\Restrictions\DenyDeviceIDs" /v 1 /t REG_SZ /d "UEFI\RES_{<firmware-class>}" /f
+   ```
+
+   `<firmware-class>` is the GUID of step 1, without braces. `DenyDeviceIDsRetroactive` set to
+   `0` leaves the driver already installed in place, so the device keeps working; only a new
+   version is refused.
+
+4. Restart Windows, then check that the policy is read.
+
+   ```bat
+   reg query "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceInstall\Restrictions" /s
+   ```
+
+   A firmware update offered later by Windows Update then fails to install, which is the
+   expected result.
+
+5. In MyASUS and in Armoury Crate, turn off the automatic updates of the BIOS and never start a
+   BIOS update from them. The labels of these settings change between versions of the
+   applications, so check them after each update of MyASUS or Armoury Crate.
 
 ## How to recover from an unpredicted update
 
