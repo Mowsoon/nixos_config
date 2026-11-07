@@ -15,6 +15,7 @@ The repository is a Nix flake pinned to `nixos-unstable`. Each machine is a host
 | `installer` | Live USB image used to install `hephaestus` |
 | `vm-test` | Disposable QEMU machine used to validate the base configuration |
 | `kernel-test` | `vm-test` with the kernel sources shared on `/src`, booted on a kernel under development |
+| `kernel-hibernate` | `vm-test` that hibernates for real, booted on a kernel under development |
 
 The system boots through Secure Boot with custom keys, unlocks its encrypted disk with the TPM,
 and erases its root filesystem at every boot: only declared state persists. Outbound traffic is
@@ -63,6 +64,7 @@ The machine reaches a login prompt in the terminal. Press `Ctrl+A` then `X` to s
 | `nix flake check` | Runs `nixfmt --check`, `statix`, `deadnix`, the tests, `ruff` and `mypy` of `rgb-effects`, `theme-recolor`, `pcr0-predict` and `pcr12`, the service exposure thresholds, the build of the supply chain app, the failure drills, and evaluates every host |
 | `nix develop` | Opens a shell with `nixfmt-tree`, `statix`, `deadnix` and `mkpasswd` |
 | `nix run .#kernel-vm -- <build directory>` | Boots a kernel build in the `kernel-test` VM |
+| `nix run .#kernel-hibernate-vm -- <build directory> <step>` | Runs one hibernation test step on a kernel build in the `kernel-hibernate` VM |
 | `nix develop .#kernel` | Opens the kernel development shell described in [kernel development](docs/operations/kernel-development.md) |
 | `nix build .#rgb-effects` | Builds the lighting effects daemon and runs its tests |
 | `nix build .#theme-recolor` | Builds the theme recolouring tool and runs its tests |
