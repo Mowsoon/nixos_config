@@ -71,6 +71,16 @@ anyway. With Secure Boot enabled, the stub ignores a command line passed by syst
 menu editor (`editor true` in `loader.conf`) cannot change the kernel command line. The table
 [PCR measurements](#pcr-measurements) lists what each PCR holds on this machine.
 
+Once the container is open, `systemd-cryptsetup` measures a digest of its volume key into PCR 15
+(`tpm2-measure-pcr=yes`). PCR 15 then holds the same value at every boot of this container,
+whatever the generation or the firmware, and zero when the container was not opened. It is not
+part of the seal of the container, which is checked before the unlock; it binds the TPM2-sealed
+credentials of the services to this root container. `systemd-cryptsetup` does not extend the PCR
+itself: it asks `systemd-pcrextend` through the socket `/run/systemd/io.systemd.PCRExtend`. NixOS
+copies that socket into the initrd without starting it, so the unlock logged
+`Could not extend PCR: No such file or directory`; the LUKS module starts it from
+`cryptsetup.target`, before the unit that opens the container.
+
 The passphrase and the recovery key slots remain as fallbacks. The initrd asks for them only when
 the TPM2 unseal fails. The enrollment of these slots is a manual procedure, described in
 [LUKS enrollment](../operations/luks-enrollment.md), because each slot produces a secret bound to
@@ -391,7 +401,8 @@ next value can be computed before the reboot.
 | 10 | Kernel, IMA | `boot_aggregate` and the IMA log, kept apart from the firmware log | Every boot | No |
 | 11 | lanzaboote stub | Name and content of `.linux`, `.osrel`, `.cmdline`, `.initrd` | Every generation, even an identical system, through `.osrel` | Yes, verified: recomputed from the generation files |
 | 12 | lanzaboote stub | Archive of the global credentials: the pcrlock policy copy | Policy change, a credential added to the ESP | Yes, rebuilt from the ESP by `pcr12` |
-| 13 to 16, 23 | Nothing | Empty: no system extension, no shim, no system identity measurement | When such a feature is enabled | Yes, zero |
+| 13, 14, 16, 23 | Nothing | Empty: no system extension, no shim | When such a feature is enabled | Yes, zero |
+| 15 | `systemd-cryptsetup` in the initrd, since 2026-11-06 | A digest of the volume key of `cryptroot`, extended when it is unlocked, by the TPM2 slot or by a passphrase | Never, short of a new container | Yes, constant, but only after the unlock |
 
 The installation also left an `nvpcr-anchor` credential, the anchor scheme of systemd before
 version 262, a secret sealed against PCR 11. systemd 262 no longer uses it and its
@@ -415,6 +426,7 @@ PCR is initialized.
 | `custom.secureBoot.enable` | `false` | Signs the boot chain with lanzaboote, keeps 8 generations, the most a PCR 11 policy can allow |
 | `custom.secureBoot.pkiBundle` | `/var/lib/sbctl` | Directory of the enrolled keys, persisted |
 | `custom.luks.tpm2Unlock` | `false` | Adds `tpm2-device=auto` to the crypttab entry of the container |
+| `custom.luks.measureVolumeKey` | `false` | Adds `tpm2-measure-pcr=yes` to the crypttab entry: the unlock measures the volume key into PCR 15 |
 | `custom.luks.name` | `cryptroot` | Name of the LUKS mapping declared by disko |
 | `custom.pcrlock.enable` | `false` | Keeps the systemd-pcrlock policy locked to the firmware code at every boot, provides `pcrlock-make-policy` |
 | `custom.pcrlock.pcrs` | `[ 0 ]` | PCRs of the policy, `[ 0 2 5 8 11 13 14 ]` on hephaestus; the policy update fails when one cannot be predicted. With PCR 5 or 11, the update writes their components from the ESP first, and the install hook of the boot loader updates the policy |

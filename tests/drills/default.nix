@@ -39,4 +39,5 @@ pkgs.lib.genAttrs [
   "generation-lock"
   "rebuild-power-loss"
   "tpm-clear"
+  "volume-key"
 ] mkDrill

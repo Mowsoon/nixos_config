@@ -45,7 +45,10 @@ in
   custom = {
     secureBoot.enable = true;
 
-    luks.tpm2Unlock = true;
+    luks = {
+      tpm2Unlock = true;
+      measureVolumeKey = true;
+    };
 
     pcrlock = {
       enable = true;
