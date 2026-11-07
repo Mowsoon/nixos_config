@@ -238,8 +238,8 @@ in every manual procedure. The install hook of the boot loader runs it too: the 
 replaces the hook of lanzaboote with the same `lzbt install` call, and the pcrlock module adds
 `pcrlock-make-policy` after it, once the pcrlock policy exists. A `nixos-rebuild switch` or
 `boot` therefore writes the stub of the new generation, predicts its PCR 11 and rewrites the
-policy before the reboot; when the policy update
-fails, the rebuild ends with an error, and the next boot would ask for the recovery key.
+policy before the reboot; when the policy update fails, the rebuild ends with an error, and the
+next boot would ask for the recovery key.
 `--strict=true` refuses a policy that does not cover every record of the current boot, so a
 wrong prediction of the running generation, of the GPT or of `loader.conf` is caught before it is
 written. The stub of a generation that has never booted is predicted from the same sections, so
