@@ -137,7 +137,7 @@ its limits are written there.
 | Secret | Location | Backup |
 | --- | --- | --- |
 | User password hash | `/persist/secrets/mowsoon.hash` | Password manager holds the password |
-| Secure Boot private keys | `/persist/var/lib/sbctl` | Encrypted archive made before each reinstallation |
+| Secure Boot private keys | `/persist/var/lib/sbctl`, sealed by the TPM to PCR 15 | Recovery copy in plain, in an encrypted archive on the T7 disk |
 | LUKS passphrase and recovery key | Not stored on the machine | Password manager |
 | LUKS header backup | Not stored on the machine | Password manager attachment |
 | BitLocker recovery key | Not stored on the machine | Password manager |

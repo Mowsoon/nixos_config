@@ -6,7 +6,6 @@
 }:
 let
   cfg = config.custom.pcrlock;
-  lanzaboote = config.boot.lanzaboote;
   systemd = config.systemd.package;
   esp = config.boot.loader.efi.efiSysMountPoint;
   separator = "500-separator.pcrlock.d/300-0x00000000.pcrlock";
@@ -84,21 +83,6 @@ let
         ''
     )
   );
-  installBootLoader = pkgs.writeShellScript "install-boot-loader" ''
-    set -e
-    PATH=${systemd}/lib/systemd:$PATH
-    ${lanzaboote.installCommand} \
-      ${
-        lib.escapeShellArgs [
-          "--public-key=${toString lanzaboote.publicKeyFile}"
-          "--private-key=${toString lanzaboote.privateKeyFile}"
-          esp
-        ]
-      } /nix/var/nix/profiles/system-*-link
-    if [ -e ${policy} ]; then
-      ${lib.getExe makePolicy}
-    fi
-  '';
   pcr12Command = pkgs.writeShellScriptBin "pcr12" ''
     exec ${pcr12} "$@"
   '';
@@ -131,14 +115,6 @@ in
   config = lib.mkIf cfg.enable (
     lib.mkMerge [
       {
-        assertions = [
-          {
-            assertion = !lanzaboote.measuredBoot.enable && lanzaboote.extraEfiSysMountPoints == [ ];
-            message = "custom.pcrlock replaces the install hook of lanzaboote, which then must use one ESP and no measured boot of its own";
-          }
-        ];
-
-        boot.loader.external.installHook = lib.mkForce "${installBootLoader}";
 
         environment = {
           etc."pcrlock.d".source = staticComponents;
@@ -181,6 +157,11 @@ in
 
         custom = {
           persistence.directories = [ "/var/lib/pcrlock.d" ];
+          secureBoot.postInstallCommands = ''
+            if [ -e ${policy} ]; then
+              ${lib.getExe makePolicy}
+            fi
+          '';
           hardening.serviceExposure = {
             systemd-pcrlock-firmware-code = "9.4";
             systemd-pcrlock-make-policy = "9.4";

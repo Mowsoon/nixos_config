@@ -42,7 +42,10 @@ in
   boot.kernelPackages = pkgs.linuxPackages_zen;
 
   custom = {
-    secureBoot.enable = true;
+    secureBoot = {
+      enable = true;
+      sealedKeys = true;
+    };
 
     luks = {
       tpm2Unlock = true;

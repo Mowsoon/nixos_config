@@ -99,6 +99,11 @@ Blast radius: the USB key is overwritten entirely.
    `lsblk`, such as `sda1`. The passphrase is stored in the password manager before the listing
    runs.
 
+   Once the Secure Boot keys are sealed, `/var/lib/sbctl` holds only credentials that the new
+   container cannot decrypt. The plain keys come from their recovery copy, made as in
+   [Boot chain](../architecture/boot-chain.md#how-to-seal-the-secure-boot-keys); check that it
+   is on the T7 disk.
+
 5. Plug the Ethernet cable.
 6. Shut down, open the firmware setup, disable Secure Boot, and boot the USB key from the firmware
    boot menu. Do not boot Windows from this point until the switch is complete.
@@ -172,6 +177,15 @@ installation. Rollback path: none for Arch; the state worth keeping is in the ar
    cp -a /tmp/restore/etc/NetworkManager/system-connections /mnt/persist/etc/NetworkManager/
    cp -a /tmp/restore /mnt/persist/restore
    chmod 700 /mnt/persist/restore
+   ```
+
+   When the keys were sealed, restore the plain keys of the recovery copy over them. A plain key
+   takes precedence over its credential, so the installation signs with it.
+
+   ```bash
+   mkdir /tmp/sbctl-keys
+   age -d "<t7-mount>/sbctl-keys-<date>.tar.zst.age" | tar --zstd -xf - -C /tmp/sbctl-keys
+   cp -a /tmp/sbctl-keys/var/lib/sbctl/keys /mnt/persist/var/lib/sbctl/
    ```
 
 8. Write the user password hash. `mkpasswd` reads the password once, without confirmation, and
@@ -261,8 +275,11 @@ installation. Rollback path: none for Arch; the state worth keeping is in the ar
    BitLocker asks for it once after the key enrollment, then opens without it.
 6. Enroll the recovery key, the pcrlock policy, the TPM2 slot and the header backup, following
    [LUKS enrollment](luks-enrollment.md).
-7. Run the hardware checks listed in the reference below.
-8. Delete the archive from the T7 disk.
+7. Seal the Secure Boot keys to the new container, following steps 2 to 4 of
+   [Boot chain](../architecture/boot-chain.md#how-to-seal-the-secure-boot-keys). The recovery copy
+   is unchanged, since the keys are the same.
+8. Run the hardware checks listed in the reference below.
+9. Delete the archive from the T7 disk. Keep the recovery copy of the Secure Boot keys.
 
 ## How to rehearse the installation
 

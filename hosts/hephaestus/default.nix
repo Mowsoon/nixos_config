@@ -43,7 +43,10 @@ in
   boot.loader.timeout = 1;
 
   custom = {
-    secureBoot.enable = true;
+    secureBoot = {
+      enable = true;
+      sealedKeys = true;
+    };
 
     luks = {
       tpm2Unlock = true;

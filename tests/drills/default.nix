@@ -11,6 +11,7 @@ let
         ];
       }
     ];
+    sealed-keys = [ { boot.loader.timeout = 0; } ];
   };
   mkDrill =
     name:
@@ -38,6 +39,7 @@ pkgs.lib.genAttrs [
   "firmware-update"
   "generation-lock"
   "rebuild-power-loss"
+  "sealed-keys"
   "tpm-clear"
   "volume-key"
 ] mkDrill
