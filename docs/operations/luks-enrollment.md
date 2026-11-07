@@ -176,6 +176,9 @@ prediction is unchanged: only the unseal message shows the clear.
    and cannot unlock, so it asks for `pcr12 reseal --ask-key`.
 3. Replace the TPM2 slot as in
    [How to replace an enrolled TPM2 slot](#how-to-replace-an-enrolled-tpm2-slot).
+4. The sealed Secure Boot keys no longer decrypt either, so every rebuild fails until they are
+   restored and sealed again, following the procedure for a TPM clear in
+   [Boot chain](../architecture/boot-chain.md).
 
 ## Reference
 

@@ -427,6 +427,44 @@ was unlocked by the initrd, so PCR 15 holds its volume key. The T7 disk is at ha
    `<first>` and `<last>` are the numbers of the oldest snapshot and of the last one taken before
    step 3.
 
+## How to restore the Secure Boot keys after a TPM clear
+
+A TPM clear replaces the storage key that sealed the credentials, so they stop decrypting even
+though PCR 15 keeps its value. systemd-creds reports `TPM key integrity check failed`,
+`secure-boot-keys` adds `the PK key no longer decrypts`, and every rebuild fails before
+lanzaboote writes anything to the ESP: the boot loader keeps the generations already installed,
+but the system profile may point to a generation that was never installed.
+
+Blast radius: the credentials in `/var/lib/sbctl` are replaced. Rollback path: the recovery copy
+is left unchanged.
+
+Prerequisites: the container is open, the pcrlock policy and the TPM2 slot are recreated as in
+the TPM clear procedure of [LUKS enrollment](../operations/luks-enrollment.md), and the T7 disk
+with the recovery copy is at hand.
+
+1. Mount the T7 disk with the `uid` and `gid` options, then extract the plain keys of the
+   recovery copy into `/var/lib/sbctl/keys`. A plain key takes precedence over its stale
+   credential.
+
+   ```bash
+   sudo mount -o uid=$(id -u),gid=$(id -g) /dev/<t7-partition> <t7-mount>
+   nix run nixpkgs#age -- -d "<t7-mount>/sbctl-keys-<date>.tar.zst.age" | sudo tar --zstd -xf - -C / var/lib/sbctl/keys
+   ```
+
+2. Seal the keys to the new TPM, then remove the plain keys.
+
+   ```bash
+   sudo secure-boot-keys seal
+   sudo rm /var/lib/sbctl/keys/{PK/PK,KEK/KEK,db/db}.key
+   ```
+
+3. Rebuild, which installs any generation left out, then check the signatures.
+
+   ```bash
+   sudo nixos-rebuild switch --flake ~/.config/nixos#hephaestus
+   sudo secure-boot-keys sbctl verify
+   ```
+
 ## Reference
 
 ### EFI System Partition

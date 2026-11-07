@@ -65,8 +65,10 @@ let
           cp "$pki/keys/$key/$key.pem" "$run/keys/$key/$key.pem"
           if [ -e "$pki/keys/$key/$key.key" ]; then
             install -m 0400 "$pki/keys/$key/$key.key" "$run/keys/$key/$key.key"
-          else
-            (umask 0077; systemd-creds decrypt --name="secure-boot-$key.key" "$pki/keys/$key/$key.key.cred" "$run/keys/$key/$key.key")
+          elif ! (umask 0077; systemd-creds decrypt --name="secure-boot-$key.key" "$pki/keys/$key/$key.key.cred" "$run/keys/$key/$key.key"); then
+            wipe
+            echo "the $key key no longer decrypts: restore the plain keys from the recovery copy, then seal them again" >&2
+            exit 1
           fi
         done
       }

@@ -195,11 +195,12 @@ def booted_entry() -> str:
 
 def assert_esp_consistent() -> None:
     machine.fail("ls /boot/EFI/Linux/*.tmp /boot/EFI/nixos/*.tmp")
-    report = machine.succeed("sbctl verify 2>&1")
+    report = machine.succeed("secure-boot-keys sbctl verify 2>&1")
     print(report)
+    files = [line for line in report.splitlines() if "/boot/" in line]
     unsigned = [
-        line
-        for line in report.splitlines()
-        if "\u2717" in line and "/EFI/nixos/" not in line
+        line for line in files if "is signed" not in line and "/EFI/nixos/" not in line
     ]
     t.assertEqual([], unsigned)
+    t.assertTrue(any("/EFI/Linux/" in line and "is signed" in line for line in files))
+    machine.fail("test -e /run/secure-boot-keys")
