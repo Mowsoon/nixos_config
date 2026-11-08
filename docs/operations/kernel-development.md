@@ -111,6 +111,11 @@ patches signed with a patatt key, so the first real submission generates that ke
 the address (`b4 send --web-auth-new`), which sends a confirmation e-mail. Until then, every send
 is a rehearsal that writes the messages to a directory.
 
+A patch written with an AI coding assistant says so in its changelog and, for a series, in the
+cover letter, as `Documentation/process/generated-content.rst` asks. The assistant never adds a
+`Signed-off-by`: certifying the Developer Certificate of Origin is the author's act
+(`Documentation/process/coding-assistants.rst`).
+
 ## How to set up the source tree
 
 Blast radius: none outside `~/src/kernel`.
@@ -140,14 +145,17 @@ Blast radius: none outside `~/src/kernel`.
    git -C ~/src/kernel/mainline fetch --filter=blob:none <remote>
    ```
 
-2. Check out its branch in its own worktree.
+2. Check out its branch in its own worktree, on a local branch that tracks it: `b4 prep` refuses
+   a detached `HEAD`.
 
    ```bash
-   git -C ~/src/kernel/mainline worktree add ~/src/kernel/<remote> <remote>/<branch>
+   git -C ~/src/kernel/mainline worktree add -b <remote>-<branch> ~/src/kernel/<remote> <remote>/<branch>
    ```
 
-`<remote>` names the tree, such as `pdx86`. `<url>` and `<branch>` come from the `MAINTAINERS`
-entry of the subsystem, line `T:`.
+`<remote>` names the tree, such as `pdx86`. `<url>` comes from the `MAINTAINERS` entry of the
+subsystem, line `T:`, with `https://` in place of `git://`. `<branch>` is the branch that feeds
+linux-next, often not named in `MAINTAINERS`: `git ls-remote --heads <url>` lists them, such as
+`for-next-tpm` in the TPM tree.
 
 ## How to configure and build a tree
 
@@ -385,6 +393,9 @@ Blast radius: none; nothing leaves the machine.
    ```
 
    `<name>` names the series; `<base>` is the branch the patch applies to, such as `master`.
+   The cover letter that b4 creates already carries a `Signed-off-by` of the configured
+   identity. For a single patch, its text goes below the `---` line of the e-mail, so give it
+   the title of the patch and keep only what reviewers should read.
 
 2. Commit the change with a sign-off and check it.
 
