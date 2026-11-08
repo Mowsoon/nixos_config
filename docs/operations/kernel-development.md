@@ -107,9 +107,12 @@ which the kernel requires in `Signed-off-by`, and b4 prepares the series: it tra
 `b4/<name>` branch with a cover letter, finds the recipients with `scripts/get_maintainer.pl`,
 runs `scripts/checkpatch.pl`, and sends through the web submission endpoint of kernel.org, which
 it also picks by default in a kernel tree when no SMTP server is set. The endpoint accepts only
-patches signed with a patatt key, so the first real submission generates that key and registers
-the address (`b4 send --web-auth-new`), which sends a confirmation e-mail. Until then, every send
-is a rehearsal that writes the messages to a directory.
+patches signed with a patatt key. b4 does not create it: `patatt genkey -n hephaestus` writes the
+key pair under `~/.local/share/patatt`, and the git configuration of `~/src/kernel` names it
+(`patatt.signingkey`). The first real submission then registers the key and the address
+(`b4 send --web-auth-new`), which sends a confirmation e-mail with a challenge for
+`b4 send --web-auth-verify`. Until then, every send is a rehearsal that writes the messages to a
+directory.
 
 A patch written with an AI coding assistant says so in its changelog and, for a series, in the
 cover letter, as `Documentation/process/generated-content.rst` asks. The assistant never adds a
@@ -443,7 +446,8 @@ Blast radius: none; nothing leaves the machine.
 | `~/src/kernel/<remote>` | Worktree of a subsystem tree |
 | `~/src/kernel/build/<tree>` | Out-of-tree build output, in the nested subvolume |
 | `tools/kernel-shell.nix` | The `kernel` development shell |
-| `home/mowsoon/dev/kernel.nix` | tmpfiles rule of the build subvolume |
+| `home/mowsoon/dev/kernel.nix` | tmpfiles rule of the build subvolume; git identity, b4 endpoint and patatt key name for `~/src/kernel` |
+| `~/.local/share/patatt` | patatt key pair `hephaestus` that signs submitted patches, never committed |
 | `~/src/kernel/build/<tree>-vm` | VM build: modules of the VM built in, all others disabled |
 | `~/src/kernel/build/<tree>-debug` | VM build with the debug fragment |
 | `~/src/kernel/build/<tree>-hibernate` | VM build with the hibernation fragment |

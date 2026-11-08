@@ -336,11 +336,11 @@
     "nixos-private": {
       "flake": false,
       "locked": {
-        "lastModified": 1793654950,
-        "narHash": "sha256-HYYrLHZvEERJCCPaEqHcWKH1OjLIw1JzQmxQfc4Xx0Y=",
+        "lastModified": 1794158270,
+        "narHash": "sha256-U8X8MrqW9TxjMGpuuj+9D41O7YinhwmO4GqJkCedA6Y=",
         "ref": "refs/heads/main",
-        "rev": "8457278b9790fed57671f21f64e8f5a0b6af2b2b",
-        "revCount": 6,
+        "rev": "bad910e7c03ac97611d5db8ea346b3d618b25cac",
+        "revCount": 9,
         "type": "git",
         "url": "ssh://git@github.com/Mowsoon/nixos_private"
       },

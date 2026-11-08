@@ -11,6 +11,10 @@ in
       contents = {
         user = { inherit (identity) name email; };
         b4.send-endpoint-web = "https://lkml.kernel.org/_b4_submit";
+        patatt = {
+          signingkey = "ed25519:hephaestus";
+          selector = "hephaestus";
+        };
         sendemail = {
           confirm = "always";
           suppresscc = "self";
