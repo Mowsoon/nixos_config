@@ -41,6 +41,20 @@ rootless containers need them. Kernel lockdown stays at `none`. Lockdown in `int
 disable hibernation, and gives no protection while nixpkgs kernels load unsigned modules; module
 signing is a Phase 8 subject of the migration roadmap.
 
+Hibernation images are authenticated by the TPM, as described in
+[Boot chain](boot-chain.md#hibernation-image-authentication), the step that lets hibernation
+survive lockdown later. The guarantee: root, in a running boot, cannot make the kernel resume an
+image that the patched kernel did not write, forged or changed offline. It does not cover:
+
+- an earlier image of the same kernel, written back to the swapfile, which resumes once more;
+- a boot of a kernel that is not locked down or that root signs, since root can unseal the
+  Secure Boot keys of a running boot: such a kernel can authenticate any image, as it can do
+  anything else;
+- the header, the page lists and the compressed data, parsed before the image is authenticated;
+  image pages only go to memory that the boot kernel does not use.
+
+PCR 23 is reserved to the kernel: a program that extends or resets it gets `EPERM`.
+
 ### Audit
 
 `auditd` records kernel audit events to `/var/log/audit`, persisted with `/var/log`. The kernel
@@ -220,6 +234,7 @@ audit or test artefact cannot be committed by accident.
 | `security.sudo.execWheelOnly` | `true` |
 | `nix.settings.allowed-users` | `@wheel` |
 | Kernel lockdown | `none` |
+| PCR 23 | Reserved to the kernel (`custom.hibernationAuth`) |
 
 ### Options
 

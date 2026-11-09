@@ -1,0 +1,171 @@
+Subject: [PATCH 1/4] tpm: Reserve PCR 23 for the kernel
+
+PCR 23 can be reset from locality 0, so a process that can send TPM
+commands can bring it to any value it can compute from zero. No TPM
+object can then rely on a value of PCR 23 to mean anything.
+
+Add CONFIG_TCG_TPM_RESTRICT_PCR. With it, the commands that reset or
+extend PCR 23 on a TPM 2.0 (PCR_Reset, PCR_Extend, PCR_Event and
+EventSequenceComplete) are refused with -EPERM when they are written to
+/dev/tpm* or /dev/tpmrm*, tpm_pcr_extend() refuses the PCR to the other
+kernel users of the TPM, and IMA refuses a policy rule that measures
+into it. A TPM object whose authorization policy requires a value of
+PCR 23 then becomes usable by the kernel alone, as long as user space
+cannot reach the TPM in any other way, which kernel lockdown ensures.
+
+A following change uses this to authenticate hibernation images with a
+key that never leaves the TPM.
+
+---
+ drivers/char/tpm/Kconfig            | 13 +++++++++++
+ drivers/char/tpm/tpm-dev-common.c   | 34 +++++++++++++++++++++++++++++
+ drivers/char/tpm/tpm-interface.c    |  3 +++
+ include/linux/tpm.h                 | 16 ++++++++++++++
+ security/integrity/ima/ima_policy.c |  3 ++-
+ 5 files changed, 68 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/char/tpm/Kconfig b/drivers/char/tpm/Kconfig
+index 8a8f692b6..1918ef94c 100644
+--- a/drivers/char/tpm/Kconfig
++++ b/drivers/char/tpm/Kconfig
+@@ -42,6 +42,19 @@ config TCG_TPM2_HMAC
+ 	  here adds some encryption overhead to all kernel to TPM
+ 	  transactions.
+
++config TCG_TPM_RESTRICT_PCR
++	bool "Reserve PCR 23 of a TPM 2.0 for the kernel"
++	depends on TCG_TPM
++	help
++	  PCR 23 can be reset and extended from locality 0, so any process
++	  that can send TPM commands can bring it to a value of its choice.
++	  Saying Y here refuses the commands that extend or reset PCR 23
++	  when they come from user space through /dev/tpm* or /dev/tpmrm*,
++	  and from the other kernel users of the TPM.  A TPM object whose
++	  authorization policy requires a value of PCR 23 then becomes usable
++	  by the kernel only.  Software that uses PCR 23 from user space
++	  stops working.
++
+ config HW_RANDOM_TPM
+ 	bool "TPM HW Random Number Generator support"
+ 	depends on TCG_TPM && HW_RANDOM && !(TCG_TPM=y && HW_RANDOM=m)
+diff --git a/drivers/char/tpm/tpm-dev-common.c b/drivers/char/tpm/tpm-dev-common.c
+index f942c0c8e..cc6c61055 100644
+--- a/drivers/char/tpm/tpm-dev-common.c
++++ b/drivers/char/tpm/tpm-dev-common.c
+@@ -15,6 +15,7 @@
+ #include <linux/poll.h>
+ #include <linux/slab.h>
+ #include <linux/uaccess.h>
++#include <linux/unaligned.h>
+ #include <linux/workqueue.h>
+ #include "tpm.h"
+ #include "tpm-dev.h"
+@@ -167,6 +168,34 @@ ssize_t tpm_common_read(struct file *file, char __user *buf,
+ 	return ret_size;
+ }
+
++/*
++ * Refuse the TPM 2.0 commands that change the restricted PCR.  The PCR is
++ * the first handle of each of them.  The caller has checked that the
++ * command length fits in the bytes written.
++ */
++static bool tpm_cmd_changes_restricted_pcr(struct tpm_chip *chip,
++					   const u8 *cmd)
++{
++	const struct tpm_header *header = (const struct tpm_header *)cmd;
++	u32 pcr_idx;
++
++	if (!IS_ENABLED(CONFIG_TCG_TPM_RESTRICT_PCR) ||
++	    !(chip->flags & TPM_CHIP_FLAG_TPM2) ||
++	    be32_to_cpu(header->length) < TPM_HEADER_SIZE + sizeof(__be32))
++		return false;
++
++	switch (be32_to_cpu(header->ordinal)) {
++	case TPM2_CC_PCR_EXTEND:
++	case TPM2_CC_PCR_EVENT:
++	case TPM2_CC_PCR_RESET:
++	case TPM2_CC_EVENT_SEQUENCE_COMPLETE:
++		pcr_idx = get_unaligned_be32(&cmd[TPM_HEADER_SIZE]);
++		return tpm_pcr_restricted(pcr_idx);
++	default:
++		return false;
++	}
++}
++
+ ssize_t tpm_common_write(struct file *file, const char __user *buf,
+ 			 size_t size, loff_t *off)
+ {
+@@ -199,6 +228,11 @@ ssize_t tpm_common_write(struct file *file, const char __user *buf,
+ 		goto out;
+ 	}
+
++	if (tpm_cmd_changes_restricted_pcr(priv->chip, priv->data_buffer)) {
++		ret = -EPERM;
++		goto out;
++	}
++
+ 	priv->response_length = 0;
+ 	priv->response_read = false;
+ 	*off = 0;
+diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+index f745a0989..81ef3a630 100644
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -378,6 +378,9 @@ int tpm_pcr_extend(struct tpm_chip *chip, u32 pcr_idx,
+ 	if (!chip)
+ 		return -ENODEV;
+
++	if (tpm_pcr_restricted(pcr_idx))
++		return -EPERM;
++
+ 	rc = tpm_try_get_ops(chip);
+ 	if (rc)
+ 		return rc;
+diff --git a/include/linux/tpm.h b/include/linux/tpm.h
+index 202da079d..10641380a 100644
+--- a/include/linux/tpm.h
++++ b/include/linux/tpm.h
+@@ -269,6 +269,8 @@ enum tpm2_command_codes {
+ 	TPM2_CC_HIERARCHY_CONTROL       = 0x0121,
+ 	TPM2_CC_HIERARCHY_CHANGE_AUTH   = 0x0129,
+ 	TPM2_CC_CREATE_PRIMARY          = 0x0131,
++	TPM2_CC_PCR_EVENT               = 0x013C,
++	TPM2_CC_PCR_RESET               = 0x013D,
+ 	TPM2_CC_SEQUENCE_COMPLETE       = 0x013E,
+ 	TPM2_CC_SELF_TEST	        = 0x0143,
+ 	TPM2_CC_STARTUP		        = 0x0144,
+@@ -438,6 +440,20 @@ static inline bool tpm_is_firmware_upgrade(struct tpm_chip *chip)
+ 	return chip->flags & TPM_CHIP_FLAG_FIRMWARE_UPGRADE;
+ }
+
++/*
++ * PCR 23 (Application Support) can be reset from locality 0, so whoever can
++ * extend and reset it can bring it to any value reachable from zero.  With
++ * CONFIG_TCG_TPM_RESTRICT_PCR, only the kernel itself may do so: a TPM object
++ * whose policy requires a value of PCR 23 is then usable by the kernel alone.
++ */
++#define TPM_RESTRICTED_PCR	23
++
++static inline bool tpm_pcr_restricted(u32 pcr_idx)
++{
++	return IS_ENABLED(CONFIG_TCG_TPM_RESTRICT_PCR) &&
++	       pcr_idx == TPM_RESTRICTED_PCR;
++}
++
+ static inline u32 tpm2_rc_value(u32 rc)
+ {
+ 	return (rc & BIT(7)) ? rc & 0xbf : rc;
+diff --git a/security/integrity/ima/ima_policy.c b/security/integrity/ima/ima_policy.c
+index b1c010e8e..1e2b1980a 100644
+--- a/security/integrity/ima/ima_policy.c
++++ b/security/integrity/ima/ima_policy.c
+@@ -1893,7 +1893,8 @@ static int ima_parse_rule(char *rule, struct ima_rule_entry *entry)
+ 			ima_log_string(ab, "pcr", args[0].from);
+
+ 			result = kstrtoint(args[0].from, 10, &entry->pcr);
+-			if (result || INVALID_PCR(entry->pcr))
++			if (result || INVALID_PCR(entry->pcr) ||
++			    tpm_pcr_restricted(entry->pcr))
+ 				result = -EINVAL;
+ 			else
+ 				entry->flags |= IMA_PCR;

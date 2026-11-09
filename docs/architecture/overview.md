@@ -354,6 +354,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `custom.windowsVolume` | `core/windows-volume.nix` | Read-only access to the BitLocker volume |
 | `custom.secureBoot` | `security/secure-boot.nix` | lanzaboote signing |
 | `custom.luks` | `security/luks.nix` | TPM2 unlock of the root container |
+| `custom.hibernationAuth` | `security/hibernation-auth.nix` | Kernel patches that authenticate hibernation images with the TPM and reserve PCR 23 |
 | `custom.pcrlock` | `security/pcrlock.nix` | systemd-pcrlock policy locked to the firmware code, PCR 0 predictor, PCR 12 seal renewed after each policy change |
 | `custom.hardening` | `security/hardening.nix` | Kernel and privilege hardening |
 | `custom.supplyChain` | `security/supply-chain.nix` | Supply chain application of the host, weekly vulnerability scan |

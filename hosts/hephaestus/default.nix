@@ -26,6 +26,7 @@ in
     ../../modules/desktop/theme.nix
     ../../modules/security/secure-boot.nix
     ../../modules/security/luks.nix
+    ../../modules/security/hibernation-auth.nix
     ../../modules/security/pcrlock.nix
     ../../modules/security/hardening.nix
     ../../modules/security/supply-chain.nix
@@ -52,6 +53,8 @@ in
       tpm2Unlock = true;
       measureVolumeKey = true;
     };
+
+    hibernationAuth.enable = true;
 
     pcrlock = {
       enable = true;

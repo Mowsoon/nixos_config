@@ -106,7 +106,9 @@ choices live in the Plasma energy settings, not in logind. Only the "Standby, th
 sleep mode calls `SuspendThenHibernate` and so honours `HibernateDelaySec`; `systemctl suspend` and
 the plain "Standby" mode never hibernate. Hibernation writes the image to the
 swapfile described in [Storage](storage.md) and resumes through the initrd described in
-[Boot chain](boot-chain.md).
+[Boot chain](boot-chain.md). The TPM authenticates every image: if the TPM does not answer,
+hibernation fails rather than write an unauthenticated image, and that holds for the hibernation
+on critical battery too.
 
 USB keyboards and mice wake the machine from sleep, but a `system-sleep` hook disarms their wakeup
 for the duration of hibernation, and chrony no longer fires RTC interrupts: a wakeup event that
@@ -386,7 +388,7 @@ which checks the whole alert chain, D-Bus and `wall` included.
 
 | Setting | Value |
 | --- | --- |
-| `boot.kernelPackages` | `linuxPackages_zen` |
+| `boot.kernelPackages` | `linuxPackages_zen`, patched by `custom.hibernationAuth`, so built locally |
 | `boot.kernelModules` | `kvm-amd` |
 | `boot.initrd.availableKernelModules` | `nvme`, `xhci_pci`, `usbhid` |
 | `hardware.enableRedistributableFirmware` | `true` |
