@@ -29,18 +29,47 @@ in
 {
   options.custom.lockdown = {
     moduleCertificates = lib.mkEnableOption "the insertion of the kmodigest module certificates into the kernel image, so that the kernel verifies the signature of every module it loads";
+
+    mode = lib.mkOption {
+      type = lib.types.enum [
+        "none"
+        "integrity"
+      ];
+      default = "none";
+      description = "Kernel lockdown mode set on the command line; `integrity` also refuses every module without a valid signature.";
+    };
   };
 
-  config = lib.mkIf cfg.moduleCertificates {
-    boot.bootspec.writer = lib.mkForce ''
-      ${options.boot.bootspec.writer.default}
-      ${jq} --sort-keys --arg kernel ${kernelPath} '."org.nixos.bootspec.v1".kernel = $kernel' \
-        ${bootspec} > ${bootspec}.new
-      mv ${bootspec}.new ${bootspec}
-    '';
+  config = lib.mkMerge [
+    (lib.mkIf cfg.moduleCertificates {
+      boot.bootspec.writer = lib.mkForce ''
+        ${options.boot.bootspec.writer.default}
+        ${jq} --sort-keys --arg kernel ${kernelPath} '."org.nixos.bootspec.v1".kernel = $kernel' \
+          ${bootspec} > ${bootspec}.new
+        mv ${bootspec}.new ${bootspec}
+      '';
 
-    system.systemBuilderCommands = lib.mkAfter ''
-      ln -sfn ${kernelPath} $out/kernel
-    '';
-  };
+      system.systemBuilderCommands = lib.mkAfter ''
+        ln -sfn ${kernelPath} $out/kernel
+      '';
+    })
+
+    (lib.mkIf (cfg.mode != "none") {
+      assertions = [
+        {
+          assertion = cfg.moduleCertificates;
+          message = "custom.lockdown.mode = \"${cfg.mode}\" refuses every module the kernel image cannot verify: enable custom.lockdown.moduleCertificates";
+        }
+        {
+          assertion = config.custom.hibernationAuth.enable or false;
+          message = "custom.lockdown.mode = \"${cfg.mode}\" disables hibernation unless the image is authenticated: enable custom.hibernationAuth";
+        }
+      ];
+
+      boot.kernelParams = [
+        "lockdown=${cfg.mode}"
+        "module.sig_enforce=1"
+      ];
+    })
+  ];
 }

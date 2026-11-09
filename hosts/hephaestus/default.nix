@@ -57,7 +57,10 @@ in
 
     hibernationAuth.enable = true;
 
-    lockdown.moduleCertificates = true;
+    lockdown = {
+      moduleCertificates = true;
+      mode = "integrity";
+    };
 
     pcrlock = {
       enable = true;

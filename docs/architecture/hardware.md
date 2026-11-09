@@ -61,11 +61,13 @@ Dynamic Boost is run by `nvidia-powerd`, a closed-source root daemon. While it w
 power limit reported by `nvidia-smi -q -d POWER` rises above the default 100 W, up to 140 W on
 mains; when it fails, the limit stays at 100 W and the daemon logs `QBoost is not created`. Its
 unit is confined to what a test of each protection on its own showed it needs: the GPU devices,
-the CPU model-specific registers (`/dev/cpu/*/msr`) read and written to set the CPU power,
-`/run` for its PID file `/run/nvtopps.pid`, `/sys/devices/system/cpu` to lower the CPU frequency
-limit while the GPU takes the power, and the capabilities `CAP_SYS_ADMIN` and `CAP_SYS_RAWIO`.
-It has no network and a system call filter that answers `EPERM`, since the calls of a closed
-binary are not known in advance. The exposure went from 9.4 to 1.8. The MSR device exists only
+the CPU model-specific registers (`/dev/cpu/*/msr`), opened read-write, `/run` for its PID file
+`/run/nvtopps.pid`, `/sys/devices/system/cpu` to lower the CPU frequency limit while the GPU takes
+the power, and the capabilities `CAP_SYS_ADMIN` and `CAP_SYS_RAWIO`. It has no network and a
+system call filter that answers `EPERM`, since the calls of a closed binary are not known in
+advance. The exposure went from 9.4 to 1.8. A trace of the daemon under full GPU load found only
+reads of the model-specific registers, energy counters and frequency ratios, and no write: kernel
+lockdown, which refuses those writes, leaves Dynamic Boost working. The MSR device exists only
 once the `msr` module is loaded, which the confined daemon can no longer do itself, so the module
 loads at boot ([incident](../incidents/nvidia-powerd-msr-at-boot.md)). The `disable Dynamic Boost
 DC controller` line at every start comes from the firmware, which turns Dynamic Boost off on
