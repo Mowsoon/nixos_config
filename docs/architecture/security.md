@@ -37,9 +37,20 @@ The sysctl settings close information leaks and reduce the attack surface of the
   from user space.
 
 Unprivileged user namespaces stay enabled: browser sandboxes, the Claude desktop application and
-rootless containers need them. Kernel lockdown stays at `none`. Lockdown in `integrity` mode would
-disable hibernation, and gives no protection while nixpkgs kernels load unsigned modules; module
-signing is a Phase 8 subject of the migration roadmap.
+rootless containers need them. Kernel lockdown stays at `none` until every check of the
+lockdown move has passed.
+
+nixpkgs signs every module, in-tree or built outside the kernel such as the NVIDIA driver, with
+kmodigest: each module carries a signature by a single-module certificate derived from its own
+content, and no private key exists anywhere. The certificates are useless while the kernel image
+does not hold them: the kernel then marks itself tainted (`E`) at the first module it loads.
+`custom.lockdown.moduleCertificates` rebuilds the image of the running kernel, patches included,
+with the certificates of the whole module tree, and points the boot loader at that image instead
+of the one nixpkgs built. Only the image is rebuilt, not the kernel. Every module the system ships
+then verifies; a module from anywhere else does not. The certificates come from the kernel and from
+every `.ko.cer` file of the module tree, not from the `modules.cer` that `aggregateModules` merges:
+it assumes that `modules.dep` lists the external modules last, and keeps only the last entries, so
+most of the NVIDIA and mt76 modules stayed unverified.
 
 Hibernation images are authenticated by the TPM, as described in
 [Boot chain](boot-chain.md#hibernation-image-authentication), the step that lets hibernation
@@ -241,6 +252,7 @@ audit or test artefact cannot be committed by accident.
 | Option | Default | Description |
 | --- | --- | --- |
 | `custom.hardening.enable` | `false` | AppArmor, audit, sysctls, wheel-only sudo and Nix daemon |
+| `custom.lockdown.moduleCertificates` | `false` | Rebuilds the kernel image with the kmodigest certificates of the module tree and boots that image |
 | `custom.hardening.serviceExposure` | `{ }` | Highest accepted exposure score of each system service, set by its owner module |
 | `custom.supplyChain.enable` | `false` | Vulnerability scan of the running system once a week, at the first hour on mains power and online, with a desktop notification |
 | `custom.supplyChain.alertScore` | `"9.0"` | Lowest CVSS score singled out by the diff of two closures and the summary of a scan |
@@ -279,6 +291,7 @@ Scores of `systemd-analyze security`, offline, on 2026-11-02. The threshold is t
 | Kernel sysctl reference | <https://docs.kernel.org/admin-guide/sysctl/kernel.html> |
 | Linux Security Modules | <https://docs.kernel.org/admin-guide/LSM/index.html> |
 | Kernel lockdown | <https://man7.org/linux/man-pages/man7/kernel_lockdown.7.html> |
+| Module signing | <https://docs.kernel.org/admin-guide/module-signing.html> |
 | `systemd.exec` sandboxing | <https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html> |
 | `systemd-analyze security` | <https://www.freedesktop.org/software/systemd/man/latest/systemd-analyze.html> |
 | `security.apparmor` | <https://search.nixos.org/options?channel=unstable&query=security.apparmor> |

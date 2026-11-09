@@ -52,7 +52,9 @@ Unified Kernel Image (UKI) that carries the kernel command line and the hashes o
 the initrd, stored unsigned and shared between generations in `EFI/nixos/`. The firmware checks
 the signature of the stub; the stub checks the hashes before starting the kernel. A full UKI per
 generation would weigh more than 170 MiB; the stubs keep eight generations well inside the 4 GiB
-EFI System Partition (ESP).
+EFI System Partition (ESP). With `custom.lockdown.moduleCertificates`, the kernel of a stub is the
+image rebuilt with the module certificates, described in
+[Security](security.md#kernel-hardening), not the image nixpkgs built.
 
 lanzaboote never writes the firmware boot entries. The `Linux Boot Manager` entry is created once,
 at installation, with `efibootmgr`.

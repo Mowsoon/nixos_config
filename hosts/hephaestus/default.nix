@@ -27,6 +27,7 @@ in
     ../../modules/security/secure-boot.nix
     ../../modules/security/luks.nix
     ../../modules/security/hibernation-auth.nix
+    ../../modules/security/lockdown.nix
     ../../modules/security/pcrlock.nix
     ../../modules/security/hardening.nix
     ../../modules/security/supply-chain.nix
@@ -55,6 +56,8 @@ in
     };
 
     hibernationAuth.enable = true;
+
+    lockdown.moduleCertificates = true;
 
     pcrlock = {
       enable = true;
