@@ -49,7 +49,8 @@ previous module options, even when `nixos-rebuild boot` has installed a new
 generation. The first run of the NVIDIA test was invalid for this reason.
 
 The rarer failures seen after this fix, on 2026-10-21 and 2026-10-22, have a different cause:
-[hibernation-wakeup-hang](hibernation-wakeup-hang.md).
+[hibernation-wakeup-hang](hibernation-wakeup-hang.md). The systematic hang from 2026-11-02 is
+[hibernation-cs35l41-firmware-deadlock](hibernation-cs35l41-firmware-deadlock.md).
 
 ## How to verify the fix
 

@@ -68,6 +68,9 @@ Sleep keeps waking on a key press; hibernation wakes only with the power button,
 from a powered-off state. chrony no longer corrects the RTC drift between boots; it steps the clock
 once the network servers answer.
 
+The systematic hang that started on 2026-11-02 has another cause:
+[hibernation-cs35l41-firmware-deadlock](hibernation-cs35l41-firmware-deadlock.md).
+
 A remaining source is the power supply: `ADP0` and the USB-C `ucsi` source are wakeup sources too,
 so plugging or unplugging the charger during the power cut can still hang it.
 

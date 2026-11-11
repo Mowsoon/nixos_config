@@ -117,6 +117,11 @@ for the duration of hibernation, and chrony no longer fires RTC interrupts: a wa
 reaches the platform while it enters S4 leaves the laptop powered on with the image already written
 ([incident](../incidents/hibernation-wakeup-hang.md)).
 
+The speaker amplifiers once blocked every power-off after the image was written: their driver
+reloads its firmware when the devices thaw to write the image, while the file system cannot
+complete reads. A kernel patch defers that reload to after the resume
+([incident](../incidents/hibernation-cs35l41-firmware-deadlock.md)).
+
 ### ASUS platform
 
 asusd drives the fan curves, the power profiles of the firmware, the keyboard backlight and the
@@ -164,6 +169,13 @@ off in sleep. Its ACPI methods race when both functions resume at the same time,
 then stays unpowered until the next boot. `custom.audio.serializeAmdAcpResume` makes the kernel
 suspend and resume both functions one after the other
 ([incident](../incidents/amd-acp-hda-resume-race.md)).
+
+The two Cirrus Logic CS35L41 speaker amplifiers load a speaker protection firmware at boot and after
+every resume. `custom.audio.deferCs35l41FirmwareReload` patches the kernel so that this reload runs
+on a freezable workqueue: during hibernation it waits for the resume instead of reading the disk
+while the file system is frozen, which deadlocked the power-off
+([incident](../incidents/hibernation-cs35l41-firmware-deadlock.md)). The firmware load controls
+`L0 DSP1 Firmware Load` and `R0 DSP1 Firmware Load` of card 1 refuse changes while a stream plays.
 
 The capture gain is the sum of two codec controls, `Capture` and `Mic Boost`, which WirePlumber
 drives from the volume of the source. At 100 % they add 60 dB, enough for the low-frequency room
@@ -390,7 +402,7 @@ which checks the whole alert chain, D-Bus and `wall` included.
 
 | Setting | Value |
 | --- | --- |
-| `boot.kernelPackages` | `linuxPackages_zen`, patched by `custom.hibernationAuth`, so built locally |
+| `boot.kernelPackages` | `linuxPackages_zen`, patched by `custom.hibernationAuth` and `custom.audio.deferCs35l41FirmwareReload`, so built locally |
 | `boot.kernelModules` | `kvm-amd` |
 | `boot.initrd.availableKernelModules` | `nvme`, `xhci_pci`, `usbhid` |
 | `hardware.enableRedistributableFirmware` | `true` |
@@ -567,6 +579,7 @@ The hwdb entry matches the LIGHTSPEED product `40B5` and the wired product `C356
 | `custom.asus.performanceEpp` | `null` | EPP that asusd writes with the Performance profile, enforced in `asusd.ron` before asusd starts |
 | `custom.audio.enable` | `false` | PipeWire with ALSA, PulseAudio and JACK layers |
 | `custom.audio.serializeAmdAcpResume` | `false` | `power/async` disabled on the revision `0x62` ACP and the AMD HD Audio controller |
+| `custom.audio.deferCs35l41FirmwareReload` | `false` | Kernel patch that queues the CS35L41 firmware reload of system resume on `system_freezable_wq` |
 | `custom.peripherals.enable` | `false` | Bluetooth, Logitech receivers, G915 X key remapping |
 | `custom.rgb.enable` | `false` | OpenRGB SDK server on `127.0.0.1:6742`, confined to the Logitech LIGHTSPEED receiver |
 | `custom.power.enable` | `false` | Power profiles without CPU driver, `powersave` governor, delayed hibernation, hibernation on critical battery |

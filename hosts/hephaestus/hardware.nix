@@ -36,6 +36,7 @@
     audio = {
       enable = true;
       serializeAmdAcpResume = true;
+      deferCs35l41FirmwareReload = true;
     };
     peripherals.enable = true;
     rgb.enable = true;
