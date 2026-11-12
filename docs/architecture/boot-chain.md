@@ -3,8 +3,8 @@
 ## Overview
 
 The workstation boots through UEFI Secure Boot with its own keys, unlocks the encrypted root
-container with the TPM, then either resumes a hibernated session or rolls the root filesystem
-back to an empty state. Each stage verifies or unlocks the next one.
+container with the TPM, then rolls the root filesystem back to an empty state. Each stage verifies
+or unlocks the next one.
 
 ```mermaid
 sequenceDiagram
@@ -17,7 +17,6 @@ sequenceDiagram
   SB->>ST: pick a generation, verify signature, load
   ST->>IR: check kernel and initrd hashes, start kernel
   IR->>IR: unlock cryptroot with the TPM2 (pcrlock PCR 0, PCR 7, PCR 12)
-  IR->>IR: resume hibernation image if one exists
   IR->>IR: archive the root subvolume, create an empty one
   IR->>OS: mount, switch root, activate the generation
 ```
@@ -40,7 +39,9 @@ sbctl with that file and removes them on exit. sbctl needs it for an enrollment,
 `verify`, which opens the db private key.
 
 The seal asks for nothing at boot and adds no prompt: it only answers a theft of the disk or of a
-backup of `/persist`. Another container, such as a reinstallation, measures another volume key, so
+backup of `/persist`. In the running system PCR 15 has its unlocked value, so root decrypts the
+keys as the hook does, signs a kernel of its choice and adds it to the pcrlock policy. Against root
+the boot chain only forces a reboot; see the threat model in [Security](security.md). Another container, such as a reinstallation, measures another volume key, so
 the credentials stop decrypting; the plain keys are then restored from the recovery copy. A plain
 `<key>.key` takes precedence over its credential, so restored keys sign the installation before
 they are sealed again. When `/var/lib/sbctl` holds no keys at all, as in the disk image of the
@@ -277,46 +278,16 @@ Changing the splash, the initrd or the kernel command line changes the measureme
 images, never PCR 0 or PCR 7, which record only the firmware code, the Secure Boot state and the
 keys, so the TPM2 unlock is not affected.
 
-### Resume and root rollback
+### Root rollback
 
-The initrd runs `systemd-hibernate-resume` first. When the system hibernated, systemd recorded
-the location of the image in the `HibernateLocation` EFI variable, so no `resume=` parameter or
-swapfile offset is declared. A successful resume replaces the running kernel with the saved one:
-the rest of the initrd never runs and the session continues untouched.
+`rollback-root` runs before the root is mounted. It moves the `@root` subvolume to
+`old_roots/<timestamp>`, creates an empty `@root`, and deletes archived roots older than 30 days.
 
-Without an image, `rollback-root` runs before the root is mounted. It moves the `@root` subvolume
-to `old_roots/<timestamp>`, creates an empty `@root`, and deletes archived roots older than
-30 days. The order is enforced by `After=systemd-hibernate-resume.service`: rolling the root back
-before a resume would corrupt the hibernated session.
-
-### Hibernation image authentication
-
-The image travels from one kernel to the next through a swapfile that root can write, so a
-forged image would let root run code in a freshly booted kernel. The kernel carries the four
-patches of `kernel/patches/hibernation-tpm-auth`, written for this machine and proposed
-upstream, which authenticate every image with a key that never leaves the TPM.
-
-The key is a keyed-hash primary object of the owner hierarchy, derived again from the same
-template at every boot, so nothing is stored. Its only authorization is a policy on PCR 23 at
-the value that a reset followed by one extend with a fixed label gives. The kernel refuses the
-commands that reset or extend PCR 23 to user space and to its other TPM users, IMA included, so
-it alone can open that window: while tasks are frozen, it resets PCR 23, extends it, has the TPM
-compute an HMAC, then extends it again to close it. When it writes an image, it hashes the image
-stream and stores the HMAC of the digest, of the header flags and of the hardware signature in
-the swap header. When it resumes, it hashes the stream again as it loads it and restores the
-image only if the TPM gives the same HMAC; otherwise the boot goes on as without an image, and
-the signature of the image is already gone, so it is never tried again. An image that cannot be
-authenticated is never written: hibernation fails instead, and it is unavailable without a
-TPM 2.0.
-
-A key kept in kernel memory would not do: with kernel lockdown in `integrity` mode, root can
-still read kernel memory through `/proc/kcore` or BPF. The TPM-resident key is what lets
-hibernation stay available under lockdown. What it does not cover is written in
-[Security](security.md#kernel-hardening).
-
-A kernel without the patches resumes an image written with them, as it ignores the HMAC, so an
-older generation stays bootable. The reverse fails: the patched kernel refuses an image written
-by an unpatched one, so the first boot of the patched kernel is a real reboot, not a resume.
+Hibernation is off: kernel lockdown refuses it and systemd forbids it (see
+[Hardware](hardware.md#sleep-and-power)). The initrd still runs `systemd-hibernate-resume`, which
+finds no image, and `rollback-root` stays ordered after it with
+`After=systemd-hibernate-resume.service`: if hibernation came back, rolling the root back before a
+resume would corrupt the hibernated session.
 
 ### Windows
 
@@ -552,7 +523,6 @@ next value can be computed before the reboot.
 | 11 | lanzaboote stub | Name and content of `.linux`, `.osrel`, `.cmdline`, `.initrd` | Every generation, even an identical system, through `.osrel` | Yes, verified: recomputed from the generation files |
 | 12 | lanzaboote stub | Archive of the global credentials: the pcrlock policy copy | Policy change, a credential added to the ESP | Yes, rebuilt from the ESP by `pcr12` |
 | 13, 14, 16 | Nothing | Empty: no system extension, no shim | When such a feature is enabled | Yes, zero |
-| 23 | The kernel only, while it writes or resumes a hibernation image | Zero until the first window of the boot, then the opening label and the closing label after a reset | Every hibernation and resume | Not sealed: it authorizes the hibernation key only while open |
 | 15 | `systemd-cryptsetup` in the initrd, since 2026-11-06 | A digest of the volume key of `cryptroot`, extended when it is unlocked, by the TPM2 slot or by a passphrase | Never, short of a new container | Yes, constant, but only after the unlock |
 
 The installation also left an `nvpcr-anchor` credential, the anchor scheme of systemd before
@@ -566,7 +536,7 @@ PCR is initialized.
 | Unit | Runs | Effect |
 | --- | --- | --- |
 | `systemd-cryptsetup@cryptroot.service` | First | Unlocks the container |
-| `systemd-hibernate-resume.service` | After the unlock | Resumes the image named by `HibernateLocation`, if any and authenticated by the TPM |
+| `systemd-hibernate-resume.service` | After the unlock | Finds no image: hibernation is off |
 | `rollback-root.service` | After the resume attempt, before `sysroot.mount` | Archives `@root` and creates an empty one |
 | `sysroot.mount` | Last | Mounts the new root |
 
@@ -581,7 +551,6 @@ PCR is initialized.
 | `custom.luks.tpm2Unlock` | `false` | Adds `tpm2-device=auto` to the crypttab entry of the container |
 | `custom.luks.measureVolumeKey` | `false` | Adds `tpm2-measure-pcr=yes` to the crypttab entry: the unlock measures the volume key into PCR 15 |
 | `custom.luks.name` | `cryptroot` | Name of the LUKS mapping declared by disko |
-| `custom.hibernationAuth.enable` | `false` | Patches the kernel to authenticate hibernation images with a TPM-resident key and to reserve PCR 23 to the kernel; asserts a 7.2 kernel |
 | `custom.pcrlock.enable` | `false` | Keeps the systemd-pcrlock policy locked to the firmware code at every boot, provides `pcrlock-make-policy` |
 | `custom.pcrlock.pcrs` | `[ 0 ]` | PCRs of the policy, `[ 0 2 5 8 11 13 14 ]` on hephaestus; the policy update fails when one cannot be predicted. With PCR 5 or 11, the update writes their components from the ESP first, and the install hook of the boot loader updates the policy |
 | `custom.pcrlock.lockCredentials` | `false` | Seals the TPM2 slot to PCR 12 too, renews it after each policy change, provides `pcr12` and the failure notification |

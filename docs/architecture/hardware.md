@@ -41,10 +41,8 @@ management settings are the result of two incidents:
 - `kernelSuspendNotifier = false` keeps those systemd units. With the kernel suspend notifier path
   of driver 595, the machine never powered off after writing a hibernation image
   ([incident](../incidents/hibernation-power-off.md)).
-- The nixpkgs module hooks those units to plain sleep and hibernation only. The NVIDIA module adds
-  the `nvidia-suspend-then-hibernate` unit and installs the driver's `system-sleep` hook, which
-  switches the driver from sleep to hibernation when the hibernation delay expires. Without them,
-  the driver refused "sleep, then hibernate"
+- The NVIDIA module installs the driver's `system-sleep` hook. A unit for "sleep, then hibernate"
+  was needed while hibernation was used
   ([incident](../incidents/suspend-then-hibernate-nvidia.md)).
 - `NVreg_EnableS0ixPowerManagement = 1` makes the driver handle `s2idle` as a low-power idle
   state instead of a full power cut. Without it, the desktop froze after resuming from sleep
@@ -55,7 +53,7 @@ management settings are the result of two incidents:
   ([incident](../incidents/sleep-after-hibernation-deadlock.md)).
 
 The driver reads its options only when it is loaded: a change to them takes effect after
-`nixos-rebuild boot` and a real reboot, never after a resume from hibernation.
+`nixos-rebuild boot` and a real reboot.
 
 Dynamic Boost is run by `nvidia-powerd`, a closed-source root daemon. While it works, the current
 power limit reported by `nvidia-smi -q -d POWER` rises above the default 100 W, up to 140 W on
@@ -79,10 +77,9 @@ program connects to the socket, so `acpid` is disabled: a root daemon without an
 surface without use. The lid and power buttons reach logind through their own input devices, and
 Dynamic Boost works without it.
 
-The driver is not loaded in the initrd. The initrd restores the hibernation image, and before
-handing over to it, the kernel freezes every device of the boot it is running. A driver loaded at
-that point has not been prepared through `/proc/driver/nvidia/suspend`, so it refuses the freeze
-and the image is dropped ([incident](../incidents/nvidia-initrd-resume.md)). The boot splash
+The driver is not loaded in the initrd. While hibernation was used, a driver loaded there refused
+the freeze that precedes a resume and the image was dropped
+([incident](../incidents/nvidia-initrd-resume.md)). The boot splash
 starts on `simpledrm`, the framebuffer set up by the firmware, and moves to `nvidia-drm` once the
 driver loads after the initrd.
 
@@ -97,30 +94,19 @@ decodes web video, stays enabled.
 ### Sleep and power
 
 The firmware exposes Modern Standby only: `s2idle` is the single sleep state, and its consumption
-depends on every driver reaching its low-power state. Two settings bound the battery drain:
+depends on every driver reaching its low-power state. UPower powers the machine off when the
+battery reaches its critical level.
 
-- a sleep started from Plasma as "sleep, then hibernate" turns into hibernation after 2 h
-  (`HibernateDelaySec`);
-- UPower hibernates the machine when the battery reaches its critical level.
+Hibernation is off. Kernel lockdown refuses it, since nothing authenticates the image that root
+could write to the swap device, and systemd forbids hibernation, suspend-then-hibernate and hybrid
+sleep so that Plasma does not offer them. It was kept for a while through local kernel patches
+that authenticated the image with the TPM, removed on 2026-11-12: they kept the kernel out of the
+binary cache, and the Secure Boot keys being reachable by root (see
+[Boot chain](boot-chain.md)) left them little to protect. The incidents met while it was used stay
+in `docs/incidents/`.
 
 Inside a Plasma session, PowerDevil decides what the lid switch and the power key do; these
-choices live in the Plasma energy settings, not in logind. Only the "Standby, then hibernate"
-sleep mode calls `SuspendThenHibernate` and so honours `HibernateDelaySec`; `systemctl suspend` and
-the plain "Standby" mode never hibernate. Hibernation writes the image to the
-swapfile described in [Storage](storage.md) and resumes through the initrd described in
-[Boot chain](boot-chain.md). The TPM authenticates every image: if the TPM does not answer,
-hibernation fails rather than write an unauthenticated image, and that holds for the hibernation
-on critical battery too.
-
-USB keyboards and mice wake the machine from sleep, but a `system-sleep` hook disarms their wakeup
-for the duration of hibernation, and chrony no longer fires RTC interrupts: a wakeup event that
-reaches the platform while it enters S4 leaves the laptop powered on with the image already written
-([incident](../incidents/hibernation-wakeup-hang.md)).
-
-The speaker amplifiers once blocked every power-off after the image was written: their driver
-reloads its firmware when the devices thaw to write the image, while the file system cannot
-complete reads. A kernel patch defers that reload to after the resume
-([incident](../incidents/hibernation-cs35l41-firmware-deadlock.md)).
+choices live in the Plasma energy settings, not in logind.
 
 ### ASUS platform
 
@@ -171,11 +157,8 @@ suspend and resume both functions one after the other
 ([incident](../incidents/amd-acp-hda-resume-race.md)).
 
 The two Cirrus Logic CS35L41 speaker amplifiers load a speaker protection firmware at boot and after
-every resume. `custom.audio.deferCs35l41FirmwareReload` patches the kernel so that this reload runs
-on a freezable workqueue: during hibernation it waits for the resume instead of reading the disk
-while the file system is frozen, which deadlocked the power-off
-([incident](../incidents/hibernation-cs35l41-firmware-deadlock.md)). The firmware load controls
-`L0 DSP1 Firmware Load` and `R0 DSP1 Firmware Load` of card 1 refuse changes while a stream plays.
+every resume. The firmware load controls `L0 DSP1 Firmware Load` and `R0 DSP1 Firmware Load` of
+card 1 refuse changes while a stream plays.
 
 The capture gain is the sum of two codec controls, `Capture` and `Mic Boost`, which WirePlumber
 drives from the volume of the source. At 100 % they add 60 dB, enough for the low-frequency room
@@ -243,11 +226,8 @@ The lighting effects that drive the server are described in
 
 ### Wi-Fi
 
-The MediaTek MT7922 card runs the `mt7921e` driver of the mt76 family. The in-tree driver resumes
-from hibernation as from sleep and waits for a firmware that the power cut has stopped, which logs
-a restore timeout on every resume. The mt7921 module rebuilds the mt76 directory of the kernel
-source with a patch that gives the driver a separate restore callback, against the cached kernel,
-and installs it ahead of the in-tree modules
+The MediaTek MT7922 card runs the in-tree `mt7921e` driver of the mt76 family. Its restore
+timeout after hibernation was fixed by a rebuilt module while hibernation was used
 ([incident](../incidents/mt7921e-hibernation-restore.md)).
 
 ### Disk health
@@ -293,8 +273,7 @@ which checks the whole alert chain, D-Bus and `wall` included.
    nixos-rebuild boot --flake ~/.config/nixos#hephaestus --elevate sudo
    ```
 
-2. Reboot with `systemctl reboot`. A resume from hibernation restores the previous kernel and
-   driver options, and does not test the change.
+2. Reboot with `systemctl reboot`.
 3. Confirm the running system is the new generation. Both paths are identical.
 
    ```bash
@@ -323,33 +302,10 @@ which checks the whole alert chain, D-Bus and `wall` included.
    [s2idle]
    ```
 
-2. Check the hibernation delay and the sleep modes systemd uses.
+2. Check the sleep modes systemd allows.
 
    ```bash
    systemd-analyze cat-config systemd/sleep.conf
-   ```
-
-## How to test sleep then hibernate without waiting
-
-1. Shorten the delay until the next reboot with a runtime drop-in, which lives in memory.
-
-   ```bash
-   sudo mkdir -p /run/systemd/sleep.conf.d
-   printf '[Sleep]\nHibernateDelaySec=2min\n' | sudo tee /run/systemd/sleep.conf.d/test.conf
-   ```
-
-2. Close the lid for more than 2 minutes, then open it. The machine must go through firmware and
-   LUKS unlock before the session comes back: it resumed from hibernation, not from sleep.
-3. Check the path logind took.
-
-   ```bash
-   journalctl -b -u systemd-suspend-then-hibernate.service --no-pager
-   ```
-
-4. Remove the drop-in, or reboot.
-
-   ```bash
-   sudo rm /run/systemd/sleep.conf.d/test.conf
    ```
 
 ## How to read the health of a disk
@@ -396,13 +352,13 @@ which checks the whole alert chain, D-Bus and `wall` included.
 | Linux disk | Samsung 990 PRO, NVMe |
 | Windows disk | Western Digital SN560, NVMe |
 | Wi-Fi | MediaTek MT7922, `mt7921e` driver |
-| Sleep states | `s2idle` only, hibernation to disk |
+| Sleep states | `s2idle` only, hibernation off |
 
 ### Kernel and firmware
 
 | Setting | Value |
 | --- | --- |
-| `boot.kernelPackages` | `linuxPackages_zen`, patched by `custom.hibernationAuth` and `custom.audio.deferCs35l41FirmwareReload`, so built locally |
+| `boot.kernelPackages` | `linuxPackages_zen` from the binary cache, image relinked with the module certificates |
 | `boot.kernelModules` | `kvm-amd` |
 | `boot.initrd.availableKernelModules` | `nvme`, `xhci_pci`, `usbhid` |
 | `hardware.enableRedistributableFirmware` | `true` |
@@ -417,7 +373,7 @@ which checks the whole alert chain, D-Bus and `wall` included.
 | `hardware.nvidia.modesetting.enable` | `true` |
 | `hardware.nvidia.powerManagement.enable` | `true` |
 | `hardware.nvidia.powerManagement.kernelSuspendNotifier` | `false` |
-| Suspend-then-hibernate unit and hook | `nvidia-suspend-then-hibernate`, `/etc/systemd/system-sleep/nvidia` |
+| Sleep hook | `/etc/systemd/system-sleep/nvidia` |
 | `hardware.nvidia.dynamicBoost.enable` | `true` |
 | `NVreg_EnableS0ixPowerManagement` | `1` |
 | `NVreg_DynamicPowerManagement` | `0` |
@@ -436,15 +392,15 @@ stored in `~/.config/powerdevilrc`.
 | --- | --- | --- |
 | When laptop lid closed | Sleep | All |
 | When power button pressed | Show logout screen | All |
-| When sleeping, enter | Standby, then hibernate | All |
-| At critical level | Hibernate | Low Battery |
+| When sleeping, enter | Standby | All |
+| At critical level | Shut down | Low Battery |
 
 ### Power settings
 
 | Setting | Value |
 | --- | --- |
-| `systemd.sleep.settings.Sleep.HibernateDelaySec` | `2h` |
-| `services.upower.criticalPowerAction` | `Hibernate` |
+| `systemd.sleep.settings.Sleep` | `AllowHibernation`, `AllowSuspendThenHibernate` and `AllowHybridSleep` set to `false` |
+| `services.upower.criticalPowerAction` | `PowerOff` |
 | `services.power-profiles-daemon.enable` | `true`, started with `--block-driver=amd_pstate` |
 | `powerManagement.cpuFreqGovernor` | `powersave` |
 | Battery charge limit | 80 % |
@@ -579,13 +535,10 @@ The hwdb entry matches the LIGHTSPEED product `40B5` and the wired product `C356
 | `custom.asus.performanceEpp` | `null` | EPP that asusd writes with the Performance profile, enforced in `asusd.ron` before asusd starts |
 | `custom.audio.enable` | `false` | PipeWire with ALSA, PulseAudio and JACK layers |
 | `custom.audio.serializeAmdAcpResume` | `false` | `power/async` disabled on the revision `0x62` ACP and the AMD HD Audio controller |
-| `custom.audio.deferCs35l41FirmwareReload` | `false` | Kernel patch that queues the CS35L41 firmware reload of system resume on `system_freezable_wq` |
 | `custom.peripherals.enable` | `false` | Bluetooth, Logitech receivers, G915 X key remapping |
 | `custom.rgb.enable` | `false` | OpenRGB SDK server on `127.0.0.1:6742`, confined to the Logitech LIGHTSPEED receiver |
-| `custom.power.enable` | `false` | Power profiles without CPU driver, `powersave` governor, delayed hibernation, hibernation on critical battery |
-| `custom.power.disarmInputWakeupForHibernation` | `false` | `system-sleep` hook that disables the wakeup of USB HID devices during hibernation |
+| `custom.power.enable` | `false` | Power profiles without CPU driver, `powersave` governor, power-off on critical battery, hibernation forbidden |
 | `custom.diskHealth.enable` | `false` | smartd with desktop notifications |
-| `custom.mt7921.enable` | `false` | mt76 Wi-Fi modules rebuilt with the MT7921 hibernation restore patch |
 
 ### Upstream documentation
 

@@ -345,7 +345,6 @@ installation. Rollback path: none for Arch; the state worth keeping is in the ar
 | Wi-Fi through iwd | `nmcli device wifi list` | No |
 | BitLocker volume opens read-only | `sudo systemctl start mnt-windows.mount` | No |
 | GPU inside a container | `sudo docker run --rm --device nvidia.com/gpu=all ubuntu nvidia-smi` | No |
-| Hibernation resumes the session | `systemctl hibernate` | No |
 | Nix fixed-output builds pass OpenSnitch | See the command below the table | Yes |
 | No boot entry targets the Windows disk | `sudo bootctl list` | Yes |
 | Firmware boots the registered entry | `sudo bootctl status` lists `Linux Boot Manager` as `active, boot-order` | Yes |

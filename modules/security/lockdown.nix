@@ -60,10 +60,6 @@ in
           assertion = cfg.moduleCertificates;
           message = "custom.lockdown.mode = \"${cfg.mode}\" refuses every module the kernel image cannot verify: enable custom.lockdown.moduleCertificates";
         }
-        {
-          assertion = config.custom.hibernationAuth.enable or false;
-          message = "custom.lockdown.mode = \"${cfg.mode}\" disables hibernation unless the image is authenticated: enable custom.hibernationAuth";
-        }
       ];
 
       boot.kernelParams = [

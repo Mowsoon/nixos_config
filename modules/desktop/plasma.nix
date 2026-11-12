@@ -29,24 +29,7 @@ in
     };
 
     systemd = {
-      services = {
-        "drkonqi-coredump-processor@".enable = false;
-        restart-lock-screen-after-hibernation = {
-          description = "Replace the lock screen that went through hibernation";
-          after = [
-            "systemd-hibernate.service"
-            "systemd-suspend-then-hibernate.service"
-          ];
-          wantedBy = [
-            "systemd-hibernate.service"
-            "systemd-suspend-then-hibernate.service"
-          ];
-          serviceConfig = {
-            Type = "oneshot";
-            ExecStart = "-${pkgs.procps}/bin/pkill -f kscreenlocker_greet";
-          };
-        };
-      };
+      services."drkonqi-coredump-processor@".enable = false;
       user = {
         services = {
           drkonqi-coredump-pickup.enable = false;

@@ -11,7 +11,6 @@
     ../../modules/hardware/rgb.nix
     ../../modules/hardware/power.nix
     ../../modules/hardware/disk-health.nix
-    ../../modules/hardware/mt7921.nix
   ];
 
   boot = {
@@ -36,15 +35,10 @@
     audio = {
       enable = true;
       serializeAmdAcpResume = true;
-      deferCs35l41FirmwareReload = true;
     };
     peripherals.enable = true;
     rgb.enable = true;
-    power = {
-      enable = true;
-      disarmInputWakeupForHibernation = true;
-    };
+    power.enable = true;
     diskHealth.enable = true;
-    mt7921.enable = true;
   };
 }

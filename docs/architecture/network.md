@@ -129,10 +129,10 @@ been synchronised once. systemd-timesyncd is disabled by the chrony module, and 
 rule disappears with it.
 
 chrony does not measure the RTC drift (`enableRTCTrimming = false`): its measurement turns on RTC
-interrupts that this AMD platform reports as wakeup events, which cancel or hang hibernation
-([incident](../incidents/hibernation-wakeup-hang.md)). `rtcsync` lets the kernel copy the
-synchronised time to the RTC every 11 minutes instead, so Windows and the firmware read a correct
-clock.
+interrupts that this AMD platform reports as wakeup events, which cancelled or hung hibernation
+when it was used ([incident](../incidents/hibernation-wakeup-hang.md)). `rtcsync` lets the kernel
+copy the synchronised time to the RTC every 11 minutes instead, so Windows and the firmware read a
+correct clock.
 
 A wrong clock must not lock the machine out of the network: DNS over TLS rejects every certificate
 while the clock is off, and chrony needs DNS to reach its servers. The addresses of the stable NTS

@@ -73,24 +73,6 @@ only the `freezer` level passes here, because virtiofs, which carries the Nix st
 cannot suspend or freeze its devices (`virtio_pci_freeze returns -95`). Testing the deeper levels
 needs a VM without virtiofs.
 
-`kernel-hibernate` is a variant of `vm-test` that hibernates for real. Its Nix store is an EROFS
-image built at each start, and it shares no directory, so every device can freeze. A raw swap
-file holds the image, and `resume=` names it on the kernel command line, since the VM boots
-without firmware variables. The root disk image, the swap file and the state of the emulated TPM
-live in `~/src/kernel/build/vm-hibernate` and survive from one run to the next: the TPM keeps its
-seeds, as the TPM of the workstation does across a hibernation, and the image written by one run
-is there for the next. The test is built into the VM and chosen by the `hibernation_test=`
-parameter. `hibernate` creates the swap if needed, prints the state of the machine and a random
-token, and hibernates; when the image is restored, the same process prints the token again.
-`check` prints the state and the kernel messages about a resume attempt. `pcr` tries to extend
-and reset PCRs 23 and 16 from user space and to point an IMA rule at them, the checks of the
-`hibernation-tpm-auth` branch, which reserves PCR 23 to the kernel. Every line of the test starts
-with `HIBERNATE-TEST` on the serial console, and the VM powers itself off at the end. The kernel
-needs the options of `kernel/hibernate.config` on top of the VM build: EROFS for the store, and
-the lockdown LSM, which the VM build lacks. The messages of the boot kernel about a restored
-image appear only on the console, since the restored kernel keeps its own log; `loglevel=7`
-shows them.
-
 A BPF program written for CO-RE (compile once, run everywhere) includes `vmlinux.h`, a header
 that declares every type of a kernel, dumped from its BTF. The `vmlinux-h` package of the flake
 dumps it from the `vmlinux` of the kernel that hephaestus builds, so it follows the kernel of the
@@ -314,51 +296,6 @@ linux-next, often not named in `MAINTAINERS`: `git ls-remote --heads <url>` list
    cat ~/src/kernel/build/<tree>-selftests/pm-test.log
    ```
 
-## How to test hibernation in the VM
-
-Blast radius: none outside `~/src/kernel/build`. Rollback path: removing
-`~/src/kernel/build/vm-hibernate` gives a blank root disk, swap file and TPM at the next run.
-
-1. In the kernel shell, configure a hibernation build of the tree from its VM build.
-
-   ```bash
-   mkdir -p ../build/<tree>-hibernate
-   cp ../build/<tree>-vm/.config ../build/<tree>-hibernate/.config
-   scripts/kconfig/merge_config.sh -m -O ../build/<tree>-hibernate ../build/<tree>-hibernate/.config ~/.config/nixos/kernel/hibernate.config
-   make O=../build/<tree>-hibernate olddefconfig
-   make O=../build/<tree>-hibernate -j"$(nproc)"
-   ```
-
-2. Hibernate the VM, then boot it again to restore the image. Each run powers itself off.
-
-   ```bash
-   nix run ~/.config/nixos#kernel-hibernate-vm -- ~/src/kernel/build/<tree>-hibernate hibernate | grep -a HIBERNATE-TEST
-   QEMU_KERNEL_PARAMS="loglevel=7" nix run ~/.config/nixos#kernel-hibernate-vm -- ~/src/kernel/build/<tree>-hibernate check | grep -a -E 'HIBERNATE-TEST|PM: '
-   ```
-
-   The second run prints `resumed with token <token>`, with the token of the first run. When
-   the image is not restored, it prints the `check` lines instead.
-
-3. To check that a changed image is refused, hibernate without compression, so that the page
-   reaches the loader intact, overwrite one page of the swap file with random data, then boot.
-
-   ```bash
-   QEMU_KERNEL_PARAMS="hibernate=nocompress" nix run ~/.config/nixos#kernel-hibernate-vm -- ~/src/kernel/build/<tree>-hibernate hibernate | grep -a HIBERNATE-TEST
-   dd if=/dev/urandom of=$HOME/src/kernel/build/vm-hibernate/swap.img bs=4096 seek=<page> count=1 conv=notrunc
-   nix run ~/.config/nixos#kernel-hibernate-vm -- ~/src/kernel/build/<tree>-hibernate check | grep -a HIBERNATE-TEST
-   ```
-
-   `<page>` is a page inside the image: the image starts at page 1 of the file, so `51200`,
-   200 MiB in, falls inside an image of a few hundred MiB. `du -h` on the swap file shows how
-   much of it the image fills.
-
-4. To test under lockdown, add `lockdown=integrity` to `QEMU_KERNEL_PARAMS` for both runs.
-5. To check the PCR reservation, run the `pcr` step.
-
-   ```bash
-   nix run ~/.config/nixos#kernel-hibernate-vm -- ~/src/kernel/build/<tree>-hibernate pcr | grep -a HIBERNATE-TEST
-   ```
-
 ## How to generate vmlinux.h
 
 1. Build the header of the hephaestus kernel.
@@ -450,19 +387,13 @@ Blast radius: none; nothing leaves the machine.
 | `~/.local/share/patatt` | patatt key pair `hephaestus` that signs submitted patches, never committed |
 | `~/src/kernel/build/<tree>-vm` | VM build: modules of the VM built in, all others disabled |
 | `~/src/kernel/build/<tree>-debug` | VM build with the debug fragment |
-| `~/src/kernel/build/<tree>-hibernate` | VM build with the hibernation fragment |
-| `~/src/kernel/build/vm-hibernate` | Root disk image, swap file and TPM state of the `kernel-hibernate` VM, kept between runs |
 | `~/src/kernel/build/vm` | Disk image of the `kernel-test` VM |
 | `~/src/kernel/build/<tree>-selftests` | VM build with the selftest fragments, the installed tests and their logs |
 | `~/src/kernel/build/vm/run` | Copy of the last script run by `kernel-vm` |
 | `kernel/run-selftests.sh` | Runs the installed kselftests, or those of `kselftest.args`, and the `pm_test` levels; results in the build directory |
 | `kernel/debug.config` | Debug fragment: KASAN, lockdep, atomic sleep check, kmemleak and their self-tests |
-| `kernel/hibernate.config` | Hibernation fragment: EROFS for the store image, lockdown LSM |
 | `hosts/kernel-test/default.nix` | VM booted on the build |
 | `tools/kernel-vm.nix` | `kernel-vm` launcher |
-| `hosts/kernel-hibernate/default.nix` | VM that hibernates, booted on the build |
-| `hosts/kernel-hibernate/scenario.sh` | Steps `hibernate`, `check` and `pcr` of the hibernation tests |
-| `tools/kernel-hibernate-vm.nix` | `kernel-hibernate-vm` launcher |
 | `tools/vmlinux-h.nix` | `vmlinux.h` of the hephaestus kernel, dumped with `bpftool` |
 | `tools/kernel-vm-modules.nix` | NixOS test that records the `lsmod` of the VM |
 
@@ -485,12 +416,3 @@ Blast radius: none; nothing leaves the machine.
 | Patch rehearsal, `asus-armoury` wording fix | `checkpatch.pl --strict`: 0 errors, 0 warnings, 0 checks; `get_maintainer.pl`: the ASUS WMI and x86 platform maintainers, `platform-driver-x86` and `linux-kernel`; `git send-email --dry-run`: `Dry-OK`; `b4 send -o`: one message written, nothing sent |
 | `pm_test`, `freeze` and `disk` | `freezer` passes; `devices` and beyond fail on virtiofs (`-95`) |
 | Debug boot with `kunit.enable=1` | `# kasan: pass:60 fail:0 skip:16 total:76`, 164 KASAN reports |
-
-| Measure, 2026-11-07, mainline `7.4-rc1` with the `hibernation-tpm-auth` branch | Value |
-| --- | --- |
-| Hibernation build from the VM build, `-j32` | 279 s, the lockdown LSM rebuilding most objects |
-| Hibernation and restore, LZO | 86 995 pages, 348 MB read in 0.87 s; TPM check about 19 ms on swtpm; same token after the restore |
-| One page of an uncompressed image overwritten | `PM: Image authentication failed`, `resume failed (-129)`; the boot goes on and the swap signature is back |
-| `lockdown=integrity` | Hibernation available, `/dev/snapshot` refused, image authenticated and restored |
-| `pcr` step | PCR 23 extend and reset refused (`Operation not permitted`), PCR 16 allowed; IMA rule on PCR 23 refused (`Invalid argument`), on PCR 16 accepted |
-| Image written back after its restore | Authenticated and restored again: a replay is not detected |

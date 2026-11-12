@@ -392,7 +392,7 @@ Each directory is one domain; its `default.nix` imports the files of the domain.
 | `nkern` | Booted and current kernel paths; a difference means a reboot is pending |
 | `cdn` | `cd ~/.config/nixos` |
 | `n` | `nvim` |
-| `hib`, `sus`, `sush` | `systemctl hibernate`, `suspend`, `suspend-then-hibernate` |
+| `sus` | `systemctl suspend` |
 | `jb`, `jbu <unit>` | `journalctl -b`, `journalctl -b --no-pager -u <unit>` |
 | `jke` | `journalctl -k -p err`, kernel messages of priority error and above |
 | `gst`, `gaa`, `gcm` | `git status`, `git add -A`, `git commit -m` |

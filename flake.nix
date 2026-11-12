@@ -106,10 +106,6 @@
           modules = [ ./hosts/kernel-test ];
         };
 
-        kernel-hibernate = nixpkgs.lib.nixosSystem {
-          modules = [ ./hosts/kernel-hibernate ];
-        };
-
         hephaestus = nixpkgs.lib.nixosSystem {
           specialArgs = { inherit inputs; };
           modules = hephaestusModules;
@@ -147,16 +143,6 @@
           program = nixpkgs.lib.getExe (
             pkgs.callPackage ./tools/kernel-vm.nix {
               vm = self.nixosConfigurations.kernel-test.config.system.build.vm;
-            }
-          );
-        };
-
-        kernel-hibernate-vm = {
-          type = "app";
-          meta.description = "Boot a kernel build directory in the kernel-hibernate VM and run one hibernation test step";
-          program = nixpkgs.lib.getExe (
-            pkgs.callPackage ./tools/kernel-hibernate-vm.nix {
-              vm = self.nixosConfigurations.kernel-hibernate.config.system.build.vm;
             }
           );
         };

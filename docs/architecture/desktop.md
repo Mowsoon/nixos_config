@@ -18,10 +18,6 @@ through `plasma-fallback-session-restore` for the others. Both read `loginMode` 
 group of `ksmserverrc`; the Plasma module sets it to `emptySession` in `/etc/xdg/ksmserverrc` and
 marks it immutable with `[$i]`, so neither the user file nor the Plasma settings can change it.
 
-After every resume from hibernation, a service kills the lock screen greeter, which the screen
-locker restarts at once: the greeter carried through hibernation makes the next sleep hang
-([incident](../incidents/sleep-after-hibernation-deadlock.md)).
-
 The DrKonqi crash handler is disabled: `drkonqi-coredump-processor@` and the user units that pick
 up pending crashes, launch the dialog and send reports to the KDE Sentry server are masked, so a
 crash leaves a core dump for `coredumpctl` and no dialog. The handler crashed in a loop at every

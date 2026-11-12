@@ -43,40 +43,32 @@ Kernel lockdown runs in `integrity` mode, set on the command line with `module.s
 `custom.lockdown.mode`. Root can no longer change the running kernel: a module loads only with a
 signature that the kernel image verifies, and `/dev/mem`, `/dev/port`, writes to the CPU
 model-specific registers, `kexec`, writes to debugfs and ACPI table overrides are refused.
-Hibernation stays available because the TPM authenticates its image; the user-space snapshot
-device `/dev/snapshot` is refused. Root still reads kernel memory: lockdown protects the integrity
+Hibernation is refused too: nothing authenticates an image that root could write to the swap
+device. Root still reads kernel memory: lockdown protects the integrity
 of the kernel, not its secrets. The `confidentiality` mode, which would also forbid that, is not
 used: it refuses the kernel memory reads of eBPF and kprobes, which the process monitor of
 OpenSnitch and bpftrace rely on. The move was checked under a lockdown raised at runtime before it
-reached the command line: hibernation and resume, Dynamic Boost under load, Docker with the GPU,
+reached the command line: Dynamic Boost under load, Docker with the GPU,
 OpenSnitch, asusd, Wi-Fi and Bluetooth, without a refused operation.
 
 nixpkgs signs every module, in-tree or built outside the kernel such as the NVIDIA driver, with
 kmodigest: each module carries a signature by a single-module certificate derived from its own
 content, and no private key exists anywhere. The certificates are useless while the kernel image
 does not hold them: the kernel then marks itself tainted (`E`) at the first module it loads.
-`custom.lockdown.moduleCertificates` rebuilds the image of the running kernel, patches included,
-with the certificates of the whole module tree, and points the boot loader at that image instead
-of the one nixpkgs built. Only the image is rebuilt, not the kernel. Every module the system ships
+`custom.lockdown.moduleCertificates` rebuilds the image of the running kernel with the
+certificates of the whole module tree, and points the boot loader at that image instead of the one
+nixpkgs built. Only the image is rebuilt, not the kernel. Every module the system ships
 then verifies; a module from anywhere else does not. The certificates come from the kernel and from
 every `.ko.cer` file of the module tree, not from the `modules.cer` that `aggregateModules` merges:
 it assumes that `modules.dep` lists the external modules last, and keeps only the last entries, so
-most of the NVIDIA and mt76 modules stayed unverified.
+most of the NVIDIA modules stayed unverified.
 
-Hibernation images are authenticated by the TPM, as described in
-[Boot chain](boot-chain.md#hibernation-image-authentication), which keeps hibernation available
-under lockdown. The guarantee: root, in a running boot, cannot make the kernel resume an
-image that the patched kernel did not write, forged or changed offline. It does not cover:
-
-- an earlier image of the same kernel, written back to the swapfile, which resumes once more,
-  with the lockdown mode of the boot that wrote it;
-- a boot of a kernel that is not locked down or that root signs, since root can unseal the
-  Secure Boot keys of a running boot: such a kernel can authenticate any image, as it can do
-  anything else;
-- the header, the page lists and the compressed data, parsed before the image is authenticated;
-  image pages only go to memory that the boot kernel does not use.
-
-PCR 23 is reserved to the kernel: a program that extends or resets it gets `EPERM`.
+Lockdown holds within one boot. The Secure Boot keys are sealed to PCR 15, which has its unlocked
+value in the running system, so root can decrypt them, sign a kernel of its choice, add it to the
+pcrlock policy and reboot into it ([Boot chain](boot-chain.md)). Against root, lockdown turns a
+silent change of the running kernel into a change that needs a reboot. Hibernation was kept for a
+while with local kernel patches that authenticated the image with the TPM; they were removed on
+2026-11-12 for that reason and to bring the kernel back to the binary cache.
 
 ### Audit
 
@@ -259,7 +251,6 @@ audit or test artefact cannot be committed by accident.
 | `security.sudo.execWheelOnly` | `true` |
 | `nix.settings.allowed-users` | `@wheel` |
 | Kernel lockdown | `integrity` |
-| PCR 23 | Reserved to the kernel (`custom.hibernationAuth`) |
 
 ### Options
 
@@ -267,7 +258,7 @@ audit or test artefact cannot be committed by accident.
 | --- | --- | --- |
 | `custom.hardening.enable` | `false` | AppArmor, audit, sysctls, wheel-only sudo and Nix daemon |
 | `custom.lockdown.moduleCertificates` | `false` | Rebuilds the kernel image with the kmodigest certificates of the module tree and boots that image |
-| `custom.lockdown.mode` | `"none"` | `integrity` adds `lockdown=integrity` and `module.sig_enforce=1`; asserts `moduleCertificates` and `custom.hibernationAuth` |
+| `custom.lockdown.mode` | `"none"` | `integrity` adds `lockdown=integrity` and `module.sig_enforce=1`; asserts `moduleCertificates` |
 | `custom.hardening.serviceExposure` | `{ }` | Highest accepted exposure score of each system service, set by its owner module |
 | `custom.supplyChain.enable` | `false` | Vulnerability scan of the running system once a week, at the first hour on mains power and online, with a desktop notification |
 | `custom.supplyChain.alertScore` | `"9.0"` | Lowest CVSS score singled out by the diff of two closures and the summary of a scan |

@@ -11,8 +11,6 @@ flowchart LR
   flake[flake.nix] --> vmtest[vm-test]
   vmtest --> kerneltest[kernel-test]
   kerneltest --> kernelvm[nix run .#kernel-vm]
-  vmtest --> kernelhib[kernel-hibernate]
-  kernelhib --> kernelhibvm[nix run .#kernel-hibernate-vm]
   flake --> heph[hephaestus]
   flake --> rehearsal[hephaestus-rehearsal]
   flake --> installer[installer]
@@ -268,7 +266,6 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | --- | --- |
 | `nixosConfigurations.vm-test` | Minimal QEMU machine |
 | `nixosConfigurations.kernel-test` | `vm-test` with root logged in on the console, `~/src/kernel` shared writable on `/src`, and the command of `systemd.run=` started at boot |
-| `nixosConfigurations.kernel-hibernate` | `vm-test` with its store in an EROFS image, no shared directory, a TPM, a swap disk and the hibernation test of `hibernation_test=` started at boot |
 | `nixosConfigurations.hephaestus` | Workstation |
 | `nixosConfigurations.hephaestus-rehearsal` | Workstation retargeted at the virtual disk of the rehearsal |
 | `nixosConfigurations.installer` | Live image used to install the workstation |
@@ -276,7 +273,6 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `apps.x86_64-linux.rehearsal` | Boots the installer image against a blank disk |
 | `apps.x86_64-linux.supply-chain` | Builds the workstation candidate without activating it, writes the SBOMs of a system closure, scans it for published vulnerabilities and compares two closures |
 | `apps.x86_64-linux.kernel-vm` | Boots a kernel build directory in the `kernel-test` VM, optionally runs a script there and powers off |
-| `apps.x86_64-linux.kernel-hibernate-vm` | Boots a kernel build directory in the `kernel-hibernate` VM for one hibernation test step, keeping its disks and TPM between runs |
 | `packages.x86_64-linux.rgb-effects` | Keyboard lighting effects daemon, built with its tests |
 | `packages.x86_64-linux.theme-recolor` | Theme recolouring tool, built with its tests |
 | `packages.x86_64-linux.pcr0-predict` | PCR 0 predictor of firmware capsules, built with its tests |
@@ -354,7 +350,6 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `custom.windowsVolume` | `core/windows-volume.nix` | Read-only access to the BitLocker volume |
 | `custom.secureBoot` | `security/secure-boot.nix` | lanzaboote signing |
 | `custom.luks` | `security/luks.nix` | TPM2 unlock of the root container |
-| `custom.hibernationAuth` | `security/hibernation-auth.nix` | Kernel patches that authenticate hibernation images with the TPM and reserve PCR 23 |
 | `custom.lockdown` | `security/lockdown.nix` | Kernel image rebuilt with the module certificates, kernel lockdown mode |
 | `custom.pcrlock` | `security/pcrlock.nix` | systemd-pcrlock policy locked to the firmware code, PCR 0 predictor, PCR 12 seal renewed after each policy change |
 | `custom.hardening` | `security/hardening.nix` | Kernel and privilege hardening |
@@ -364,9 +359,8 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `custom.audio` | `hardware/audio.nix` | PipeWire |
 | `custom.peripherals` | `hardware/peripherals.nix` | Bluetooth, Logitech receivers, G915 X key remapping |
 | `custom.rgb` | `hardware/rgb.nix` | OpenRGB SDK server for the Logitech keyboard |
-| `custom.power` | `hardware/power.nix` | Power profiles, delayed hibernation, critical battery |
+| `custom.power` | `hardware/power.nix` | Power profiles, critical battery, hibernation forbidden |
 | `custom.diskHealth` | `hardware/disk-health.nix` | SMART monitoring |
-| `custom.mt7921` | `hardware/mt7921.nix` | Patched mt76 Wi-Fi modules |
 | `custom.network.manager` | `network/manager.nix` | NetworkManager with iwd |
 | `custom.network.dns` | `network/dns.nix` | systemd-resolved over TLS |
 | `custom.network.firewall` | `network/firewall.nix` | nftables firewall |

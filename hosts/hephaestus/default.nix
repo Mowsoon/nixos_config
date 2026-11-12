@@ -26,7 +26,6 @@ in
     ../../modules/desktop/theme.nix
     ../../modules/security/secure-boot.nix
     ../../modules/security/luks.nix
-    ../../modules/security/hibernation-auth.nix
     ../../modules/security/lockdown.nix
     ../../modules/security/pcrlock.nix
     ../../modules/security/hardening.nix
@@ -54,8 +53,6 @@ in
       tpm2Unlock = true;
       measureVolumeKey = true;
     };
-
-    hibernationAuth.enable = true;
 
     lockdown = {
       moduleCertificates = true;
@@ -174,7 +171,6 @@ in
         diskSerial = lib.mkForce "windows-test";
       };
     };
-    systemd.sleep.settings.Sleep.HibernateMode = "reboot";
     users.users.mowsoon = {
       hashedPasswordFile = lib.mkForce null;
       hashedPassword = lib.fileContents ../vm-test/mowsoon.hash;

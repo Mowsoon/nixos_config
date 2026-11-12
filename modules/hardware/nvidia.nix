@@ -96,22 +96,6 @@ in
         ];
         UMask = "0077";
       };
-
-      nvidia-suspend-then-hibernate = {
-        description = "NVIDIA system suspend-then-hibernate actions";
-        path = [ pkgs.kbd ];
-        serviceConfig = {
-          Type = "oneshot";
-          ExecStart = "${driver}/bin/nvidia-sleep.sh 'suspend'";
-        };
-        before = [ "systemd-suspend-then-hibernate.service" ];
-        requiredBy = [ "systemd-suspend-then-hibernate.service" ];
-      };
-
-      nvidia-resume = {
-        after = [ "systemd-suspend-then-hibernate.service" ];
-        requiredBy = [ "systemd-suspend-then-hibernate.service" ];
-      };
     };
 
     environment = {

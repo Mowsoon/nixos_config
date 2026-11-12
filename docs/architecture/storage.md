@@ -56,7 +56,8 @@ module that owns it.
 
 Two swap devices coexist. zram, a compressed swap device in RAM sized to half of the memory, has
 priority 100 and absorbs memory pressure without disk I/O. The 32 GiB swapfile in `@swap` has
-priority 0: it receives pages only when zram is full, and it holds the hibernation image.
+priority 0: it receives pages only when zram is full. It once held the hibernation image too;
+hibernation is off since 2026-11-12 (see [Hardware](hardware.md#sleep-and-power)).
 
 The kernel settings follow from zram being the first swap device. zswap is disabled on the kernel
 command line, so pages are not compressed twice. `vm.swappiness = 180` makes the kernel prefer
@@ -103,9 +104,8 @@ input, as described in [Architecture overview](overview.md#private-input). The s
 of `hosts/hephaestus/disko.nix` comes from the same file.
 
 Read-only access is a safety rule, not a preference: writing to an NTFS volume that Windows left
-in a hibernated or fast-startup state corrupts it, and a Linux hibernation with the volume mounted
-would do the same in the other direction. No key file is stored on Linux, so root access to Linux
-does not grant access to Windows.
+in a hibernated or fast-startup state corrupts it. No key file is stored on Linux, so root access
+to Linux does not grant access to Windows.
 
 ## How to persist a new directory
 
@@ -243,7 +243,7 @@ does not grant access to Windows.
 | Device | Size | Priority | Role |
 | --- | --- | --- | --- |
 | zram, zstd | 50 % of RAM | 100 | First swap target |
-| `/swap/swapfile` | 32 GiB | 0 | Overflow and hibernation image |
+| `/swap/swapfile` | 32 GiB | 0 | Overflow |
 
 ### Kernel memory settings
 

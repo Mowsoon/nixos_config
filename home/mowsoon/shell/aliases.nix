@@ -29,9 +29,7 @@ in
     cdn = "cd ~/.config/nixos";
     n = "nvim";
 
-    hib = "systemctl hibernate";
     sus = "systemctl suspend";
-    sush = "systemctl suspend-then-hibernate";
 
     jb = "journalctl -b";
     jbu = "journalctl -b --no-pager -u";
