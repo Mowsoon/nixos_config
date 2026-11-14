@@ -1,0 +1,210 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Mowsoon <Mowsoon@users.noreply.github.com>
+Date: Sat, 14 Nov 2026 00:00:00 +0000
+Subject: [PATCH] preload: skip restarts only while Discord shares audio
+
+The hook keeps the LocalUser objects that received a successful
+SignalOnSoundshare(true) in a set, and removes them only on
+SignalOnSoundshare(false). In Discord 1.0.168 a soundshare also ends
+through LocalUser::SignalOnSoundshareEnded(), which clears the state
+without calling SignalOnSoundshare(false). The object then stays in
+the set, and the next legitimate start of the same LocalUser is
+suppressed, which leaves the stream without audio. A LocalUser
+allocated at the address of a freed one hits the same problem.
+
+Read Discord's own soundshare state instead. SignalOnSoundshare()
+stores its argument in a byte of LocalUser and
+SignalOnSoundshareEnded() clears that byte. Take the offset of the
+byte from these two stores, 0x1f30 in Discord 1.0.168, and leave the
+function unpatched when either store is missing or when they disagree.
+A start is suppressed only while the byte says that a soundshare is
+already active.
+---
+ native/preload.cc | 80 ++++++++++++++++++++++++++++++++++-------------
+ 1 file changed, 59 insertions(+), 21 deletions(-)
+
+diff --git a/native/preload.cc b/native/preload.cc
+index 8b85034..3c1cfe0 100644
+--- a/native/preload.cc
++++ b/native/preload.cc
+@@ -21,7 +21,6 @@
+ #include <optional>
+ #include <string>
+ #include <string_view>
+-#include <unordered_set>
+ #include <vector>
+ 
+ #include <fcntl.h>
+@@ -33,9 +32,13 @@ namespace {
+ 
+ constexpr std::string_view kVoiceModuleName = "discord_voice.node";
+ constexpr std::string_view kSignalSymbol = "_ZN7discord5media9LocalUser18SignalOnSoundshareEb";
++constexpr std::string_view kEndedSymbol = "_ZN7discord5media9LocalUser23SignalOnSoundshareEndedEv";
+ constexpr std::size_t kAbsoluteJumpSize = 14;
+ constexpr std::size_t kMaximumPatchSize = 48;
+ constexpr std::size_t kTrampolineSize = 4096;
++constexpr std::size_t kFlagScanLimit = 48;
++constexpr std::size_t kFlagStoreSize = 7;
++constexpr std::uint32_t kMaximumFlagOffset = 0x100000;
+ 
+ using DlopenFn = void* (*)(const char*, int);
+ using SignalOnSoundshareFn = void (*)(void*, bool);
+@@ -48,8 +51,6 @@ struct SymbolLocation {
+ 
+ struct HookState {
+   std::mutex install_mutex;
+-  std::mutex users_mutex;
+-  std::unordered_set<void*> active_users;
+   std::atomic<bool> installed{false};
+   std::atomic<std::uint64_t> hit_count{0};
+   std::atomic<std::uint64_t> blocked_count{0};
+@@ -59,6 +60,7 @@ struct HookState {
+   std::array<std::uint8_t, kMaximumPatchSize> patch{};
+   std::size_t patch_size = 0;
+   std::uintptr_t load_bias = 0;
++  std::size_t active_offset = 0;
+   SignalOnSoundshareFn original = nullptr;
+ };
+ 
+@@ -124,8 +126,9 @@ std::optional<std::vector<std::uint8_t>> ReadFile(const char* path, std::string*
+   return bytes;
+ }
+ 
+-std::optional<SymbolLocation> FindSignalSymbol(
++std::optional<SymbolLocation> FindSymbol(
+     const std::vector<std::uint8_t>& bytes,
++    std::string_view wanted,
+     std::string* error) {
+   const auto* header = ObjectAt<Elf64_Ehdr>(bytes, 0);
+   if (header == nullptr || std::memcmp(header->e_ident, ELFMAG, SELFMAG) != 0 ||
+@@ -168,7 +171,7 @@ std::optional<SymbolLocation> FindSignalSymbol(
+       const char* name = strings + symbol.st_name;
+       const std::size_t remaining = string_section.sh_size - symbol.st_name;
+       const void* terminator = std::memchr(name, '\0', remaining);
+-      if (terminator == nullptr || std::string_view(name) != kSignalSymbol) continue;
++      if (terminator == nullptr || std::string_view(name) != wanted) continue;
+ 
+       const Elf64_Shdr& code_section = sections[symbol.st_shndx];
+       if (symbol.st_value < code_section.sh_addr) break;
+@@ -188,7 +191,7 @@ std::optional<SymbolLocation> FindSignalSymbol(
+     }
+   }
+ 
+-  *error = "LocalUser::SignalOnSoundshare(bool) was not found in the ELF symbol table";
++  *error = std::string(wanted) + " was not found in the ELF symbol table";
+   return std::nullopt;
+ }
+ 
+@@ -327,6 +330,41 @@ std::optional<std::size_t> FindSafePatchSize(
+   return decoded;
+ }
+ 
++std::optional<std::uint32_t> FindFlagStore(
++    const std::vector<std::uint8_t>& bytes,
++    const SymbolLocation& symbol,
++    bool from_register) {
++  const std::size_t limit = std::min(symbol.size, kFlagScanLimit);
++  for (std::size_t cursor = 0; cursor + kFlagStoreSize <= limit; ++cursor) {
++    const std::uint8_t* at = bytes.data() + symbol.file_offset + cursor;
++    std::uint32_t displacement = 0;
++    if (from_register && at[0] == 0x40 && at[1] == 0x88 && at[2] == 0xB7) {
++      std::memcpy(&displacement, at + 3, sizeof(displacement));
++      return displacement;
++    }
++    if (!from_register && at[0] == 0xC6 && at[1] == 0x87 && at[6] == 0x00) {
++      std::memcpy(&displacement, at + 2, sizeof(displacement));
++      return displacement;
++    }
++  }
++  return std::nullopt;
++}
++
++std::optional<std::size_t> FindActiveOffset(
++    const std::vector<std::uint8_t>& bytes,
++    const SymbolLocation& signal,
++    std::string* error) {
++  const auto ended = FindSymbol(bytes, kEndedSymbol, error);
++  if (!ended) return std::nullopt;
++  const auto stored = FindFlagStore(bytes, signal, true);
++  const auto cleared = FindFlagStore(bytes, *ended, false);
++  if (!stored || !cleared || *stored != *cleared || *stored == 0 || *stored >= kMaximumFlagOffset) {
++    *error = "the soundshare state flag of LocalUser was not found";
++    return std::nullopt;
++  }
++  return static_cast<std::size_t>(*stored);
++}
++
+ void WriteAbsoluteJump(std::uint8_t* destination, std::uintptr_t target) {
+   // jmp qword ptr [rip+0], followed by the 64-bit destination. Unlike movabs
+   // rax/jmp rax, this form preserves every register from the copied prologue.
+@@ -355,17 +393,13 @@ bool MakeWritable(void* address, std::size_t length, int protection, std::string
+ extern "C" void SignalOnSoundshareReplacement(void* local_user, bool success) {
+   g_state.hit_count.fetch_add(1, std::memory_order_relaxed);
+ 
+-  if (local_user != nullptr) {
+-    std::scoped_lock lock(g_state.users_mutex);
+-    if (success) {
+-      if (!g_state.active_users.insert(local_user).second) {
+-        const std::uint64_t blocked = g_state.blocked_count.fetch_add(1, std::memory_order_relaxed) + 1;
+-        Log(false, "suppressed duplicate soundshare restart (%llu total)",
+-            static_cast<unsigned long long>(blocked));
+-        return;
+-      }
+-    } else {
+-      g_state.active_users.erase(local_user);
++  if (success && local_user != nullptr) {
++    const auto* active = static_cast<const std::uint8_t*>(local_user) + g_state.active_offset;
++    if (__atomic_load_n(active, __ATOMIC_ACQUIRE) != 0) {
++      const std::uint64_t blocked = g_state.blocked_count.fetch_add(1, std::memory_order_relaxed) + 1;
++      Log(false, "suppressed duplicate soundshare restart (%llu total)",
++          static_cast<unsigned long long>(blocked));
++      return;
+     }
+   }
+ 
+@@ -378,8 +412,10 @@ bool InstallHook(const char* module_path, std::uintptr_t load_bias, std::string*
+ 
+   const auto file = ReadFile(module_path, error);
+   if (!file) return false;
+-  const auto symbol = FindSignalSymbol(*file, error);
++  const auto symbol = FindSymbol(*file, kSignalSymbol, error);
+   if (!symbol) return false;
++  const auto active_offset = FindActiveOffset(*file, *symbol, error);
++  if (!active_offset) return false;
+ 
+   const std::size_t available = std::min(symbol->size, kMaximumPatchSize);
+   const auto patch_size = FindSafePatchSize(file->data() + symbol->file_offset, available, error);
+@@ -417,6 +453,7 @@ bool InstallHook(const char* module_path, std::uintptr_t load_bias, std::string*
+       reinterpret_cast<char*>(trampoline_bytes),
+       reinterpret_cast<char*>(trampoline_bytes + *patch_size + kAbsoluteJumpSize));
+ 
++  g_state.active_offset = *active_offset;
+   g_state.original = reinterpret_cast<SignalOnSoundshareFn>(trampoline);
+   if (!MakeWritable(target, *patch_size, PROT_READ | PROT_WRITE | PROT_EXEC, error)) {
+     g_state.original = nullptr;
+@@ -442,10 +479,11 @@ bool InstallHook(const char* module_path, std::uintptr_t load_bias, std::string*
+   g_state.patch_size = *patch_size;
+   g_state.load_bias = load_bias;
+   g_state.installed.store(true, std::memory_order_release);
+-  Log(false, "active for %s (symbol 0x%llx, %zu-byte prologue)",
++  Log(false, "active for %s (symbol 0x%llx, %zu-byte prologue, state flag +0x%zx)",
+       module_path,
+       static_cast<unsigned long long>(symbol->virtual_address),
+-      *patch_size);
++      *patch_size,
++      *active_offset);
+   return true;
+ }
+ 
+@@ -529,7 +567,7 @@ extern "C" __attribute__((visibility("default"))) int discord_soundshare_fix_ins
+   } else {
+     const auto file = ReadFile(module_path, &error);
+     if (file) {
+-      const auto symbol = FindSignalSymbol(*file, &error);
++      const auto symbol = FindSymbol(*file, kSignalSymbol, &error);
+       if (symbol) {
+         const auto decoded = FindSafePatchSize(
+             file->data() + symbol->file_offset,
+-- 
+2.56.0
+

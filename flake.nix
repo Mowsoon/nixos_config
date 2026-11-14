@@ -80,6 +80,7 @@
       pcr0Predict = pkgs.callPackage ./pkgs/pcr0-predict/package.nix { };
       pcr12 = pkgs.callPackage ./pkgs/pcr12/package.nix { };
       pcrlockEsp = pkgs.callPackage ./pkgs/pcrlock-esp/package.nix { };
+      discordSoundshareFix = pkgs.callPackage ./pkgs/discord-soundshare-fix/package.nix { };
       drills = import ./tests/drills { inherit pkgs inputs; };
       hephaestusModules = [
         disko.nixosModules.disko
@@ -181,6 +182,7 @@
         pcr0-predict = pcr0Predict;
         inherit pcr12;
         pcrlock-esp = pcrlockEsp;
+        discord-soundshare-fix = discordSoundshareFix;
         kernel-vm-modules = pkgs.callPackage ./tools/kernel-vm-modules.nix { };
         vmlinux-h = pkgs.callPackage ./tools/vmlinux-h.nix {
           inherit (self.nixosConfigurations.hephaestus.config.boot.kernelPackages) kernel;
@@ -208,6 +210,7 @@
         pcrlock-esp = pcrlockEsp;
         pcrlock-esp-ruff = pcrlockEsp.lints.ruff;
         pcrlock-esp-mypy = pcrlockEsp.lints.mypy;
+        discord-soundshare-fix = discordSoundshareFix;
         supply-chain = supplyChain;
         update-gate = updateGate;
         service-exposure = pkgs.callPackage ./tools/service-exposure.nix {

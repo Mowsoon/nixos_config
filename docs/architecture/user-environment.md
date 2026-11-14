@@ -222,7 +222,10 @@ modules receive the flake inputs through `extraSpecialArgs`.
 
 ### Desktop applications and user services
 
-Discord, Spotify, LibreOffice, Solaar and Obsidian are user packages. Obsidian renders the Markdown
+Discord, Spotify, LibreOffice, Solaar and Obsidian are user packages. Discord starts through a
+wrapper that preloads `discord-soundshare-fix`, which stops it from restarting the audio of a
+screen share each time a new playback stream appears
+([incident](../incidents/discord-stream-audio-restarts.md)). Obsidian renders the Markdown
 notes edited in Neovim, Mermaid graphs and callouts included, and reloads a file when Neovim saves
 it; Home Manager keeps its in-app updates off in `~/.config/obsidian/obsidian.json`, so its version
 is the one of nixpkgs, and leaves the list of vaults to the application. Two user services run in
