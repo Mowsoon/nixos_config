@@ -28,7 +28,7 @@ writeShellApplication {
 
     repo=$(git -C "''${1:-.}" rev-parse --show-toplevel)
     base=$(git -C "$repo" rev-parse HEAD)
-    run="$repo/docs/incidents/builds/$(date +%Y-%m-%d-%H%M%S)"
+    run="''${XDG_STATE_HOME:-$HOME/.local/state}/update-gate/$(date +%Y-%m-%d-%H%M%S)"
     worktree="''${XDG_CACHE_HOME:-$HOME/.cache}/update-gate/worktree"
     toplevel="nixosConfigurations.${host}.config.system.build.toplevel"
     phases=(update eval build check diff)

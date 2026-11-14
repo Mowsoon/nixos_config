@@ -12,10 +12,10 @@ The gate starts from the last commit, `HEAD`. Uncommitted changes are left out o
 and the run records that it left them out. The worktree lives under `~/.cache/update-gate/` and
 is removed at the end of the run.
 
-Each run writes its traces under `docs/incidents/builds/<date>/`, a directory that Git ignores:
-the traces are evidence for the triage, not history. What the triage concludes goes into a
-tracked incident report under `docs/incidents/`, which cites public evidence (a nixpkgs commit, a
-pull request, a Hydra build) rather than the local traces.
+Each run writes its traces under `~/.local/state/update-gate/<date>/`, outside the repository:
+the traces are evidence for the triage, not documentation. What the triage concludes goes into an
+incident report under `docs/incidents/`, which cites public evidence (a nixpkgs commit, a pull
+request, a Hydra build) rather than the local traces.
 
 The run goes through five phases. A failed phase stops only the phases that depend on it:
 
@@ -55,7 +55,7 @@ on a timer.
    passed, read `diff.txt` and `warnings.txt`, then accept the update.
 
    ```bash
-   cp docs/incidents/builds/<run>/flake.lock flake.lock
+   cp ~/.local/state/update-gate/<run>/flake.lock flake.lock
    ```
 
    `<run>` is the date of the run, printed as `Report in ...`.

@@ -133,7 +133,7 @@ third-party themes first installed with "Get New...". Their original files live 
 input under `themes/`, so their choice and their source stay out of this public repository. The
 theme module builds each of them into the store with `pkgs/theme-recolor`, a Python tool of this
 repository that rewrites their fixed colours towards the roles of the palette; the drawing is
-never changed.
+never changed ([incident](../incidents/theme-recolor-pillow-13.md)).
 
 - Every colour keeps its OKLab lightness. A grey takes the tint of the `base00` to `base07` ramp at
   that lightness; a colour takes the hue of the role of its family (red, orange, yellow, green,
