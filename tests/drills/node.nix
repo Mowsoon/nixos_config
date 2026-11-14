@@ -17,7 +17,13 @@ let
   otherFirmware = extendModules {
     modules = [
       {
-        virtualisation.efi.OVMF = pkgs.OVMFFull.override { httpSupport = false; };
+        virtualisation.efi.OVMF = pkgs.OVMF.override {
+          secureBoot = true;
+          httpSupport = false;
+          tpmSupport = true;
+          tlsSupport = true;
+          msVarsTemplate = true;
+        };
       }
     ];
   };

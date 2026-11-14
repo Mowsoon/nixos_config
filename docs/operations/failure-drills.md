@@ -41,7 +41,9 @@ anything.
 The `firmware-update` drill needs a firmware whose code differs. The drill machine carries a second
 VM start script, identical except for an OVMF build without HTTP boot; the drill swaps the start
 command of the machine between two boots, and the disk, the firmware variables and the TPM state
-carry over, as they would across a firmware update.
+carry over, as they would across a firmware update. That build is OVMF with the arguments of
+`OVMFFull` and HTTP boot turned off, since `OVMFFull` no longer passes its overrides to OVMF
+([incident](../incidents/ovmffull-by-name-drills.md)).
 
 The drills are flake checks named `drill-<name>`. Nix caches a passed drill and runs it again only
 when one of its inputs changes: nixpkgs, disko, lanzaboote, impermanence or one of the imported
