@@ -81,7 +81,7 @@ writeShellApplication {
     elif [ ! -s "$run/inputs.tsv" ]; then
       for name in eval build check diff; do skip "$name" "every input is already up to date"; done
     else
-      phase eval nix eval --show-trace --raw "$worktree#$toplevel.drvPath"
+      phase eval env NIX_CONFIG="keep-going = true" nix eval --show-trace --raw "$worktree#$toplevel.drvPath"
       if [ "''${status[eval]}" = ok ]; then
         phase build env NIX_CONFIG="keep-going = true" supply-chain build "$worktree"
         phase check nix flake check --keep-going "$worktree"
@@ -96,8 +96,13 @@ writeShellApplication {
       fi
     fi
 
-    grep -E '^(trace: )?(evaluation )?warning:' "$run/eval.log" > "$run/warnings.txt" 2> /dev/null || true
-    cat "$run/build.log" "$run/check.log" 2> /dev/null | awk -v q="'" '
+    logs=()
+    for name in eval build check; do
+      if [ -e "$run/$name.log" ]; then logs+=("$run/$name.log"); fi
+    done
+    cat /dev/null "''${logs[@]}" | grep -E '^(trace: )?evaluation warning:|^trace: warning:' > "$run/warnings.txt" || true
+    cat /dev/null "''${logs[@]}" | grep -E 'Could not resolve host|Timeout was reached|unable to download' > "$run/network.txt" || true
+    cat /dev/null "''${logs[@]}" | awk -v q="'" '
       /builder for / { split($0, part, q); print part[2]; next }
       /Cannot build / { split($0, part, q); drv = part[2]; next }
       /Reason:/ && drv != "" { if ($0 !~ /dependenc/) print drv; drv = "" }
@@ -117,7 +122,7 @@ writeShellApplication {
     echo >&2
     echo "Report in $run" >&2
     jq -r '.phases[] | "  \(.phase): \(.status)"' "$run/summary.json" >&2
-    echo "  inputs changed: $(wc -l < "$run/inputs.tsv"), warnings: $(wc -l < "$run/warnings.txt"), failed derivations: $(wc -l < "$run/failed-drvs.txt")" >&2
+    echo "  inputs changed: $(wc -l < "$run/inputs.tsv"), warnings: $(wc -l < "$run/warnings.txt"), failed derivations: $(wc -l < "$run/failed-drvs.txt"), network errors: $(wc -l < "$run/network.txt")" >&2
     if jq -e '[.phases[] | select(.status == "failed")] | length > 0' "$run/summary.json" > /dev/null; then
       exit 1
     fi

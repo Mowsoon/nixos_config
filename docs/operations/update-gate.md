@@ -22,10 +22,16 @@ The run goes through five phases. A failed phase stops only the phases that depe
 | Phase | Depends on | What it does |
 | --- | --- | --- |
 | `update` | | `nix flake update` in the worktree |
-| `eval` | `update` | Evaluates the system derivation with `--show-trace`; the warnings are kept, since a renamed or deprecated option warns before it breaks |
+| `eval` | `update` | Evaluates the system derivation with `--show-trace` and `keep-going`; the warnings are kept, since a renamed or deprecated option warns before it breaks |
 | `build` | `eval` | Builds the candidate with `supply-chain build`, with `keep-going` so that every failing derivation is reached, not only the first |
 | `check` | `eval` | `nix flake check --keep-going`: the lints, the service exposure thresholds and the failure drills |
 | `diff` | `build` | `supply-chain diff` of the running system against the candidate: packages and vulnerabilities |
+
+The evaluation already builds most of the system. The KWin graft (`system.replaceDependencies`)
+reads the references of the system before the graft while it evaluates, an import from
+derivation, so Nix builds that system during the `eval` phase. A package that fails to build
+therefore usually fails the `eval` phase, and the `build` phase only adds the graft. The failed
+derivations are collected from the logs of every phase.
 
 The candidate is linked as `result` in the run directory. The link is a garbage collector root:
 the candidate stays in the store as long as the run directory exists.
@@ -70,6 +76,7 @@ on a timer.
    | A derivation in `failed-drvs.txt`, from nixpkgs | Upstream | Its Hydra job and the open nixpkgs issues and pull requests |
    | A local patch or override that no longer applies | Configuration | The upstream change that moved the patched code |
    | A failure drill or another flake check | Behaviour change | The drill log, read case by case |
+   | `Could not resolve host`, `Timeout was reached`, listed in `network.txt` | Transient | None: run the gate again once the network is back |
 
    The log of each failed derivation is in `logs/`.
 
@@ -93,6 +100,7 @@ on a timer.
 | `flake.lock`, `flake.lock.old` | The lock of the candidate and the lock of the base commit |
 | `<phase>.log` | The full output of a phase |
 | `warnings.txt` | The evaluation warnings |
+| `network.txt` | The downloads that failed or timed out; a failed derivation that only fetches is then likely transient |
 | `failed-drvs.txt` | The derivations whose builder failed, without those that failed only through a dependency |
 | `logs/<derivation>.log` | The build log of each failed derivation |
 | `result` | The candidate system, when it built |
