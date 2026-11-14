@@ -89,6 +89,11 @@
       ];
       hephaestus = self.nixosConfigurations.hephaestus.config;
       supplyChain = hephaestus.custom.supplyChain.package;
+      updateGate = pkgs.callPackage ./tools/update-gate.nix {
+        nix = hephaestus.nix.package;
+        host = hephaestus.networking.hostName;
+        inherit supplyChain;
+      };
       runLint =
         name: tool: command:
         pkgs.runCommand "${name}-check" { nativeBuildInputs = [ tool ]; } ''
@@ -153,6 +158,12 @@
           program = nixpkgs.lib.getExe supplyChain;
         };
 
+        update-gate = {
+          type = "app";
+          meta.description = "Update the flake inputs in a Git worktree, then evaluate, build, check and diff the candidate without activating it";
+          program = nixpkgs.lib.getExe updateGate;
+        };
+
         rehearsal = {
           type = "app";
           meta.description = "Boot the installer ISO against a blank NVMe disk, Secure Boot firmware in setup mode and a TPM";
@@ -198,6 +209,7 @@
         pcrlock-esp-ruff = pcrlockEsp.lints.ruff;
         pcrlock-esp-mypy = pcrlockEsp.lints.mypy;
         supply-chain = supplyChain;
+        update-gate = updateGate;
         service-exposure = pkgs.callPackage ./tools/service-exposure.nix {
           systemd = hephaestus.systemd.package;
           units = hephaestus.environment.etc."systemd/system".source;

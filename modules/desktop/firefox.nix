@@ -1,7 +1,6 @@
 {
   config,
   lib,
-  inputs,
   ...
 }:
 let
@@ -13,7 +12,6 @@ let
     private_browsing = true;
     default_area = "navbar";
   };
-  allowedThirdParties = import "${inputs.nixos-private}/firefox/ublock-allowances.nix";
   ublockDefaultRules = [
     "behind-the-scene * * noop"
     "behind-the-scene * image noop"
@@ -23,16 +21,6 @@ let
     "behind-the-scene * 3p-script noop"
     "behind-the-scene * 3p-frame noop"
   ];
-  ublockMediumMode = [
-    "* * 3p-script block"
-    "* * 3p-frame block"
-  ];
-  ublockAllowances = lib.concatLists (
-    lib.mapAttrsToList (site: hosts: map (host: "${site} ${host} * noop") hosts) allowedThirdParties
-  );
-  ublockDynamicRules = lib.concatStringsSep "\n" (
-    ublockDefaultRules ++ ublockMediumMode ++ ublockAllowances
-  );
 in
 {
   options.custom.firefox = {
@@ -84,11 +72,13 @@ in
         };
 
         "3rdparty".Extensions."uBlock0@raymondhill.net" = {
-          adminSettings = builtins.toJSON { dynamicFilteringString = ublockDynamicRules; };
+          adminSettings = builtins.toJSON {
+            dynamicFilteringString = lib.concatStringsSep "\n" ublockDefaultRules;
+          };
           userSettings = [
             [
               "advancedUserEnabled"
-              "true"
+              "false"
             ]
           ];
           toOverwrite.filterLists = [
@@ -105,6 +95,15 @@ in
             "urlhaus-1"
             "curben-phishing"
             "plowe-0"
+            "fanboy-cookiemonster"
+            "ublock-cookies-easylist"
+            "fanboy-social"
+            "easylist-annoyances"
+            "easylist-chat"
+            "fanboy-ai-suggestions"
+            "easylist-newsletters"
+            "easylist-notifications"
+            "ublock-annoyances"
           ];
         };
       };

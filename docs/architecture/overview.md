@@ -23,6 +23,7 @@ flowchart LR
   iso --> app[nix run .#rehearsal]
   heph --> vm[nix run .#hephaestus-vm]
   heph --> supply[nix run .#supply-chain]
+  supply --> gate[nix run .#update-gate]
 ```
 
 ### Modules and hosts
@@ -63,15 +64,15 @@ are persisted, through the contribution list above. The details are in [Storage]
 
 ### Private input
 
-The repository is public. Data that reveals personal habits or identifies the hardware, such as
-the sites whose third-party scripts uBlock Origin lets through or the serial numbers and partition
-UUID of the disks, lives in a separate private repository, `nixos_private`, declared as the
-`nixos-private` input with `flake = false`. Nix fetches it as a plain source tree over SSH, and
-modules import plain Nix files from it. Each file holds values only, an attribute set without
-functions; the public side builds everything derived from them, such as the `/dev/disk/...`
-paths. The input also holds unmodified third-party files, the Plasma themes under `themes/`: the
-public side copies them into derivations and recolours them, and never imports them as Nix.
-`flake.lock` pins its revision and hash, so only the repository URL and a commit hash are public.
+The repository is public. Data that reveals personal habits or identifies the hardware, such as the
+serial numbers and partition UUID of the disks, lives in a separate private repository,
+`nixos_private`, declared as the `nixos-private` input with `flake = false`. Nix fetches it as a
+plain source tree over SSH, and modules import plain Nix files from it. Each file holds values only,
+an attribute set without functions; the public side builds everything derived from them, such as the
+`/dev/disk/...` paths. The input also holds unmodified third-party files, the Plasma themes under
+`themes/`: the public side copies them into derivations and recolours them, and never imports them
+as Nix. `flake.lock` pins its revision and hash, so only the repository URL and a commit hash are
+public.
 
 Fetching the input needs a GitHub SSH key that can read the private repository. The key belongs
 to the user, not to root: the flake is evaluated as the user, and only the activation runs with
@@ -193,19 +194,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 ## How to build without the private repository
 
 1. Create a directory holding every file of the private input layout listed in the Reference
-   section. The first file maps sites to the third parties uBlock Origin lets through; an empty
-   attribute set `{ }` allows none.
-
-   ```nix
-   {
-     "<site>" = [ "<host>" ];
-   }
-   ```
-
-   `<site>` is the registrable domain of a visited site, `<host>` the registrable domain of a
-   third party whose scripts and frames that site needs.
-
-   The second file identifies the disks of the target machine.
+   section. The first file identifies the disks of the target machine.
 
    ```nix
    {
@@ -272,6 +261,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `apps.x86_64-linux.hephaestus-vm` | Boots the workstation VM from a blank firmware and TPM |
 | `apps.x86_64-linux.rehearsal` | Boots the installer image against a blank disk |
 | `apps.x86_64-linux.supply-chain` | Builds the workstation candidate without activating it, writes the SBOMs of a system closure, scans it for published vulnerabilities and compares two closures |
+| `apps.x86_64-linux.update-gate` | Updates the flake inputs in a Git worktree, then evaluates, builds, checks and diffs the candidate without activating it |
 | `apps.x86_64-linux.kernel-vm` | Boots a kernel build directory in the `kernel-test` VM, optionally runs a script there and powers off |
 | `packages.x86_64-linux.rgb-effects` | Keyboard lighting effects daemon, built with its tests |
 | `packages.x86_64-linux.theme-recolor` | Theme recolouring tool, built with its tests |
@@ -279,7 +269,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `packages.x86_64-linux.pcr12` | PCR 12 check and TPM2 reseal tool, built with its tests |
 | `packages.x86_64-linux.vmlinux-h` | `vmlinux.h` of the hephaestus kernel, for CO-RE BPF programs |
 | `packages.x86_64-linux.kernel-vm-modules` | `lsmod` of the `kernel-test` VM on the NixOS kernel, input of `localyesconfig` |
-| `checks.x86_64-linux` | `nixfmt`, `statix`, `deadnix`, `rgb-effects`, `rgb-effects-ruff`, `rgb-effects-mypy`, `theme-recolor`, `theme-recolor-ruff`, `theme-recolor-mypy`, `pcr0-predict`, `pcr0-predict-ruff`, `pcr0-predict-mypy`, `pcr12`, `pcr12-ruff`, `pcr12-mypy`, `service-exposure`, `supply-chain`, one `drill-<name>` per failure drill |
+| `checks.x86_64-linux` | `nixfmt`, `statix`, `deadnix`, `rgb-effects`, `rgb-effects-ruff`, `rgb-effects-mypy`, `theme-recolor`, `theme-recolor-ruff`, `theme-recolor-mypy`, `pcr0-predict`, `pcr0-predict-ruff`, `pcr0-predict-mypy`, `pcr12`, `pcr12-ruff`, `pcr12-mypy`, `service-exposure`, `supply-chain`, `update-gate`, one `drill-<name>` per failure drill |
 | `formatter.x86_64-linux` | `nixfmt-tree` |
 | `devShells.x86_64-linux.default` | `nixfmt-tree`, `statix`, `deadnix`, `mkpasswd` |
 | `devShells.x86_64-linux.kernel` | Toolchain of the zen kernel, clang, llvm and lld, pahole, bpftool, libbpf, QEMU, b4, git with `send-email`, the zen configuration as `KERNEL_BASE_CONFIG`, and `CLANG` set to `clang-bpf` for the BPF selftests |
@@ -305,7 +295,6 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 
 | File | Imported by | Schema |
 | --- | --- | --- |
-| `firefox/ublock-allowances.nix` | `modules/desktop/firefox.nix` | Attribute set: site registrable domain to list of third-party registrable domains |
 | `hosts/hephaestus/hardware-ids.nix` | `hosts/hephaestus/disko.nix`, `hosts/hephaestus/default.nix` | Attribute set of strings: `systemDisk`, `windowsPartuuid`, `windowsDiskSerial` |
 | `themes/desktoptheme/<name>/` | `modules/desktop/theme.nix` | Plasma style directory as installed by "Get New..." |
 | `themes/aurorae/<name>/` | `modules/desktop/theme.nix` | Aurorae decoration directory |

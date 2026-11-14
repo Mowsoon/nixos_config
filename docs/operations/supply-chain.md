@@ -185,7 +185,8 @@ by package and reason, with an expiry six months after the triage.
    ```
 
    To build the candidate of another checkout, such as a Git worktree, pass its directory:
-   `nix run .#supply-chain -- build <directory>`.
+   `nix run .#supply-chain -- build <directory>`. After a `nix flake update`, the
+   [update gate](update-gate.md) builds, checks and diffs the candidate in one run.
 
 2. Write its SBOMs.
 

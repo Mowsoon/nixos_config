@@ -60,7 +60,7 @@ The machine reaches a login prompt in the terminal. Press `Ctrl+A` then `X` to s
 | Command | Effect |
 | --- | --- |
 | `nix fmt` | Formats every Nix file with `nixfmt` |
-| `nix flake check` | Runs `nixfmt --check`, `statix`, `deadnix`, the tests, `ruff` and `mypy` of `rgb-effects`, `theme-recolor`, `pcr0-predict` and `pcr12`, the service exposure thresholds, the build of the supply chain app, the failure drills, and evaluates every host |
+| `nix flake check` | Runs `nixfmt --check`, `statix`, `deadnix`, the tests, `ruff` and `mypy` of `rgb-effects`, `theme-recolor`, `pcr0-predict` and `pcr12`, the service exposure thresholds, the build of the supply chain and update gate apps, the failure drills, and evaluates every host |
 | `nix develop` | Opens a shell with `nixfmt-tree`, `statix`, `deadnix` and `mkpasswd` |
 | `nix run .#kernel-vm -- <build directory>` | Boots a kernel build in the `kernel-test` VM |
 | `nix develop .#kernel` | Opens the kernel development shell described in [kernel development](docs/operations/kernel-development.md) |
@@ -81,3 +81,4 @@ The machine reaches a login prompt in the terminal. Press `Ctrl+A` then `X` to s
 | `nixos-rebuild switch --flake .#hephaestus --elevate sudo` | Runs a new generation and makes it the boot default |
 | `nixos-rebuild boot --flake .#hephaestus --elevate sudo` | Makes a new generation the boot default without running it |
 | `nix flake update` | Moves `flake.lock` to the latest `nixos-unstable` revision |
+| `nix run .#update-gate` | Updates the inputs in a Git worktree and evaluates, builds, checks and diffs the candidate without activating it, as described in [update gate](docs/operations/update-gate.md) |

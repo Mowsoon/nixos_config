@@ -238,17 +238,16 @@ Bitwarden session live there and are not declared.
   They update themselves and are not pinned by the flake, which keeps security fixes flowing.
 - The uBlock Origin filter lists are set through the extension managed storage. The declared list
   replaces the whole local selection; the "My filters" pane stays available.
-- uBlock Origin runs in medium mode: third-party scripts and frames are blocked on every site. A
-  site that needs one gets a `noop` rule for that third-party host on that site only. A `noop`
-  rule lifts the medium-mode block alone, so the filter lists keep blocking trackers served by the
-  allowed host.
-- The per-site allowances name the sites the user visits, so they live in the private input
-  described in [Architecture overview](overview.md#private-input), not in this repository.
-- uBlock Origin evaluates dynamic rules only in advanced user mode, which is declared on as well.
-  It also shows the per-host cells used to set `noop` rules in the popup.
-- The dynamic rules ("My rules") are declared and overwrite the local ones at every Firefox start.
-  A rule saved with the padlock in the popup is lost at the next start; a fix becomes permanent
-  only once declared.
+- uBlock Origin runs in easy mode: the filter lists alone decide what is blocked, and no site
+  needs a fix by hand. Third-party scripts and frames that no list knows load normally; Firefox
+  strict tracking protection and its cookie partitioning cover part of that gap. A site broken by
+  a list is fixed upstream by the list maintainers, or turned off for that site with the power
+  button of the popup.
+- The annoyance lists hide cookie notices, social widgets, newsletter, chat and notification
+  prompts.
+- The dynamic rules ("My rules") are declared as the uBlock Origin defaults and overwrite the
+  local ones at every Firefox start, so a block rule set in the popup never outlives a restart.
+  Advanced user mode is declared off, which hides the per-host cells of the popup.
 - DuckDuckGo is the default search engine, in normal and private windows.
 - Telemetry, studies, sponsored shortcuts, stories and suggestions are disabled.
 
@@ -475,43 +474,6 @@ binaries are the `.<name>-wrapped` files behind the nixpkgs wrappers. The full l
 
 5. Apply the configuration and restart Firefox.
 
-## How to allow a third party on a site broken by medium mode
-
-1. On the broken page, open the uBlock Origin popup and expand the per-host list.
-2. Set the blocked third-party host to `noop` (the grey cell) for this site, without clicking the
-   padlock: the rule lasts for the session only.
-3. Reload the page. Repeat for the next host until the page works, keeping the fewest hosts.
-4. Add the hosts to `firefox/ublock-allowances.nix` in the clone of the private repository,
-   keyed by the site. The sites a user visits are personal data: they never go into this public
-   repository, its documentation or its commit messages.
-
-   ```nix
-   {
-     "<site>" = [
-       "<host>"
-     ];
-   }
-   ```
-
-   `<site>` is the registrable domain of the visited site, `<host>` the registrable domain of the
-   third party set to `noop`.
-
-5. Commit and push the private repository, then move the pinned revision of the input in this
-   repository. The input is fetched over SSH with the key of the user, so this runs without
-   `sudo`.
-
-   ```bash
-   nix flake update nixos-private
-   ```
-
-6. Apply the configuration and restart Firefox twice. uBlock Origin reads its cached copy of the
-   managed settings at start and refreshes the cache afterwards, so new rules apply from the
-   second start.
-
-When the blocked hosts are not obvious, the built-in browser of the Claude desktop app, which runs
-without uBlock Origin, lists every script and frame a page loads. The third-party ones that are
-not advertising or tracking are the hosts to allow.
-
 ## How to allow the keyboard to follow full screen windows
 
 1. Ask for the grant; Plasma opens its screen sharing dialog.
@@ -598,15 +560,13 @@ not advertising or tracking are the hosts to allow.
 
 | uBlock Origin dynamic rules | Effect |
 | --- | --- |
-| `behind-the-scene * ... noop` | uBlock Origin defaults, kept because the declared set replaces all rules |
-| `* * 3p-script block` | Third-party scripts blocked everywhere |
-| `* * 3p-frame block` | Third-party frames blocked everywhere |
-| `<site> <host> * noop` | One per entry of `firefox/ublock-allowances.nix` in the private input |
+| `behind-the-scene * ... noop` | uBlock Origin defaults, the only rules declared |
 
 | uBlock Origin filter lists | Tokens |
 | --- | --- |
 | Stock defaults | `user-filters`, `ublock-filters`, `ublock-badware`, `ublock-privacy`, `ublock-unbreak`, `ublock-quick-fixes`, `easylist`, `easyprivacy`, `urlhaus-1`, `plowe-0` |
 | Added | `adguard-spyware-url` (tracking parameters), `block-lan` (public sites reaching the LAN), `curben-phishing` |
+| Annoyances | `fanboy-cookiemonster`, `ublock-cookies-easylist`, `fanboy-social`, `easylist-annoyances`, `easylist-chat`, `fanboy-ai-suggestions`, `easylist-newsletters`, `easylist-notifications`, `ublock-annoyances` |
 
 ### Theme
 
@@ -765,7 +725,7 @@ not advertising or tracking are the hosts to allow.
 | Plasma theme colours | <https://develop.kde.org/docs/plasma/theme/theme-colors/> |
 | Firefox policies | <https://mozilla.github.io/enterprise-admin-reference/reference/policies/> |
 | uBlock Origin managed settings | <https://github.com/gorhill/uBlock/wiki/Deploying-uBlock-Origin:-configuration> |
-| uBlock Origin medium mode | <https://github.com/gorhill/uBlock/wiki/Blocking-mode:-medium-mode> |
+| uBlock Origin easy mode | <https://github.com/gorhill/uBlock/wiki/Blocking-mode:-easy-mode> |
 | `programs.firefox` | <https://search.nixos.org/options?channel=unstable&query=programs.firefox> |
 | plasma-manager | <https://github.com/nix-community/plasma-manager> |
 | plasma-manager options | <https://nix-community.github.io/plasma-manager/options.html> |
