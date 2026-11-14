@@ -100,7 +100,9 @@ writeShellApplication {
     for name in eval build check; do
       if [ -e "$run/$name.log" ]; then logs+=("$run/$name.log"); fi
     done
-    cat /dev/null "''${logs[@]}" | grep -E '^(trace: )?evaluation warning:|^trace: warning:' > "$run/warnings.txt" || true
+    cat /dev/null "''${logs[@]}" | grep -E '^(trace: )?evaluation warning:|^trace: warning:' | sort -u > "$run/warnings.txt" || true
+    cat /dev/null "''${logs[@]}" | grep -E '^ *error: ' | sed 's/^ *//' \
+      | grep -vE '^error: (Cannot build|some errors were encountered|build of .* failed)' | sort -u > "$run/errors.txt" || true
     cat /dev/null "''${logs[@]}" | grep -E 'Could not resolve host|Timeout was reached|unable to download' > "$run/network.txt" || true
     cat /dev/null "''${logs[@]}" | awk -v q="'" '
       /builder for / { split($0, part, q); print part[2]; next }
@@ -122,7 +124,7 @@ writeShellApplication {
     echo >&2
     echo "Report in $run" >&2
     jq -r '.phases[] | "  \(.phase): \(.status)"' "$run/summary.json" >&2
-    echo "  inputs changed: $(wc -l < "$run/inputs.tsv"), warnings: $(wc -l < "$run/warnings.txt"), failed derivations: $(wc -l < "$run/failed-drvs.txt"), network errors: $(wc -l < "$run/network.txt")" >&2
+    echo "  inputs changed: $(wc -l < "$run/inputs.tsv"), warnings: $(wc -l < "$run/warnings.txt"), errors: $(wc -l < "$run/errors.txt"), failed derivations: $(wc -l < "$run/failed-drvs.txt"), network errors: $(wc -l < "$run/network.txt")" >&2
     if jq -e '[.phases[] | select(.status == "failed")] | length > 0' "$run/summary.json" > /dev/null; then
       exit 1
     fi

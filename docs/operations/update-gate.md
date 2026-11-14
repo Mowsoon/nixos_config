@@ -99,7 +99,8 @@ on a timer.
 | `inputs.tsv` | Each input that moved, with its previous and new revision and date |
 | `flake.lock`, `flake.lock.old` | The lock of the candidate and the lock of the base commit |
 | `<phase>.log` | The full output of a phase |
-| `warnings.txt` | The evaluation warnings |
+| `warnings.txt` | The evaluation warnings, each once |
+| `errors.txt` | The distinct error messages, such as an evaluation error that fails a check without any failed derivation |
 | `network.txt` | The downloads that failed or timed out; a failed derivation that only fetches is then likely transient |
 | `failed-drvs.txt` | The derivations whose builder failed, without those that failed only through a dependency |
 | `logs/<derivation>.log` | The build log of each failed derivation |
