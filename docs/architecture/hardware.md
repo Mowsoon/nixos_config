@@ -9,7 +9,9 @@ profiles with the modules under `modules/hardware/`.
 
 ### Kernel and CPU
 
-The kernel is the zen variant (`linuxPackages_zen`), tuned for desktop latency. The CPU runs the
+The kernel is the zen variant (`linuxPackages_zen`), tuned for desktop latency; its releases carry
+the zen scheduler patches, which can break where mainline does not
+([incident](../incidents/zen-7.3.4-zen1-bh-worker-panic.md)). The CPU runs the
 `amd-pstate` driver in active mode, and power-profiles-daemon switches between the power saver,
 balanced and performance profiles. `kvm-amd` is loaded for virtual machines.
 

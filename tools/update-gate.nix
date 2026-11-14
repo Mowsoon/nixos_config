@@ -104,9 +104,13 @@ writeShellApplication {
     cat /dev/null "''${logs[@]}" | grep -E '^ *error: ' | sed 's/^ *//' \
       | grep -vE '^error: (Cannot build|some errors were encountered|build of .* failed)' | sort -u > "$run/errors.txt" || true
     cat /dev/null "''${logs[@]}" | grep -E 'Could not resolve host|Timeout was reached|unable to download' > "$run/network.txt" || true
-    cat /dev/null "''${logs[@]}" | awk -v q="'" '
-      /builder for / { split($0, part, q); print part[2]; next }
-      /Cannot build / { split($0, part, q); drv = part[2]; next }
+    cat /dev/null "''${logs[@]}" | awk '
+      /^ *error: (builder for|Cannot build) / {
+        match($0, /\/nix\/store\/[^ ]+\.drv/)
+        drv = substr($0, RSTART, RLENGTH)
+        if ($0 ~ /builder for/) { print drv; drv = "" }
+        next
+      }
       /Reason:/ && drv != "" { if ($0 !~ /dependenc/) print drv; drv = "" }
     ' | sort -u > "$run/failed-drvs.txt"
     while read -r drv; do
