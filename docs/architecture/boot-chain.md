@@ -174,21 +174,35 @@ advance. `pcr12` does both:
 
 - `pcr12-check`, before the policy update of every boot, rebuilds the archive from the ESP and
   checks that it reproduces the PCR 12 records of the event log and the PCR itself. It proves the
-  model on this boot; without it, no slot is written.
+  model on this boot; without it, no slot is written. A rebuild does not restart it: once a policy
+  change has rewritten the ESP copy, the ESP no longer matches the event log of the running boot.
 - `pcr12 reseal`, run by `pcrlock-make-policy` after each successful policy write, so at boot and
   in every manual procedure, accepts only one credential on the ESP: the pcrlock policy copy,
   whose decrypted content must be the current `/var/lib/systemd/pcrlock.json`. It then computes
-  the next PCR 12 and, when the slot does not already match it and the current PCR 7, enrolls a
-  new slot unlocked by the current one and wipes the old one. The enrolled values are kept in
-  `/var/lib/pcr12/enrollment.json`.
+  the next PCR 12 and, when no slot already matches it and the current PCR 7, enrolls a new slot.
+  The PCR values of each slot are kept in `/var/lib/pcr12/enrollment.json`.
+
+The container holds up to two TPM2 slots. The boot slot is sealed to the PCR 12 of the running
+boot and unlocks the container for every reseal until the reboot. The next slot is sealed to the
+PCR 12 that the ESP will produce at the next boot. A reseal unlocks with the boot slot, enrolls a
+new next slot and wipes the previous one, so any number of policy changes between two reboots
+renews the seal without a key. At the next boot, the initrd tries the slots in turn: the boot
+slot fails on its PCR 12, which a TPM2 does not count as a dictionary attack, and the next slot
+unlocks. The reseal of that boot then wipes the slot left from the previous boot. `pcr12 reseal
+--ask-key` replaces every slot instead: it runs when no slot unlocks the running boot, such as
+after a TPM clear, where the boot slot still matches the PCRs but its TPM key is gone. A single slot
+sealed to the next PCR 12 would leave the running boot without a slot that unlocks, and the
+second policy change before a reboot would fail; see
+[Second reseal in one boot](../incidents/pcr12-second-reseal-same-boot.md).
 
 A credential added offline changes PCR 12, so the unseal fails and the recovery prompt shows the
 intrusion; the reseal of that boot refuses the unknown file, so it is never sealed. A file
 written while the system runs needs root, which the seal does not protect against. When the
 current slot can no longer unlock, after a boot opened with the recovery key such as a PCR 7
 change, the reseal fails and asks for `pcr12 reseal --ask-key`, which takes the recovery key.
-Every failure of the check or of the policy update is appended to `/run/pcr12/alert`, which a user
-unit reports as a desktop notification at login or as soon as it changes. Before the first TPM2
+Every failure of the check or of the policy update, at boot or in the install hook of a rebuild, is
+appended to `/run/pcr12/alert`, which a user unit reports as a desktop notification at login or as
+soon as it changes. Before the first TPM2
 enrollment, the reseal does nothing.
 
 `pcr12-check` reads only the event log, the PCRs and the ESP, all owned by root, and runs without
@@ -499,7 +513,7 @@ entry token of the installation, the machine ID here.
 | Mapping | `/dev/mapper/cryptroot` |
 | Format | LUKS2, cryptsetup defaults, 4096-byte sectors |
 | Options | `allowDiscards`, `bypassWorkqueues`, `tpm2-device=auto` |
-| Key slots | Passphrase, recovery key, TPM2 bound to the pcrlock policy, PCR 7 and PCR 12 |
+| Key slots | Passphrase, recovery key, one or two TPM2 slots bound to the pcrlock policy, PCR 7 and PCR 12 |
 | Header backup | Kept outside the machine |
 
 ### PCR measurements

@@ -11,6 +11,16 @@ let
         ];
       }
     ];
+    same-boot-reseal = [
+      {
+        boot.loader.timeout = 0;
+        custom.pcrlock.pcrs = [
+          0
+          5
+          11
+        ];
+      }
+    ];
     sealed-keys = [ { boot.loader.timeout = 0; } ];
     sealed-keys-recovery = [ { boot.loader.timeout = 0; } ];
   };
@@ -40,6 +50,7 @@ pkgs.lib.genAttrs [
   "firmware-update"
   "generation-lock"
   "rebuild-power-loss"
+  "same-boot-reseal"
   "sealed-keys"
   "sealed-keys-recovery"
   "tpm-clear"

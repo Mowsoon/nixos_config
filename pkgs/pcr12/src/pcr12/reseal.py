@@ -55,12 +55,23 @@ def check(paths: Paths) -> bytes:
     return current
 
 
-def _up_to_date(
-    enrollment: Enrollment | None, tokens: list[Token], pcr7: bytes, pcr12: bytes
-) -> bool:
-    if enrollment is None or len(tokens) != 1 or not tokens[0].sealed:
-        return False
-    return enrollment == Enrollment(pcr7.hex(), pcr12.hex(), tokens[0].policy_hash)
+@dataclass(frozen=True, slots=True)
+class Slot:
+    token: Token
+    enrollment: Enrollment | None
+
+    def seals(self, pcr7: bytes, pcr12: bytes) -> bool:
+        return self.token.sealed and self.enrollment == Enrollment(
+            pcr7.hex(), pcr12.hex(), self.token.policy_hash
+        )
+
+
+def _keyslots(slots: list[Slot]) -> list[int]:
+    return sorted(keyslot for slot in slots for keyslot in slot.token.keyslots)
+
+
+def _enrollments(slots: list[Slot]) -> list[Enrollment]:
+    return [slot.enrollment for slot in slots if slot.enrollment is not None]
 
 
 class Resealer:
@@ -75,25 +86,41 @@ class Resealer:
         allowlist.verify(
             credentials, esp.entry_credentials(), _read(paths.policy), CredsDecryptor(self._runner)
         )
-        pcr12 = measure.replay(measure.records(credentials))
+        predicted = measure.replay(measure.records(credentials))
         pcr7 = _pcr(paths, SECURE_BOOT_PCR)
         device = luks.backing_device(paths.mapping, paths.sysfs)
-        tokens = self._tokens(device)
-        if not tokens and not ask_key:
+        slots = self._slots(device)
+        if not slots and not ask_key:
             logger.info("no TPM2 slot is enrolled, nothing to reseal")
             return False
-        if _up_to_date(state.load(paths.state), tokens, pcr7, pcr12):
-            logger.info("the TPM2 slot is already sealed to PCR 12 %s", pcr12.hex())
+        current = [slot for slot in slots if slot.seals(pcr7, _pcr(paths, CREDENTIALS_PCR))]
+        target = [slot for slot in slots if slot.seals(pcr7, predicted)]
+        if target:
+            self._prune(device, slots, current + target)
+            logger.info("the TPM2 slot is already sealed to PCR 12 %s", predicted.hex())
             return False
         self._require_verified_model()
-        self._enroll(device, pcr12, ask_key=ask_key)
-        token = self._sealed_token(device)
-        state.save(paths.state, Enrollment(pcr7.hex(), pcr12.hex(), token.policy_hash))
-        logger.info("sealed the TPM2 slot to PCR 7 and PCR 12 %s", pcr12.hex())
+        kept = [] if ask_key else current
+        stale = [slot for slot in slots if slot not in kept]
+        self._enroll(device, predicted, _keyslots(stale), ask_key=ask_key)
+        token = self._new_token(device, slots)
+        sealed = Enrollment(pcr7.hex(), predicted.hex(), token.policy_hash)
+        state.save(paths.state, [*_enrollments(kept), sealed])
+        logger.info("sealed a TPM2 slot to PCR 7 and PCR 12 %s", predicted.hex())
         return True
 
-    def _tokens(self, device: Path) -> list[Token]:
-        return luks.tpm2_tokens(self._runner.run(luks.dump_command(device)))
+    def _slots(self, device: Path) -> list[Slot]:
+        known = {enrollment.policy_hash: enrollment for enrollment in state.load(self._paths.state)}
+        tokens = luks.tpm2_tokens(self._runner.run(luks.dump_command(device)))
+        return [Slot(token, known.get(token.policy_hash)) for token in tokens]
+
+    def _prune(self, device: Path, slots: list[Slot], kept: list[Slot]) -> None:
+        stale = [slot for slot in slots if slot not in kept]
+        if not stale:
+            return
+        self._runner.run(luks.wipe_command(device, _keyslots(stale)))
+        state.save(self._paths.state, _enrollments([slot for slot in slots if slot in kept]))
+        logger.info("removed the TPM2 slots %s left from a previous boot", _keyslots(stale))
 
     def _require_verified_model(self) -> None:
         try:
@@ -103,20 +130,27 @@ class Resealer:
         if verified != _pcr(self._paths, CREDENTIALS_PCR).hex():
             raise ModelError("the check of this boot does not match the current PCR 12")
 
-    def _enroll(self, device: Path, pcr12: bytes, *, ask_key: bool) -> None:
-        command = luks.enroll_command(device, self._paths.policy, pcr12, ask_key=ask_key)
+    def _enroll(self, device: Path, pcr12: bytes, wipe: list[int], *, ask_key: bool) -> None:
+        command = luks.enroll_command(device, self._paths.policy, pcr12, wipe=wipe, ask_key=ask_key)
         try:
             self._runner.run(command, interactive=ask_key)
         except EnrollError as err:
             if ask_key:
                 raise
             raise EnrollError(
-                "the TPM2 slot no longer unlocks the container: run 'pcr12 reseal --ask-key'"
+                "no TPM2 slot unlocks the container in this boot: run 'pcr12 reseal --ask-key'"
                 " and type the recovery key"
             ) from err
 
-    def _sealed_token(self, device: Path) -> Token:
-        tokens = self._tokens(device)
-        if len(tokens) != 1 or not tokens[0].sealed:
-            raise EnrollError("the LUKS2 header does not hold one TPM2 slot sealed to PCR 7 and 12")
-        return tokens[0]
+    def _new_token(self, device: Path, before: list[Slot]) -> Token:
+        previous = set(_keyslots(before))
+        new = [
+            slot.token
+            for slot in self._slots(device)
+            if slot.token.sealed and not previous.intersection(slot.token.keyslots)
+        ]
+        if len(new) != 1:
+            raise EnrollError(
+                "the LUKS2 header does not hold one new TPM2 slot sealed to PCR 7 and 12"
+            )
+        return new[0]

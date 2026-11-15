@@ -86,10 +86,13 @@ let
   pcr12Command = pkgs.writeShellScriptBin "pcr12" ''
     exec ${pcr12} "$@"
   '';
+  raiseAlert = pkgs.writeShellScript "pcr12-raise-alert" ''
+    ${lib.getExe' pkgs.coreutils "mkdir"} -p ${dirOf alertFile}
+    echo "$1" >> ${alertFile}
+  '';
   recordFailure = pkgs.writeShellScript "pcr12-record-failure" ''
     if [ "$SERVICE_RESULT" != success ]; then
-      ${lib.getExe' pkgs.coreutils "mkdir"} -p ${dirOf alertFile}
-      echo "$1" >> ${alertFile}
+      exec ${raiseAlert} "$1"
     fi
   '';
   notify = pkgs.writeShellScript "pcr12-notify" ''
@@ -159,7 +162,7 @@ in
           persistence.directories = [ "/var/lib/pcrlock.d" ];
           secureBoot.postInstallCommands = ''
             if [ -e ${policy} ]; then
-              ${lib.getExe makePolicy}
+              ${lib.getExe makePolicy}${lib.optionalString cfg.lockCredentials " || { ${raiseAlert} pcrlock-make-policy; exit 1; }"}
             fi
           '';
           hardening.serviceExposure = {
@@ -177,6 +180,7 @@ in
             pcr12-check = {
               description = "Check that PCR 12 is reproduced from the ESP credentials";
               wantedBy = [ "sysinit.target" ];
+              restartIfChanged = false;
               after = [
                 "systemd-tpm2-setup.service"
                 "systemd-remount-fs.service"

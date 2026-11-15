@@ -1,4 +1,5 @@
 import json
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -13,10 +14,20 @@ class Token:
     pcrs: tuple[int, ...]
     pcrlock: bool
     policy_hash: str
+    keyslots: tuple[int, ...]
 
     @property
     def sealed(self) -> bool:
         return self.pcrlock and self.pcrs == SEALED_PCRS
+
+
+def _keyslots(raw: dict[str, object]) -> tuple[int, ...]:
+    keyslots = raw.get("keyslots", [])
+    if not isinstance(keyslots, list) or not all(
+        isinstance(keyslot, str) and keyslot.isdigit() for keyslot in keyslots
+    ):
+        raise InputError("TPM2 token has an invalid keyslot list")
+    return tuple(sorted(int(keyslot) for keyslot in keyslots))
 
 
 def _token(raw: dict[str, object]) -> Token:
@@ -26,7 +37,8 @@ def _token(raw: dict[str, object]) -> Token:
         raise InputError("TPM2 token has an invalid PCR list")
     if not isinstance(policy_hash, str):
         raise InputError("TPM2 token has an invalid policy hash")
-    return Token(tuple(sorted(pcrs)), raw.get("tpm2_pcrlock") is True, policy_hash)
+    pcrlock = raw.get("tpm2_pcrlock") is True
+    return Token(tuple(sorted(pcrs)), pcrlock, policy_hash, _keyslots(raw))
 
 
 def tpm2_tokens(metadata: bytes) -> list[Token]:
@@ -48,18 +60,30 @@ def dump_command(device: Path) -> list[str]:
     return ["cryptsetup", "luksDump", "--dump-json-metadata", str(device)]
 
 
-def enroll_command(device: Path, policy: Path, pcr12: bytes, *, ask_key: bool) -> list[str]:
+def _wipe_option(keyslots: Sequence[int]) -> list[str]:
+    if not keyslots:
+        return []
+    return ["--wipe-slot=" + ",".join(str(keyslot) for keyslot in sorted(keyslots))]
+
+
+def enroll_command(
+    device: Path, policy: Path, pcr12: bytes, *, wipe: Sequence[int], ask_key: bool
+) -> list[str]:
     command = [
         "systemd-cryptenroll",
         str(device),
         "--tpm2-device=auto",
         f"--tpm2-pcrlock={policy}",
         f"--tpm2-pcrs=7+12:sha256={pcr12.hex()}",
-        "--wipe-slot=tpm2",
+        *_wipe_option(wipe),
     ]
     if not ask_key:
         command.append("--unlock-tpm2-device=auto")
     return command
+
+
+def wipe_command(device: Path, keyslots: Sequence[int]) -> list[str]:
+    return ["systemd-cryptenroll", str(device), *_wipe_option(keyslots)]
 
 
 def backing_device(mapping: Path, sysfs: Path) -> Path:

@@ -31,9 +31,12 @@ def luks_metadata(tokens: Sequence[dict[str, object]]) -> bytes:
     return json.dumps({"keyslots": {}, "tokens": table}).encode("utf-8")
 
 
-def tpm2_token(pcrs: Sequence[int], policy_hash: str, *, pcrlock: bool = True) -> dict[str, object]:
+def tpm2_token(
+    pcrs: Sequence[int], policy_hash: str, *, pcrlock: bool = True, keyslot: int = 2
+) -> dict[str, object]:
     return {
         "type": "systemd-tpm2",
+        "keyslots": [str(keyslot)],
         "tpm2-pcrs": list(pcrs),
         "tpm2_pcrlock": pcrlock,
         "tpm2-policy-hash": policy_hash,

@@ -102,9 +102,10 @@ copy.
 
 ## How to replace an enrolled TPM2 slot
 
-Blast radius: the TPM2 slot is replaced. Rollback path: the old slot is wiped
-only once the new one is written, and the passphrase and the recovery key still
-open the container.
+Blast radius: every TPM2 slot is replaced by one new slot, including a slot
+sealed to the running boot, which cannot be trusted to unlock after a TPM clear.
+Rollback path: the old slots are wiped only once the new one is written, and the
+passphrase and the recovery key still open the container.
 
 1. Enroll the new slot, unlocked with the recovery key. The command asks for it.
 
@@ -188,7 +189,7 @@ prediction is unchanged: only the unseal message shows the clear.
 | --- | --- | --- |
 | Passphrase | Typed passphrase | disko at format time |
 | Recovery | 256-bit key printed once | `systemd-cryptenroll --recovery-key` |
-| TPM2 | Key sealed against the pcrlock policy, PCR 7 and PCR 12 | `pcr12 reseal`, after every policy change |
+| TPM2 | Key sealed against the pcrlock policy, PCR 7 and PCR 12; a second slot for the running boot until the next reboot | `pcr12 reseal`, after every policy change |
 
 ### Unseal failures
 
