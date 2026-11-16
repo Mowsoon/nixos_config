@@ -110,11 +110,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1793546352,
-        "narHash": "sha256-XC+z451bkc5cv6wJ3g1/0xKOSte1irhmSmnGtcG4PSc=",
+        "lastModified": 1794665788,
+        "narHash": "sha256-cZ4kvdddEAHEWcl4w1ST4aJhprXdi+IogYfVPXDyOPQ=",
         "ref": "refs/heads/main",
-        "rev": "eae16960f18d44f5458bee03c13ba773cbb98415",
-        "revCount": 6,
+        "rev": "77847399ed4b865d8db97ad2a79d7b1967218013",
+        "revCount": 7,
         "type": "git",
         "url": "ssh://git@github.com/Mowsoon/DublinLife"
       },

@@ -8,6 +8,7 @@
       wget = "${pkgs.wget}/bin/wget";
       python3 = "${pkgs.python3}/bin/${pkgs.python3.executable}";
       go = "${pkgs.go}/share/go/bin/go";
+      cargo = "${pkgs.cargo}/bin/.cargo-wrapped";
       terraform = "${pkgs.terraform}/bin/terraform";
       helm = "${pkgs.kubernetes-helm}/bin/helm";
       kubectl = "${pkgs.kubectl}/bin/kubectl";

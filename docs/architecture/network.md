@@ -245,7 +245,7 @@ second off (`makestep 1 -1`), and a timer resets the resolver's servers after ev
 | `allow-claude-desktop-vm` | QEMU of the Cowork virtual machine, whose network goes out through the QEMU process | `desktop/claude-desktop.nix` |
 | `match-claude-code` | Claude Code binary downloaded under `~/.config/Claude` | `desktop/claude-desktop.nix` |
 | `allow-git-remote-http`, `allow-ssh`, `allow-curl`, `allow-wget` | Git transports and download tools | `hosts/hephaestus/opensnitch.nix` |
-| `allow-python3`, `allow-go` | Language toolchains; Python also carries the OSV queries and the NVD downloads of the supply chain scan | `hosts/hephaestus/opensnitch.nix` |
+| `allow-python3`, `allow-go`, `allow-cargo` | Language toolchains; cargo fetches crates through its wrapped binary; Python also carries the OSV queries and the NVD downloads of the supply chain scan | `hosts/hephaestus/opensnitch.nix` |
 | `allow-terraform`, `match-terraform-providers` | Terraform and the HashiCorp providers it downloads | `hosts/hephaestus/opensnitch.nix` |
 | `allow-helm`, `allow-kubectl`, `allow-flux`, `allow-clusterctl`, `allow-kind` | Kubernetes clients | `hosts/hephaestus/opensnitch.nix` |
 | `allow-trivy` | Vulnerability scanner | `hosts/hephaestus/opensnitch.nix` |

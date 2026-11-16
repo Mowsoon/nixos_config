@@ -39,21 +39,6 @@
         mapping = {
           "<C-Space>" = "cmp.mapping.complete()";
           "<C-e>" = "cmp.mapping.abort()";
-          "<Space>" = ''
-            cmp.mapping(function(fallback)
-            local entry = cmp.get_selected_entry()
-            if cmp.visible() and entry then
-                local snippet = entry:get_completion_item().insertTextFormat == 2
-                cmp.confirm({ select = false }, function()
-                    if not snippet then
-                        vim.api.nvim_feedkeys(" ", "n", false)
-                    end
-                end)
-            else
-                fallback()
-            end
-            end, { "i" })
-          '';
           "<C-j>" = "cmp.mapping.select_next_item()";
           "<C-k>" = "cmp.mapping.select_prev_item()";
           "<Down>" = "cmp.mapping.select_next_item()";
@@ -64,8 +49,8 @@
           "<Tab>" = ''
             cmp.mapping(function(fallback)
             local luasnip = require('luasnip')
-            if cmp.visible() then
-                cmp.select_next_item()
+            if cmp.visible() and cmp.get_selected_entry() then
+                cmp.confirm({ select = false })
             elseif luasnip.expand_or_jumpable() then
                 luasnip.expand_or_jump()
             else
