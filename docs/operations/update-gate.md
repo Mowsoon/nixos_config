@@ -114,18 +114,57 @@ The `diff` phase is skipped, since the running system has nothing to do with a p
    merged in `master` but not yet in `nixos-unstable` means wait; no fix means report or pin.
 
 4. Choose the narrowest decision: fix the configuration; pin only the broken package from the
-   previous nixpkgs revision; remove the package while it is broken; or keep the previous
-   `flake.lock` and wait.
+   previous nixpkgs revision, as described below; remove the package while it is broken; or keep
+   the previous `flake.lock` and wait.
 
 5. Write one incident report per failure in `docs/incidents/<subject>.md`: symptom, cause,
    evidence links, decision, and the exit condition of a workaround, for example "remove the pin
    once pull request N reaches `nixos-unstable`".
 
+## How to pin one package
+
+A pin takes one top-level package, such as `azure-cli`, from an older nixpkgs revision, while the
+rest of the update lands. The pin carries the commit and the hash of that revision, so it needs
+no flake input and survives `nix flake update`; the evaluation stays pure because the source is
+checked against its hash. A package nested in a set, such as `python3Packages.fabric`, cannot be
+pinned: pin the package that uses it instead. A pinned package brings the dependencies of its own
+revision into the closure.
+
+1. Write the incident report first, in `docs/incidents/<incident>.md`, with the exit condition of
+   the pin. The evaluation fails while the report is missing.
+
+2. Read the previous nixpkgs revision of the run that found the failure.
+
+   ```bash
+   jq .previousNixpkgs ~/.local/state/update-gate/<run>/summary.json
+   ```
+
+   `<run>` is the date of the run.
+
+3. Declare the pin in the `custom` block of `hosts/hephaestus/default.nix`.
+
+   ```nix
+   {
+     custom.packagePins.azure-cli = {
+       rev = "<rev>";
+       narHash = "<narHash>";
+       incident = "<incident>";
+     };
+   }
+   ```
+
+   `<rev>` and `<narHash>` are the values printed by step 2, and `<incident>` the base name of the
+   report of step 1.
+
+4. Run the gate again. `pins.json` of each later run lists the pins still active: once the exit
+   condition of a pin is met, remove it and run the gate again.
+
 ## Reference
 
 | File in the run directory | Content |
 | --- | --- |
-| `summary.json` | Base commit, whether the run is a replay and the commit of its lock, whether uncommitted changes were left out, status and duration of each phase |
+| `summary.json` | Base commit, whether the run is a replay and the commit of its lock, the previous nixpkgs revision and its hash, whether uncommitted changes were left out, status and duration of each phase |
+| `pins.json` | The packages pinned by the candidate configuration, or `null` when it does not evaluate |
 | `inputs.tsv` | Each input that moved, with its previous and new revision and date |
 | `flake.lock`, `flake.lock.old` | The lock of the candidate and the lock of the base commit |
 | `<phase>.log` | The full output of a phase |

@@ -100,6 +100,9 @@ writeShellApplication {
       | [.key, (if $previous then $previous | version else "new" end), (.value | version)] | @tsv
     ' > "$run/inputs.tsv"
 
+    nix eval --json "$worktree#nixosConfigurations.${host}.config.custom.packagePins" > "$run/pins.json" 2> /dev/null \
+      || echo null > "$run/pins.json"
+
     if [ "''${status[update]}" = failed ]; then
       for name in eval build check diff; do skip "$name" "the update failed"; done
     elif [ ! -s "$run/inputs.tsv" ]; then
@@ -147,10 +150,11 @@ writeShellApplication {
 
     for name in "''${phases[@]}"; do
       printf '%s\t%s\t%s\n' "$name" "''${status[$name]}" "''${seconds[$name]}"
-    done | jq -Rn --arg base "$base" --arg lock "$lock" --argjson replay "$replay" --argjson dirty "$dirty" '{
+    done | jq -Rn --slurpfile old "$run/flake.lock.old" --arg base "$base" --arg lock "$lock" --argjson replay "$replay" --argjson dirty "$dirty" '{
       base: $base,
       replay: $replay,
       replayedLock: (if $lock == "" then null else $lock end),
+      previousNixpkgs: ($old[0].nodes[$old[0].nodes.root.inputs.nixpkgs].locked | {rev, narHash}),
       uncommittedChangesLeftOut: $dirty,
       phases: [inputs | split("\t") | {phase: .[0], status: .[1], seconds: (.[2] | tonumber)}]
     }' > "$run/summary.json"

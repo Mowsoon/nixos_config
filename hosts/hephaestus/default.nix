@@ -10,6 +10,7 @@ in
     ./home.nix
     ./opensnitch.nix
     ../../modules/core/unfree.nix
+    ../../modules/core/package-pins.nix
     ../../modules/core/root-rollback.nix
     ../../modules/core/persistence.nix
     ../../modules/core/snapshots.nix

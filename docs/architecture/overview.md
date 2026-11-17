@@ -337,6 +337,7 @@ generation, from `home/mowsoon/`. The details are in [User environment](user-env
 | `custom.fhsCompat` | `core/fhs-compat.nix` | envfs: `/bin` and `/usr/bin` resolved from the caller's `PATH` |
 | `custom.nixMaintenance` | `core/nix-maintenance.nix` | Build priority, store deduplication, garbage collection |
 | `custom.unfreePackages` | `core/unfree.nix` | Allowlist of unfree packages |
+| `custom.packagePins` | `core/package-pins.nix` | Top-level packages taken from another nixpkgs revision, each tied to its incident report |
 | `custom.windowsVolume` | `core/windows-volume.nix` | Read-only access to the BitLocker volume |
 | `custom.secureBoot` | `security/secure-boot.nix` | lanzaboote signing |
 | `custom.luks` | `security/luks.nix` | TPM2 unlock of the root container |
