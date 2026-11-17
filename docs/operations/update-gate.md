@@ -33,12 +33,22 @@ derivation, so Nix builds that system during the `eval` phase. A package that fa
 therefore usually fails the `eval` phase, and the `build` phase only adds the graft. The failed
 derivations are collected from the logs of every phase.
 
+An evaluation error, unlike a build failure, stops the evaluation where it occurs: `keep-going`
+reaches every failing derivation, but only the first evaluation error. Fixing it in the worktree
+or in a commit reveals the next one, so an update that breaks the evaluation in several places
+takes several runs.
+
 The candidate is linked as `result` in the run directory. The link is a garbage collector root:
 the candidate stays in the store as long as the run directory exists.
 
 The gate never activates, commits or pushes. The triage that follows a failed run is done in a
 Claude Code session, with the procedure below; a scheduled agent is left for when the gate runs
 on a timer.
+
+A replay runs the gate on a past update instead of a new one: `--base` takes the configuration of
+another commit than `HEAD`, and `--lock` takes the `flake.lock` of a commit instead of running
+`nix flake update`. A replay checks that the gate and its triage still recognise a known failure.
+The `diff` phase is skipped, since the running system has nothing to do with a past update.
 
 ## How to run the gate
 
@@ -61,6 +71,26 @@ on a timer.
    `<run>` is the date of the run, printed as `Report in ...`.
 
 3. Apply the update as any other change, with `nixos-rebuild test`, then `switch`.
+
+## How to replay a past update
+
+1. Find the commit that moved `flake.lock`, and take its parent as the configuration before the
+   update.
+
+   ```bash
+   git log --oneline -- flake.lock
+   ```
+
+2. Run the gate on that configuration with the lock of that commit.
+
+   ```bash
+   nix run .#update-gate -- --base <commit>^ --lock <commit>
+   ```
+
+   `<commit>` is the commit found in step 1, and `<commit>^` its parent. The `--` separates the
+   options of `nix run` from those of the gate.
+
+3. Triage the run as any other, then compare the result with the incident report of that update.
 
 ## How to triage a failed run
 
@@ -95,7 +125,7 @@ on a timer.
 
 | File in the run directory | Content |
 | --- | --- |
-| `summary.json` | Base commit, whether uncommitted changes were left out, status and duration of each phase |
+| `summary.json` | Base commit, whether the run is a replay and the commit of its lock, whether uncommitted changes were left out, status and duration of each phase |
 | `inputs.tsv` | Each input that moved, with its previous and new revision and date |
 | `flake.lock`, `flake.lock.old` | The lock of the candidate and the lock of the base commit |
 | `<phase>.log` | The full output of a phase |

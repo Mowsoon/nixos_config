@@ -21,13 +21,32 @@ writeShellApplication {
     supplyChain
   ];
   text = ''
-    if [ $# -gt 1 ]; then
-      echo "usage: update-gate [<flake directory>]" >&2
+    usage() {
+      echo "usage: update-gate [--base <commit>] [--lock <commit>] [<flake directory>]" >&2
       exit 2
-    fi
+    }
 
-    repo=$(git -C "''${1:-.}" rev-parse --show-toplevel)
-    base=$(git -C "$repo" rev-parse HEAD)
+    base=HEAD
+    lock=
+    directory=.
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --base) [ $# -ge 2 ] || usage; base=$2; shift 2 ;;
+        --lock) [ $# -ge 2 ] || usage; lock=$2; shift 2 ;;
+        -*) usage ;;
+        *) [ "$directory" = . ] || usage; directory=$1; shift ;;
+      esac
+    done
+
+    repo=$(git -C "$directory" rev-parse --show-toplevel)
+    replay=false
+    if [ "$base" != HEAD ] || [ -n "$lock" ]; then
+      replay=true
+    fi
+    base=$(git -C "$repo" rev-parse --verify "$base^{commit}")
+    if [ -n "$lock" ]; then
+      lock=$(git -C "$repo" rev-parse --verify "$lock^{commit}")
+    fi
     run="''${XDG_STATE_HOME:-$HOME/.local/state}/update-gate/$(date +%Y-%m-%d-%H%M%S)"
     worktree="''${XDG_CACHE_HOME:-$HOME/.cache}/update-gate/worktree"
     toplevel="nixosConfigurations.${host}.config.system.build.toplevel"
@@ -55,7 +74,7 @@ writeShellApplication {
 
     mkdir -p "$run/logs"
     dirty=false
-    if [ -n "$(git -C "$repo" status --porcelain)" ]; then
+    if ! $replay && [ -n "$(git -C "$repo" status --porcelain)" ]; then
       dirty=true
       echo "uncommitted changes are left out: the candidate starts from $base" >&2
     fi
@@ -67,7 +86,12 @@ writeShellApplication {
     trap 'git -C "$repo" worktree remove --force "$worktree"' EXIT
 
     git -C "$repo" show "$base:flake.lock" > "$run/flake.lock.old"
-    phase update nix flake update --flake "$worktree"
+    if [ -n "$lock" ]; then
+      git -C "$repo" show "$lock:flake.lock" > "$worktree/flake.lock"
+      skip update "the lock of $lock is replayed"
+    else
+      phase update nix flake update --flake "$worktree"
+    fi
     cp "$worktree/flake.lock" "$run/flake.lock"
     jq -rn --slurpfile old "$run/flake.lock.old" --slurpfile new "$run/flake.lock" '
       def version: .locked | "\(.rev // .narHash | .[0:12]) \(.lastModified // 0 | todate | .[0:10])";
@@ -87,6 +111,10 @@ writeShellApplication {
         phase check nix flake check --keep-going "$worktree"
         if [ "''${status[build]}" = ok ]; then
           nix build --out-link "$run/result" "$(readlink "$worktree/result")"
+        fi
+        if $replay; then
+          skip diff "a replay is not compared with the running system"
+        elif [ "''${status[build]}" = ok ]; then
           phase diff supply-chain diff /run/current-system "$run/result"
         else
           skip diff "the candidate did not build"
@@ -119,8 +147,10 @@ writeShellApplication {
 
     for name in "''${phases[@]}"; do
       printf '%s\t%s\t%s\n' "$name" "''${status[$name]}" "''${seconds[$name]}"
-    done | jq -Rn --arg base "$base" --argjson dirty "$dirty" '{
+    done | jq -Rn --arg base "$base" --arg lock "$lock" --argjson replay "$replay" --argjson dirty "$dirty" '{
       base: $base,
+      replay: $replay,
+      replayedLock: (if $lock == "" then null else $lock end),
       uncommittedChangesLeftOut: $dirty,
       phases: [inputs | split("\t") | {phase: .[0], status: .[1], seconds: (.[2] | tonumber)}]
     }' > "$run/summary.json"

@@ -83,3 +83,4 @@ The machine reaches a login prompt in the terminal. Press `Ctrl+A` then `X` to s
 | `nixos-rebuild boot --flake .#hephaestus --elevate sudo` | Makes a new generation the boot default without running it |
 | `nix flake update` | Moves `flake.lock` to the latest `nixos-unstable` revision |
 | `nix run .#update-gate` | Updates the inputs in a Git worktree and evaluates, builds, checks and diffs the candidate without activating it, as described in [update gate](docs/operations/update-gate.md) |
+| `nix run .#update-gate -- --base <commit>^ --lock <commit>` | Replays a past update through the gate: the configuration before the commit with the lock of the commit |
