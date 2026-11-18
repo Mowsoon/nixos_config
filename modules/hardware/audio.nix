@@ -4,7 +4,7 @@ let
 in
 {
   options.custom.audio = {
-    enable = lib.mkEnableOption "PipeWire as the audio server for ALSA, PulseAudio and JACK clients";
+    enable = lib.mkEnableOption "PipeWire as the audio server for ALSA and PulseAudio clients";
     serializeAmdAcpResume = lib.mkEnableOption "sequential suspend and resume of the AMD revision 0x62 audio coprocessor and HD Audio controller";
   };
 
@@ -19,7 +19,6 @@ in
           support32Bit = true;
         };
         pulse.enable = true;
-        jack.enable = true;
         extraConfig.pipewire-pulse."50-discord-latency" = {
           "pulse.rules" = [
             {

@@ -140,8 +140,10 @@ which slows battery wear on a laptop that stays plugged in.
 
 ### Audio
 
-PipeWire is the audio server, with its ALSA, PulseAudio and JACK compatibility layers and
-WirePlumber as session manager. rtkit grants it real-time scheduling. Device access goes through
+PipeWire is the audio server, with its ALSA and PulseAudio compatibility layers and
+WirePlumber as session manager. Its JACK layer is off: nixpkgs deprecated it, since it exports a
+global `LD_LIBRARY_PATH`, and no JACK client runs here; a JACK client would start through the
+`pw-jack` wrapper of `pipewire.jack`. rtkit grants it real-time scheduling. Device access goes through
 the logind seat of the session. The effects processor, EasyEffects, runs as a user service
 declared in the user environment.
 
@@ -542,7 +544,7 @@ The hwdb entry matches the LIGHTSPEED product `40B5` and the wired product `C356
 | `custom.asus.enable` | `false` | asusd, ROG Control Center, charge limit service |
 | `custom.asus.chargeLimit` | `100` | Charge percentage at which charging stops, 20 to 100 |
 | `custom.asus.performanceEpp` | `null` | EPP that asusd writes with the Performance profile, enforced in `asusd.ron` before asusd starts |
-| `custom.audio.enable` | `false` | PipeWire with ALSA, PulseAudio and JACK layers |
+| `custom.audio.enable` | `false` | PipeWire with ALSA and PulseAudio layers |
 | `custom.audio.serializeAmdAcpResume` | `false` | `power/async` disabled on the revision `0x62` ACP and the AMD HD Audio controller |
 | `custom.peripherals.enable` | `false` | Bluetooth, Logitech receivers, G915 X key remapping |
 | `custom.rgb.enable` | `false` | OpenRGB SDK server on `127.0.0.1:6742`, confined to the Logitech LIGHTSPEED receiver |
