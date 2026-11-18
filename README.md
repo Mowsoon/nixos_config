@@ -84,3 +84,4 @@ The machine reaches a login prompt in the terminal. Press `Ctrl+A` then `X` to s
 | `nix flake update` | Moves `flake.lock` to the latest `nixos-unstable` revision |
 | `nix run .#update-gate` | Updates the inputs in a Git worktree and evaluates, builds, checks and diffs the candidate without activating it, as described in [update gate](docs/operations/update-gate.md) |
 | `nix run .#update-gate -- --base <commit>^ --lock <commit>` | Replays a past update through the gate: the configuration before the commit with the lock of the commit |
+| `nix run .#update-gate -- triage [<run>]` | Hands the last gate run, or the one given, to a Claude Code session that writes its triage report |

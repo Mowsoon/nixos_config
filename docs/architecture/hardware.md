@@ -185,6 +185,13 @@ automatic gain control off.
 EasyEffects moves every recording stream to its virtual source. A recording that must read the
 raw microphone, for a measurement, sets `node.dont-move` on its stream.
 
+The PipeWire graph runs at the smallest period that an active stream asks for. Discord sets
+`PULSE_LATENCY_MSEC=30` for its PulseAudio streams, so its call playback asks for 7.5 ms and the
+whole graph dropped to 256 samples, a deadline its own playback missed under load. A
+`pipewire-pulse` rule gives the streams of the clients named `discord*` a floor of 1024 samples,
+as the stock configuration already does for speech-dispatcher
+([incident](../incidents/discord-call-audio-crackles.md)).
+
 ### Peripherals
 
 BlueZ runs with its experimental features, which report the battery level of Bluetooth headsets

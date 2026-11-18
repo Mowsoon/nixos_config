@@ -41,9 +41,15 @@ takes several runs.
 The candidate is linked as `result` in the run directory. The link is a garbage collector root:
 the candidate stays in the store as long as the run directory exists.
 
-The gate never activates, commits or pushes. The triage that follows a failed run is done in a
-Claude Code session, with the procedure below; a scheduled agent is left for when the gate runs
-on a timer.
+The gate never activates, commits or pushes. The triage of a run follows the procedure below,
+by hand or through `update-gate triage`, which hands the run to a Claude Code session without
+interaction. The session starts in a worktree of the base commit of the run, so it reads the
+configuration that the run evaluated, and it receives this procedure. It may read files, search
+the web, and run only `nix eval`, `nix log`, `nix why-depends`, `nix path-info`,
+`nix derivation show`, `jq` and `curl` on the GitHub API; it cannot write. Its report, with the
+proposed incident reports and configuration change, is written to `triage.md` in the run
+directory, and the decision stays manual. The session uses the Claude Code binary of the Claude
+desktop app, already allowed by OpenSnitch, and needs one sign-in of that binary.
 
 A replay runs the gate on a past update instead of a new one: `--base` takes the configuration of
 another commit than `HEAD`, and `--lock` takes the `flake.lock` of a commit instead of running
@@ -91,6 +97,27 @@ The `diff` phase is skipped, since the running system has nothing to do with a p
    options of `nix run` from those of the gate.
 
 3. Triage the run as any other, then compare the result with the incident report of that update.
+
+## How to triage a run with Claude
+
+1. Sign in once with the Claude Code binary of the desktop app. The command opens the browser.
+
+   ```bash
+   "$(find ~/.config/Claude/claude-code -name claude -type f | sort -V | tail -n 1)" auth login
+   ```
+
+2. Hand the last run, or the run given as argument, to the triage session. It takes a few
+   minutes and prints nothing until it ends.
+
+   ```bash
+   nix run .#update-gate -- triage [<run>]
+   ```
+
+   `<run>` is a run directory under `~/.local/state/update-gate/`; without it, the last run is
+   triaged.
+
+3. Read `triage.md` in the run directory, check its evidence, then apply the decisions you accept
+   as described in the next sections. `triage.log` holds the errors of the session.
 
 ## How to triage a failed run
 
@@ -164,6 +191,7 @@ revision into the closure.
 | File in the run directory | Content |
 | --- | --- |
 | `summary.json` | Base commit, whether the run is a replay and the commit of its lock, the previous nixpkgs revision and its hash, whether uncommitted changes were left out, status and duration of each phase |
+| `procedure.md`, `triage.md`, `triage.log` | The procedure given to the triage session, its report, and its errors |
 | `pins.json` | The packages pinned by the candidate configuration, or `null` when it does not evaluate |
 | `inputs.tsv` | Each input that moved, with its previous and new revision and date |
 | `flake.lock`, `flake.lock.old` | The lock of the candidate and the lock of the base commit |

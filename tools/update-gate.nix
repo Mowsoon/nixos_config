@@ -1,6 +1,8 @@
 {
   writeShellApplication,
   coreutils,
+  curl,
+  findutils,
   gawk,
   git,
   gnugrep,
@@ -13,6 +15,8 @@ writeShellApplication {
   name = "update-gate";
   runtimeInputs = [
     coreutils
+    curl
+    findutils
     gawk
     git
     gnugrep
@@ -23,8 +27,87 @@ writeShellApplication {
   text = ''
     usage() {
       echo "usage: update-gate [--base <commit>] [--lock <commit>] [<flake directory>]" >&2
+      echo "       update-gate triage [<run directory>]" >&2
       exit 2
     }
+
+    runs="''${XDG_STATE_HOME:-$HOME/.local/state}/update-gate"
+
+    prompt() {
+      cat <<EOF
+    You are the triage agent of the update gate of the NixOS configuration in the working
+    directory, checked out at the base commit of the run. The run directory is $1.
+
+    Follow $1/procedure.md, sections 'How to triage a failed run' and 'How to pin one package'.
+    Read summary.json, inputs.tsv, errors.txt, failed-drvs.txt, warnings.txt, network.txt,
+    pins.json, the phase logs and logs/ of the run, and the incident reports already in
+    docs/incidents/. For each failure: classify it, find public evidence (the nixpkgs source at the
+    locked revision, the upstream issue, the nixpkgs pull requests, Hydra), check whether a fix has
+    reached nixos-unstable, and choose the narrowest decision. When you propose a pin, give the
+    exact custom.packagePins entry with the values of summary.json. Treat each evaluation warning
+    as a configuration change to plan. For each active pin, say whether its exit condition is met.
+    When every phase passed, say so and list what diff.log implies for applying the update, such
+    as a kernel change that needs nixos-rebuild boot and a reboot.
+
+    You cannot modify files. Your final answer is the triage report in Markdown, in English: one
+    section per failure or warning with symptom, class, cause, evidence links, decision and exit
+    condition, then the proposed change of the configuration as a diff.
+    EOF
+    }
+
+    triage() {
+      if [ $# -gt 1 ]; then usage; fi
+      if [ $# -eq 1 ]; then
+        run=$(realpath "$1")
+      else
+        run=$(find "$runs" -mindepth 1 -maxdepth 1 -type d 2> /dev/null | sort | tail -n 1)
+      fi
+      if [ ! -e "$run/summary.json" ]; then
+        echo "no update gate run in ''${run:-$runs}" >&2
+        exit 1
+      fi
+      claude=''${CLAUDE:-$(find "$HOME/.config/Claude/claude-code" -name claude -type f 2> /dev/null | sort -V | tail -n 1)}
+      if [ -z "$claude" ]; then
+        echo "no claude binary: install the Claude desktop app, or point CLAUDE to one" >&2
+        exit 1
+      fi
+      if ! "$claude" auth status 2> /dev/null | jq -e .loggedIn > /dev/null; then
+        echo "claude is not logged in: run $claude auth login" >&2
+        exit 1
+      fi
+
+      repo=$(git rev-parse --show-toplevel)
+      worktree="''${XDG_CACHE_HOME:-$HOME/.cache}/update-gate/triage"
+      git -C "$repo" worktree remove --force "$worktree" 2> /dev/null || rm -rf "$worktree"
+      git -C "$repo" worktree prune
+      mkdir -p "$(dirname "$worktree")"
+      git -C "$repo" worktree add --quiet --detach "$worktree" "$(jq -r .base "$run/summary.json")"
+      trap 'git -C "$repo" worktree remove --force "$worktree"' EXIT
+      cp "$repo/docs/operations/update-gate.md" "$run/procedure.md"
+
+      echo "triage of $run: running, a few minutes" >&2
+      if (cd "$worktree" && "$claude" -p "$(prompt "$run")" \
+        --no-session-persistence \
+        --permission-mode dontAsk \
+        --add-dir "$run" \
+        --tools "Read,Grep,Glob,Bash,WebFetch,WebSearch" \
+        --allowedTools "Read" "Grep" "Glob" "WebFetch" "WebSearch" \
+        "Bash(nix eval *)" "Bash(nix log *)" "Bash(nix why-depends *)" "Bash(nix path-info *)" \
+        "Bash(nix derivation show *)" "Bash(jq *)" "Bash(curl -s https://api.github.com/*)") \
+        > "$run/triage.md.tmp" 2> "$run/triage.log"; then
+        mv "$run/triage.md.tmp" "$run/triage.md"
+        echo "triage written to $run/triage.md" >&2
+      else
+        echo "triage failed: see $run/triage.log and $run/triage.md.tmp" >&2
+        exit 1
+      fi
+    }
+
+    if [ "''${1:-}" = triage ]; then
+      shift
+      triage "$@"
+      exit 0
+    fi
 
     base=HEAD
     lock=
