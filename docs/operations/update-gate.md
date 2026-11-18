@@ -46,7 +46,9 @@ by hand or through `update-gate triage`, which hands the run to a Claude Code se
 interaction. The session starts in a worktree of the base commit of the run, so it reads the
 configuration that the run evaluated, and it receives this procedure. It may read files, search
 the web, and run only `nix eval`, `nix log`, `nix why-depends`, `nix path-info`,
-`nix derivation show`, `jq` and `curl` on the GitHub API; it cannot write. Its report, with the
+`nix derivation show`, `jq`, `git log`, `git show` and `curl` on the GitHub API; it cannot write.
+Any other command is denied without a prompt, and the denied calls are kept with the run, so that a
+command the triage keeps needing can be allowed on evidence. Its report, with the
 proposed incident reports and configuration change, is written to `triage.md` in the run
 directory, and the decision stays manual. The session uses the Claude Code binary of the Claude
 desktop app, already allowed by OpenSnitch, and needs one sign-in of that binary.
@@ -117,7 +119,8 @@ The `diff` phase is skipped, since the running system has nothing to do with a p
    triaged.
 
 3. Read `triage.md` in the run directory, check its evidence, then apply the decisions you accept
-   as described in the next sections. `triage.log` holds the errors of the session.
+   as described in the next sections. `triage.log` holds the errors of the session, and
+   `triage-denials.json` the commands it was refused.
 
 ## How to triage a failed run
 
@@ -192,6 +195,7 @@ revision into the closure.
 | --- | --- |
 | `summary.json` | Base commit, whether the run is a replay and the commit of its lock, the previous nixpkgs revision and its hash, whether uncommitted changes were left out, status and duration of each phase |
 | `procedure.md`, `triage.md`, `triage.log` | The procedure given to the triage session, its report, and its errors |
+| `triage.json`, `triage-denials.json` | The full answer of the session, and the tool calls it was denied |
 | `pins.json` | The packages pinned by the candidate configuration, or `null` when it does not evaluate |
 | `inputs.tsv` | Each input that moved, with its previous and new revision and date |
 | `flake.lock`, `flake.lock.old` | The lock of the candidate and the lock of the base commit |

@@ -88,17 +88,20 @@ writeShellApplication {
       echo "triage of $run: running, a few minutes" >&2
       if (cd "$worktree" && "$claude" -p "$(prompt "$run")" \
         --no-session-persistence \
+        --output-format json \
         --permission-mode dontAsk \
         --add-dir "$run" \
         --tools "Read,Grep,Glob,Bash,WebFetch,WebSearch" \
         --allowedTools "Read" "Grep" "Glob" "WebFetch" "WebSearch" \
         "Bash(nix eval *)" "Bash(nix log *)" "Bash(nix why-depends *)" "Bash(nix path-info *)" \
-        "Bash(nix derivation show *)" "Bash(jq *)" "Bash(curl -s https://api.github.com/*)") \
-        > "$run/triage.md.tmp" 2> "$run/triage.log"; then
-        mv "$run/triage.md.tmp" "$run/triage.md"
-        echo "triage written to $run/triage.md" >&2
+        "Bash(nix derivation show *)" "Bash(jq *)" "Bash(git log *)" "Bash(git show *)" \
+        "Bash(curl -s https://api.github.com/*)") \
+        > "$run/triage.json" 2> "$run/triage.log" \
+        && jq -er .result "$run/triage.json" > "$run/triage.md"; then
+        jq '[.permission_denials[]?.tool_input]' "$run/triage.json" > "$run/triage-denials.json"
+        echo "triage written to $run/triage.md, $(jq length "$run/triage-denials.json") tool calls denied" >&2
       else
-        echo "triage failed: see $run/triage.log and $run/triage.md.tmp" >&2
+        echo "triage failed: see $run/triage.log and $run/triage.json" >&2
         exit 1
       fi
     }
