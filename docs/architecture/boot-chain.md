@@ -180,7 +180,10 @@ advance. `pcr12` does both:
   in every manual procedure, accepts only one credential on the ESP: the pcrlock policy copy,
   whose decrypted content must be the current `/var/lib/systemd/pcrlock.json`. It then computes
   the next PCR 12 and, when no slot already matches it and the current PCR 7, enrolls a new slot.
-  The PCR values of each slot are kept in `/var/lib/pcr12/enrollment.json`.
+  The PCR values of each slot are kept in `/var/lib/pcr12/enrollment.json`, with those of the
+  next slot also at the top level, in the single-slot format: a generation built before the two
+  slots, booted from the menu or activated by a rollback, still reads the file and reseals one
+  slot.
 
 The container holds up to two TPM2 slots. The boot slot is sealed to the PCR 12 of the running
 boot and unlocks the container for every reseal until the reboot. The next slot is sealed to the

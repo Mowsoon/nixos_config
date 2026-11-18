@@ -124,6 +124,21 @@ def test_reseal_after_the_reboot_removes_the_slot_of_the_previous_boot(
     assert "--unlock-tpm2-device=auto" not in wipe
 
 
+def test_reseal_records_the_next_boot_slot_for_older_generations(
+    machine: Machine, runner: FakeRunner
+) -> None:
+    _booted(machine)
+    _resealed(machine, runner)
+    _write_new_policy(machine, 1)
+    _resealed(machine, runner)
+    raw = json.loads(machine.paths.state.read_text(encoding="utf-8"))
+    assert raw["pcr12"] == _predicted(machine).hex()
+    machine.boot()
+    _resealed(machine, runner)
+    raw = json.loads(machine.paths.state.read_text(encoding="utf-8"))
+    assert raw["pcr12"] == _predicted(machine).hex()
+
+
 def test_reseal_asks_for_the_key_after_a_new_secure_boot_state(
     machine: Machine, runner: FakeRunner
 ) -> None:

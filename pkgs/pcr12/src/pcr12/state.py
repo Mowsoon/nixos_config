@@ -44,12 +44,17 @@ def load(path: Path) -> list[Enrollment]:
     return [_enrollment(slot, path) for slot in slots]
 
 
+def _document(enrollments: Sequence[Enrollment]) -> dict[str, object]:
+    single = asdict(enrollments[-1]) if enrollments else {}
+    return {**single, "slots": [asdict(enrollment) for enrollment in enrollments]}
+
+
 def save(path: Path, enrollments: Sequence[Enrollment]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(
         "w", encoding="utf-8", dir=path.parent, prefix=f".{path.name}.", delete=False
     ) as handle:
-        json.dump({"slots": [asdict(enrollment) for enrollment in enrollments]}, handle, indent=2)
+        json.dump(_document(enrollments), handle, indent=2)
         handle.write("\n")
         handle.flush()
         os.fsync(handle.fileno())

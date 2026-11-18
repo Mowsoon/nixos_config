@@ -1,3 +1,5 @@
+import json
+from dataclasses import asdict
 from pathlib import Path
 
 import pytest
@@ -11,6 +13,13 @@ def test_save_then_load_returns_the_enrollments(tmp_path: Path) -> None:
     enrollments = [Enrollment("07", "12", "ab"), Enrollment("07", "13", "cd")]
     state.save(tmp_path / "pcr12" / "enrollment.json", enrollments)
     assert state.load(tmp_path / "pcr12" / "enrollment.json") == enrollments
+
+
+def test_save_keeps_the_last_enrollment_in_the_single_slot_format(tmp_path: Path) -> None:
+    path = tmp_path / "enrollment.json"
+    state.save(path, [Enrollment("07", "12", "ab"), Enrollment("07", "13", "cd")])
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    assert {field: raw[field] for field in state.FIELDS} == asdict(Enrollment("07", "13", "cd"))
 
 
 def test_load_reads_the_single_slot_format(tmp_path: Path) -> None:

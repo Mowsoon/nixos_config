@@ -119,7 +119,7 @@ class Resealer:
         if not stale:
             return
         self._runner.run(luks.wipe_command(device, _keyslots(stale)))
-        state.save(self._paths.state, _enrollments([slot for slot in slots if slot in kept]))
+        state.save(self._paths.state, _enrollments(list(dict.fromkeys(kept))))
         logger.info("removed the TPM2 slots %s left from a previous boot", _keyslots(stale))
 
     def _require_verified_model(self) -> None:
