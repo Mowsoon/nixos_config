@@ -20,6 +20,17 @@ in
         };
         pulse.enable = true;
         jack.enable = true;
+        extraConfig.pipewire-pulse."50-discord-latency" = {
+          "pulse.rules" = [
+            {
+              matches = [ { "application.name" = "~discord.*"; } ];
+              actions.update-props = {
+                "pulse.min.req" = "1024/48000";
+                "pulse.min.quantum" = "1024/48000";
+              };
+            }
+          ];
+        };
       };
 
       udev.extraRules = lib.mkIf cfg.serializeAmdAcpResume ''
