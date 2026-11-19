@@ -8,5 +8,6 @@
     ./bufferline.nix
     ./fidget.nix
     ./render-markdown.nix
+    ./scrollview.nix
   ];
 }

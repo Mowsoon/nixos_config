@@ -168,7 +168,9 @@ terminal, while the syntax colours and the integrations with the plugins stay th
 catppuccin. Italics are off and inactive windows are dimmed. Diagnostics show their message at
 the end of the line, errors first, since Neovim no longer does by default. Markdown files are
 rendered in place by render-markdown: headings, tables, checkboxes and callouts are drawn, and the
-line under the cursor shows its raw text for editing; Mermaid blocks stay as code.
+line under the cursor shows its raw text for editing; Mermaid blocks stay as code. A scrollview
+scrollbar on the right of each window can be dragged with the mouse and marks diagnostics,
+search matches, marks and gitsigns hunks.
 Started without argument, Neovim shows the alpha dashboard; started on a directory, it opens the
 neo-tree explorer on it. alpha redraws itself whenever any window is resized, but can keep the
 identifier of a closed window and then fails on it; its redraw is wrapped to drop closed windows
